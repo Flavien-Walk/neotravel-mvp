@@ -40,7 +40,13 @@ export default function RegisterPage() {
     const res = await register(form)
     setLoading(false)
     if (res.error) { setError(res.error); return }
-    router.replace('/dashboard')
+    try {
+      const stored = localStorage.getItem('neo_user')
+      const u = stored ? JSON.parse(stored) : null
+      router.replace(u?.role === 'client' ? '/client' : '/dashboard')
+    } catch {
+      router.replace('/dashboard')
+    }
   }
 
   return (

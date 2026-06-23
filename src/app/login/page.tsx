@@ -23,7 +23,17 @@ export default function LoginPage() {
     const res = await login(email, password)
     setLoading(false)
     if (res.error) { setError(res.error); return }
-    router.replace('/dashboard')
+    // Redirect based on role from updated user state (login() calls persist() which updates state)
+    // We read role from the updated user object via the current auth context after login
+    // Since login() updates state synchronously via persist(), user might not be updated yet
+    // So we decode the role from the stored JSON directly
+    try {
+      const stored = localStorage.getItem('neo_user')
+      const u = stored ? JSON.parse(stored) : null
+      router.replace(u?.role === 'client' ? '/client' : '/dashboard')
+    } catch {
+      router.replace('/dashboard')
+    }
   }
 
   return (
