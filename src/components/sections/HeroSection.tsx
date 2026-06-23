@@ -1,18 +1,9 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, LayoutDashboard, Users, Clock, CheckCircle } from 'lucide-react'
-
-const HeroScene = dynamic(() => import('@/components/3d/HeroScene'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="w-12 h-12 rounded-full border-2 border-neo-blue/30 border-t-neo-blue animate-spin" />
-    </div>
-  ),
-})
+import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
   hidden: {},
@@ -72,7 +63,7 @@ export default function HeroSection() {
             >
               NeoTravel centralise les demandes, qualifie les trajets et génère des devis fiables —
               pour les entreprises, collectivités, associations et groupes privés.
-              Chaque lead est suivi, chaque devis est tracé, chaque relance est planifiée.
+              Chaque lead est suivi. Chaque devis est tracé. Chaque relance est planifiée.
             </motion.p>
 
             <motion.div variants={item} className="flex flex-wrap gap-3 mb-10">
@@ -101,7 +92,7 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* ─── Right — 3D city network ──────────────── */}
+          {/* ─── Right — transport route map ─────────── */}
           <motion.div
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -111,38 +102,9 @@ export default function HeroSection() {
             {/* Radial glow */}
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.10) 0%, transparent 65%)' }}
+              style={{ background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 65%)' }}
             />
-            <HeroScene />
-
-            {/* Label overlay */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 text-xs text-white/25 tracking-widest uppercase pointer-events-none">
-              Réseau NeoTravel — trajets actifs
-            </div>
-
-            {/* Floating card — Paris hub */}
-            <motion.div
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.1, duration: 0.55 }}
-              className="absolute bottom-8 right-0 glass-blue rounded-2xl px-4 py-3.5 pointer-events-none hidden sm:block"
-            >
-              <div className="text-[10px] text-white/40 mb-1 uppercase tracking-wide">Hub central</div>
-              <div className="font-bold text-white text-sm">Paris → 8 villes</div>
-              <div className="text-[11px] text-neo-blue mt-0.5">Route la plus demandée : Lyon</div>
-            </motion.div>
-
-            {/* Floating card — response time */}
-            <motion.div
-              initial={{ opacity: 0, x: -24 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.3, duration: 0.55 }}
-              className="absolute top-10 left-0 glass rounded-xl px-4 py-3 pointer-events-none hidden sm:block"
-            >
-              <div className="text-[10px] text-white/40 mb-1 uppercase tracking-wide">Dernier devis</div>
-              <div className="font-bold text-white text-sm">Bordeaux → Nice, 52 pax</div>
-              <div className="text-[11px] text-green-400 mt-0.5">Généré en 14 s · 2 340 € HT</div>
-            </motion.div>
+            <TransportHeroVisual />
           </motion.div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calculator, Bell, UserCheck, RefreshCw,
   CheckCircle, Activity, MapPin, Users, Calendar,
-  Send, Mail, AlertTriangle
+  Send, Mail, AlertTriangle, XCircle, X,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS } from '@/types'
@@ -108,6 +108,39 @@ export default function DashboardLeadDetailPage() {
       await api.leads.updateStatus(lead._id, 'cas_complexe')
       await fetchAll()
       flash('Dossier transmis pour reprise humaine.', true)
+    } catch {
+      flash('Erreur mise à jour statut', false)
+    }
+  }
+
+  async function markAccepted() {
+    if (!lead) return
+    try {
+      await api.leads.updateStatus(lead._id, 'accepte')
+      await fetchAll()
+      flash('Dossier marqué comme accepté.', true)
+    } catch {
+      flash('Erreur mise à jour statut', false)
+    }
+  }
+
+  async function markRefused() {
+    if (!lead) return
+    try {
+      await api.leads.updateStatus(lead._id, 'refuse')
+      await fetchAll()
+      flash('Dossier marqué comme refusé.', true)
+    } catch {
+      flash('Erreur mise à jour statut', false)
+    }
+  }
+
+  async function closeLead() {
+    if (!lead) return
+    try {
+      await api.leads.updateStatus(lead._id, 'cloture')
+      await fetchAll()
+      flash('Dossier clôturé.', true)
     } catch {
       flash('Erreur mise à jour statut', false)
     }
@@ -356,8 +389,26 @@ export default function DashboardLeadDetailPage() {
               )}
               <button onClick={markComplex} className="btn-ghost w-full !justify-start gap-2 text-sm">
                 <UserCheck className="w-4 h-4 text-rose-400" />
-                Passer en cas complexe
+                Reprise humaine
               </button>
+              {!['accepte', 'refuse', 'cloture'].includes(lead.statut) && (
+                <>
+                  <button onClick={markAccepted} className="btn-ghost w-full !justify-start gap-2 text-sm border-green-500/20 hover:bg-green-500/10 hover:border-green-500/30">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    Marquer accepté
+                  </button>
+                  <button onClick={markRefused} className="btn-danger w-full !justify-start gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Marquer refusé
+                  </button>
+                </>
+              )}
+              {lead.statut !== 'cloture' && (
+                <button onClick={closeLead} className="btn-ghost w-full !justify-start gap-2 text-sm text-white/30 hover:text-white/55">
+                  <X className="w-4 h-4" />
+                  Clôturer le dossier
+                </button>
+              )}
             </div>
           </div>
 
