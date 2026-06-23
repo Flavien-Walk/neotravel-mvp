@@ -10,15 +10,13 @@ const app = express()
 const PORT = process.env.PORT || 4000
 
 // Middleware
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [
-      process.env.FRONTEND_URL,
-      /\.vercel\.app$/,
-    ].filter(Boolean)
-  : '*'
+const corsOrigin: cors.CorsOptions['origin'] =
+  process.env.NODE_ENV === 'production'
+    ? ([process.env.FRONTEND_URL, /\.vercel\.app$/].filter(Boolean) as (string | RegExp)[])
+    : '*'
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: corsOrigin,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'x-admin-secret'],
 }))

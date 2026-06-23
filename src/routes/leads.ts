@@ -21,8 +21,10 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const lead = await Lead.findById(req.params.id).lean()
-    if (!lead) return res.status(404).json({ message: 'Lead introuvable' })
-
+    if (!lead) {
+      res.status(404).json({ message: 'Lead introuvable' })
+      return
+    }
     const quote = await Quote.findOne({ leadId: lead._id }).lean()
     res.json({ ...lead, quote: quote || null })
   } catch (err) {
@@ -55,14 +57,19 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id/status', async (req: Request, res: Response) => {
   try {
     const { statut } = req.body
-    if (!statut) return res.status(400).json({ message: 'Champ statut requis' })
-
+    if (!statut) {
+      res.status(400).json({ message: 'Champ statut requis' })
+      return
+    }
     const lead = await Lead.findByIdAndUpdate(
       req.params.id,
       { statut },
       { new: true, runValidators: false }
     )
-    if (!lead) return res.status(404).json({ message: 'Lead introuvable' })
+    if (!lead) {
+      res.status(404).json({ message: 'Lead introuvable' })
+      return
+    }
 
     await Log.create({
       action: 'STATUS_CHANGED',

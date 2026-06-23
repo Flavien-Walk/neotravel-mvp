@@ -26,7 +26,8 @@ router.post('/calculate', async (req: Request, res: Response) => {
         await Lead.findByIdAndUpdate(leadId, { statut: 'cas_complexe' }).catch(() => null)
       }
     }
-    return res.status(422).json({ message: result.error, needs_human_review: result.needs_human_review ?? false })
+    res.status(422).json({ message: result.error, needs_human_review: result.needs_human_review ?? false })
+    return
   }
 
   try {
