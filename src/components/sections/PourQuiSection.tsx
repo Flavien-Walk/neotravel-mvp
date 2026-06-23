@@ -1,38 +1,46 @@
-import { Building2, Landmark, Users, Heart } from 'lucide-react'
+import Image from 'next/image'
 import AnimatedSection from '@/components/ui/AnimatedSection'
 
 const CLIENTS = [
   {
-    icon: Building2,
-    color: 'bg-blue-50 text-blue-600',
-    ring:  'ring-blue-100',
-    title: 'Entreprises',
-    desc:  'Séminaires, sorties d\'équipe, transferts aéroport, conventions, team buildings. Vous avez besoin d\'un autocar fiable, d\'un devis rapide et d\'une facturation propre.',
+    img: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&q=75',
+    tag: 'Entreprises',
+    title: 'Séminaires & événements pro',
+    desc: 'Séminaires, team buildings, conventions, transferts aéroport. Vous avez besoin d\'un autocar fiable, d\'un devis rapide et d\'une facturation propre.',
     examples: ['Séminaire Paris → Lyon, 45 pax', 'Navette aéroport CDG, 28 pax', 'Convention annuelle, 80 pax'],
+    accent: 'from-blue-500/30 to-blue-900/60',
   },
   {
-    icon: Landmark,
-    color: 'bg-indigo-50 text-indigo-600',
-    ring:  'ring-indigo-100',
-    title: 'Collectivités',
-    desc:  'Sorties scolaires, voyages institutionnels, événements municipaux, transports de personnes âgées. Nous gérons le dossier, vous validez.',
-    examples: ['Sortie scolaire Versailles, 40 élèves', 'Voyage de fin d\'année, lycée, 55 pax', 'Transfert seniors EHPAD'],
+    img: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=75',
+    tag: 'Collectivités',
+    title: 'Mairies & institutions',
+    desc: 'Événements municipaux, sorties institutionnelles, transports de seniors. Nous gérons le dossier, vous validez le devis.',
+    examples: ['Sortie seniors CCAS, 40 pax', 'Événement municipal, 60 pax', 'Transfert institutionnel'],
+    accent: 'from-indigo-500/30 to-indigo-900/60',
   },
   {
-    icon: Users,
-    color: 'bg-violet-50 text-violet-600',
-    ring:  'ring-violet-100',
-    title: 'Associations',
-    desc:  'Déplacements sportifs, voyages culturels, pèlerinages, weekends associatifs. On s\'occupe de la logistique, vous vous concentrez sur l\'événement.',
-    examples: ['Déplacement club foot, 32 pax', 'Voyage culturel Rome, 50 pax', 'Weekend ski Alpes, 38 pax'],
+    img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&q=75',
+    tag: 'Établissements scolaires',
+    title: 'Sorties & voyages scolaires',
+    desc: 'Voyages de fin d\'année, sorties culturelles, classes découverte. Transport sécurisé, devis conforme aux procédures administratives.',
+    examples: ['Voyage scolaire Rome, 55 élèves', 'Sortie Versailles, 40 élèves', 'Classe découverte Alpes, 32 pax'],
+    accent: 'from-emerald-500/30 to-emerald-900/60',
   },
   {
-    icon: Heart,
-    color: 'bg-rose-50 text-rose-600',
-    ring:  'ring-rose-100',
-    title: 'Particuliers & groupes privés',
-    desc:  'Mariage, enterrement de vie de garçon, fête familiale, groupe d\'amis. Un autocar privatisé, un chauffeur professionnel, aucune contrainte de parking.',
-    examples: ['Mariage Normandie, 60 invités', 'EVJF Paris → Champagne', 'Réunion de famille, 35 pax'],
+    img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=75',
+    tag: 'Associations & clubs',
+    title: 'Sport & culture',
+    desc: 'Déplacements pour compétitions, tournois, weekends culturels ou pèlerinages. On s\'occupe de la logistique, vous vous concentrez sur l\'événement.',
+    examples: ['Déplacement club foot, 32 pax', 'Tournoi régional, 25 pax', 'Weekend ski Alpes, 38 pax'],
+    accent: 'from-violet-500/30 to-violet-900/60',
+  },
+  {
+    img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=75',
+    tag: 'Groupes privés',
+    title: 'Mariages & événements',
+    desc: 'Mariage, EVJF/EVG, anniversaire, réunion de famille. Un autocar privatisé, un chauffeur professionnel, aucune contrainte de stationnement.',
+    examples: ['Mariage Normandie, 60 invités', 'EVJF Paris → Champagne', 'Réunion famille, 35 pax'],
+    accent: 'from-rose-500/30 to-rose-900/60',
   },
 ]
 
@@ -47,28 +55,43 @@ export default function PourQuiSection() {
               Un outil pensé pour ceux qui organisent des déplacements de groupe
             </h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-              Que vous soyez RH, directeur administratif, enseignant ou responsable associatif — NeoTravel simplifie
-              votre demande de transport et vous garantit un devis fiable en moins de deux heures ouvrées.
+              Que vous soyez RH, directeur administratif, enseignant ou responsable associatif —
+              NeoTravel simplifie votre demande et vous garantit un devis fiable sous 2h ouvrées.
             </p>
           </div>
         </AnimatedSection>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {CLIENTS.map(({ icon: Icon, color, ring, title, desc, examples }, i) => (
-            <AnimatedSection key={title} delay={i * 0.08}>
-              <div className={`card-light h-full flex flex-col ring-1 ${ring}`}>
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color} mb-4`}>
-                  <Icon className="w-5 h-5" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          {CLIENTS.map(({ img, tag, title, desc, examples, accent }, i) => (
+            <AnimatedSection key={tag} delay={i * 0.07}>
+              <div className="rounded-2xl overflow-hidden border border-slate-200 h-full flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200">
+                {/* Image header */}
+                <div className="relative h-40 w-full flex-shrink-0 overflow-hidden bg-slate-100">
+                  <Image
+                    src={img}
+                    alt={title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${accent}`} />
+                  <span className="absolute bottom-3 left-3 text-[11px] font-bold text-white/90 uppercase tracking-wider bg-black/30 px-2 py-1 rounded-md backdrop-blur-sm">
+                    {tag}
+                  </span>
                 </div>
-                <h3 className="font-bold text-slate-900 text-lg mb-2">{title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-5 flex-1">{desc}</p>
-                <div className="space-y-1.5">
-                  {examples.map(ex => (
-                    <div key={ex} className="flex items-center gap-2 text-xs text-slate-400">
-                      <span className="w-1 h-1 rounded-full bg-slate-300 flex-shrink-0" />
-                      {ex}
-                    </div>
-                  ))}
+
+                {/* Content */}
+                <div className="p-5 flex flex-col flex-1 bg-white">
+                  <h3 className="font-bold text-slate-900 text-base mb-2">{title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed mb-4 flex-1">{desc}</p>
+                  <div className="space-y-1.5 border-t border-slate-100 pt-3">
+                    {examples.map(ex => (
+                      <div key={ex} className="flex items-center gap-2 text-xs text-slate-400">
+                        <span className="w-1 h-1 rounded-full bg-slate-300 flex-shrink-0" />
+                        {ex}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </AnimatedSection>

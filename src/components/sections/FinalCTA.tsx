@@ -38,9 +38,9 @@ export default function FinalCTA() {
               Faire une demande test
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/dashboard" className="btn-ghost gap-2 !px-6 !py-4 !text-base">
+            <Link href="/register" className="btn-ghost gap-2 !px-6 !py-4 !text-base">
               <LayoutDashboard className="w-4 h-4" />
-              Ouvrir le dashboard
+              Créer un compte
             </Link>
           </div>
 

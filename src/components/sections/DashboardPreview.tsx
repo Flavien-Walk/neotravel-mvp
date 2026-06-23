@@ -111,12 +111,13 @@ export default function DashboardPreview() {
 
         <AnimatedSection delay={0.3}>
           <div className="text-center mt-8">
-            <Link href="/dashboard" className="btn-solid gap-2 inline-flex">
-              Ouvrir le dashboard démo
+            <Link href="/register" className="btn-solid gap-2 inline-flex">
+              Créer un compte commercial
               <ArrowRight className="w-4 h-4" />
             </Link>
             <p className="text-slate-400 text-sm mt-3">
-              Connexion démo disponible — aucune inscription requise pour tester
+              Accès dashboard réservé aux comptes commerciaux —{' '}
+              <Link href="/login" className="text-neo-blue hover:underline">Se connecter</Link>
             </p>
           </div>
         </AnimatedSection>

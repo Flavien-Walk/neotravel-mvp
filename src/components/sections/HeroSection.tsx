@@ -80,9 +80,9 @@ export default function HeroSection() {
                 Demander un devis
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="/dashboard" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
+              <Link href="/login" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
                 <LayoutDashboard className="w-4 h-4" />
-                Dashboard démo
+                Accéder au dashboard
               </Link>
             </motion.div>
 

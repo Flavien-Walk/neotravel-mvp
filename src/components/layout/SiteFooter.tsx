@@ -16,7 +16,8 @@ export default function SiteFooter() {
             <div className="flex flex-col gap-2">
               <span className="text-white/30 text-xs uppercase tracking-widest font-semibold mb-1">Produit</span>
               <Link href="/devis" className="text-white/50 hover:text-white transition-colors">Demander un devis</Link>
-              <Link href="/admin" className="text-white/50 hover:text-white transition-colors">Dashboard admin</Link>
+              <Link href="/register" className="text-white/50 hover:text-white transition-colors">Créer un compte</Link>
+              <Link href="/login" className="text-white/50 hover:text-white transition-colors">Se connecter</Link>
             </div>
             <div className="flex flex-col gap-2">
               <span className="text-white/30 text-xs uppercase tracking-widest font-semibold mb-1">Technique</span>
@@ -27,7 +28,7 @@ export default function SiteFooter() {
         </div>
         <div className="divider my-8" />
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/25">
-          <p>© 2024 NeoTravel — Prototype fonctionnel</p>
+          <p>© 2025 NeoTravel — Prototype fonctionnel</p>
           <p className="italic">&ldquo;L&apos;agent collecte et orchestre, le code calcule.&rdquo;</p>
         </div>
       </div>

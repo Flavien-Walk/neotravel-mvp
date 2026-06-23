@@ -2,25 +2,30 @@ import AnimatedSection from '@/components/ui/AnimatedSection'
 import { CheckCircle2, Circle } from 'lucide-react'
 
 const DONE = [
-  'Formulaire guidé de demande (chatbot étape par étape)',
+  'Inscription / connexion / déconnexion (auth JWT réelle)',
+  'Protection des routes dashboard par token Bearer',
+  'Mot de passe oublié + réinitialisation par email',
+  'Formulaire guidé de demande (étape par étape)',
   'Stockage des leads en base MongoDB Atlas',
   'Scoring de complétude et qualification automatique',
   'Calcul déterministe du devis (distance, durée, coefficients)',
-  'Affichage du devis avec détail des lignes de calcul',
-  'Changement de statut manuel et automatique',
-  'Simulation de relance email depuis le dashboard',
-  'Dashboard commercial avec filtres et recherche',
-  'Logs horodatés de chaque action sur un lead',
-  'Page de confirmation post-devis (/merci)',
+  'Détail devis avec lignes de calcul et coefficients',
+  'Changement de statut (nouveau → qualifié → devis_genere → envoyé)',
+  'Envoi devis client par email Brevo (email réel)',
+  'Envoi relance par email Brevo (email réel)',
+  'Dashboard commercial avec filtres, recherche, stats',
+  'Logs horodatés de chaque action (EMAIL_SENT, QUOTE_GENERATED…)',
+  'Reprise humaine : passage en cas_complexe + log HUMAN_HANDOFF',
+  'Page confirmation post-devis (/merci)',
 ]
 
 const NEXT = [
-  'Intégration vraie API de géocodage (distance réelle)',
-  'Connexion aux autocaristes partenaires (matching)',
+  'Intégration API géocodage réelle (distances kilométriques précises)',
+  'Matching autocaristes partenaires (attribution automatique)',
   'Signature électronique du devis (DocuSign / Yousign)',
-  'Notifications email transactionnelles (SendGrid)',
-  'Gestion multi-rôles (admin / commercial / client)',
-  'Module de facturation et de suivi paiement',
+  'CRM complet multi-rôles (admin / commercial / client)',
+  'Paiement et facturation',
+  'Notifications push et relances automatisées (cron)',
 ]
 
 export default function MVPSection() {

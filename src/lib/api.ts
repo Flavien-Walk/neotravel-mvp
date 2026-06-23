@@ -79,4 +79,8 @@ export const api = {
   },
 
   health: () => request('/health'),
+
+  admin: {
+    testEmail: () => request('/api/admin/test-email', { method: 'POST' }),
+  },
 }
