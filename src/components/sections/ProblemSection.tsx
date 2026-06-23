@@ -1,98 +1,101 @@
-'use client'
-
-import { Clock, FileX, BellOff, BarChart2, Users } from 'lucide-react'
+import { Hourglass, PenLine, BellOff, Eye, TrendingDown } from 'lucide-react'
 import AnimatedSection from '@/components/ui/AnimatedSection'
-import SectionLabel from '@/components/ui/SectionLabel'
-import GlassCard from '@/components/ui/GlassCard'
 
 const PROBLEMS = [
   {
-    icon: Clock,
-    stat: '4h+',
-    label: 'par lead',
-    title: 'Qualification trop lente',
-    desc: 'Chaque demande entrante est traitée manuellement. Le commercial passe plus de temps à trier qu\'à vendre.',
-    color: '#F43F5E',
+    icon: Hourglass,
+    stat: '60',
+    unit: 'leads / jour',
+    title: 'Trop de volume pour une seule personne',
+    desc: 'Un commercial reçoit 60 demandes par jour. Chaque devis prend 20 à 40 minutes à constituer manuellement. Le calcul est vite dépassé.',
   },
   {
-    icon: FileX,
-    stat: '48h',
-    label: 'pour un devis',
-    title: 'Devis faits à la main',
-    desc: 'Calculs dans des tableurs, copier-coller, erreurs de saisie. Un processus non reproductible et non auditable.',
-    color: '#F59E0B',
+    icon: PenLine,
+    stat: '20–40',
+    unit: 'min par devis',
+    title: 'Devis faits à la main, sans traçabilité',
+    desc: 'Calcul sous Excel, prix recopié dans un email, aucun historique. Si le client rappelle, impossible de retrouver la version envoyée.',
   },
   {
     icon: BellOff,
-    stat: '30%',
-    label: 'non recontactés',
-    title: 'Relances oubliées',
-    desc: 'Sans pipeline centralisé, les leads chauds refroidissent. Des opportunités disparaissent faute de suivi.',
-    color: '#818CF8',
+    stat: '~30 %',
+    unit: 'de relances oubliées',
+    title: 'Relances non systématiques',
+    desc: 'Un devis sans réponse sous 48 h doit être relancé. Sans système, une relance sur trois ne part jamais.',
   },
   {
-    icon: BarChart2,
+    icon: Eye,
     stat: '0',
-    label: 'visibilité',
-    title: 'Aucun suivi pipeline',
-    desc: 'Impossible de savoir où en est chaque lead, quel est le taux de conversion, ou qui relancer en priorité.',
-    color: '#22D3EE',
+    unit: 'visibilité',
+    title: 'Aucune vue sur le pipeline',
+    desc: 'Impossible de savoir combien de devis sont en attente, combien ont été acceptés, ni quels leads n\'ont jamais été contactés.',
   },
   {
-    icon: Users,
-    stat: '60+',
-    label: 'leads / jour',
-    title: 'Commerciaux saturés',
-    desc: 'Le volume entrant dépasse la capacité de traitement. L\'équipe gère l\'urgence plutôt que la performance.',
-    color: '#4B8EF8',
+    icon: TrendingDown,
+    stat: '15 %',
+    unit: 'de leads perdus',
+    title: 'Leads payants non recontactés',
+    desc: 'Des entreprises prêtes à signer attendent trop longtemps et choisissent un concurrent. La perte est directe et chiffrable.',
   },
 ]
 
 export default function ProblemSection() {
   return (
-    <section id="probleme" className="section-padding">
-      <div className="container-neo">
-        <AnimatedSection className="text-center mb-16">
-          <SectionLabel>Le problème</SectionLabel>
-          <h2 className="mt-4 text-3xl sm:text-4xl font-bold text-white leading-tight">
-            Le traitement manuel <span className="text-gradient-blue">coûte cher</span>
-          </h2>
-          <p className="mt-4 text-white/50 max-w-xl mx-auto">
-            Avec 60+ leads entrants par jour, chaque friction dans le processus commercial se traduit par du chiffre d&apos;affaires perdu.
-          </p>
+    <section id="probleme" className="section-padding bg-neo-900 relative overflow-hidden">
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }}
+      />
+
+      <div className="container-neo relative z-10">
+        <AnimatedSection>
+          <div className="text-center mb-14">
+            <span className="label-tag mb-4">Le problème</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mt-4 mb-4">
+              60 leads par jour, un commercial,{' '}
+              <span className="text-white/40">aucun outil.</span>
+            </h2>
+            <p className="text-white/45 text-lg max-w-2xl mx-auto">
+              Ce n&apos;est pas un problème de volonté. C&apos;est un problème de volume et d&apos;outillage.
+              Voici ce qui se passe concrètement, chaque jour, sans NeoTravel.
+            </p>
+          </div>
         </AnimatedSection>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {PROBLEMS.map((p, i) => (
-            <AnimatedSection key={p.title} delay={i * 0.08}>
-              <GlassCard className="h-full">
-                <div className="flex items-start gap-4">
-                  <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{ background: `${p.color}18`, border: `1px solid ${p.color}30` }}>
-                    <p.icon className="w-5 h-5" style={{ color: p.color }} />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {PROBLEMS.map(({ icon: Icon, stat, unit, title, desc }, i) => (
+            <AnimatedSection key={title} delay={i * 0.07}>
+              <div className="card-neo h-full flex flex-col">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-neo-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Icon className="w-5 h-5 text-neo-blue" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-1.5 mb-1">
-                      <span className="text-2xl font-bold text-white">{p.stat}</span>
-                      <span className="text-xs text-white/35">{p.label}</span>
-                    </div>
-                    <h3 className="font-semibold text-white mb-2 text-sm">{p.title}</h3>
-                    <p className="text-xs text-white/45 leading-relaxed">{p.desc}</p>
+                  <div>
+                    <span className="text-2xl font-bold text-white">{stat}</span>
+                    <span className="text-white/35 text-sm ml-1.5">{unit}</span>
                   </div>
                 </div>
-              </GlassCard>
+                <h3 className="font-semibold text-white text-base mb-2">{title}</h3>
+                <p className="text-white/40 text-sm leading-relaxed flex-1">{desc}</p>
+              </div>
             </AnimatedSection>
           ))}
 
-          {/* Emphasis card */}
-          <AnimatedSection delay={PROBLEMS.length * 0.08} className="sm:col-span-2 lg:col-span-1 lg:row-span-1">
-            <div className="card-premium h-full flex items-center justify-center p-8 text-center"
-              style={{ borderColor: 'rgba(75,142,248,0.25)', background: 'rgba(75,142,248,0.06)' }}>
+          <AnimatedSection delay={0.35}>
+            <div
+              className="rounded-2xl p-6 flex flex-col justify-between h-full"
+              style={{
+                background: 'linear-gradient(135deg, rgba(37,99,235,0.14) 0%, rgba(37,99,235,0.05) 100%)',
+                border: '1px solid rgba(37,99,235,0.3)',
+              }}
+            >
+              <p className="text-white/55 text-sm leading-relaxed mb-5">
+                La somme de ces frictions représente des milliers d&apos;euros
+                de chiffre d&apos;affaires non réalisé — chaque mois.
+              </p>
               <div>
-                <div className="text-4xl font-bold text-white mb-2">
-                  <span className="text-gradient-blue">80%</span>
-                </div>
-                <p className="text-white/50 text-sm">du temps commercial consacré à des tâches automatisables</p>
+                <div className="text-3xl font-bold text-neo-blue mb-1">NeoTravel</div>
+                <div className="text-white/40 text-sm">automatise chaque étape.</div>
               </div>
             </div>
           </AnimatedSection>

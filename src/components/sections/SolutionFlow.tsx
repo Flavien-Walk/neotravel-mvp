@@ -1,89 +1,141 @@
-'use client'
-
-import { motion } from 'framer-motion'
-import { MessageSquare, CheckCircle, Calculator, Send, Bell, LayoutDashboard, UserCheck, ChevronRight } from 'lucide-react'
 import AnimatedSection from '@/components/ui/AnimatedSection'
-import SectionLabel from '@/components/ui/SectionLabel'
+import { MessageSquare, SlidersHorizontal, Calculator, Send, Bell, LayoutDashboard, UserCheck } from 'lucide-react'
 
 const STEPS = [
-  { icon: MessageSquare, label: 'Lead entrant',     desc: 'Le client soumet sa demande via le chatbot guidé',          color: '#4B8EF8', num: '01' },
-  { icon: CheckCircle,   label: 'Qualification',    desc: 'Score de complétude calculé automatiquement',               color: '#22D3EE', num: '02' },
-  { icon: Calculator,    label: 'Calcul devis',     desc: 'calculer_devis() — déterministe, auditable, reproductible', color: '#818CF8', num: '03' },
-  { icon: Send,          label: 'Envoi devis',      desc: 'Devis envoyé au client, statut mis à jour',                 color: '#F59E0B', num: '04' },
-  { icon: Bell,          label: 'Relances',         desc: 'Relances automatiques si absence de réponse',               color: '#F43F5E', num: '05' },
-  { icon: LayoutDashboard,label:'Dashboard',        desc: 'Vue complète du pipeline pour l\'équipe commerciale',       color: '#4B8EF8', num: '06' },
-  { icon: UserCheck,     label: 'Reprise humaine',  desc: 'Cas complexes transmis au commercial pour clôture',         color: '#22D3EE', num: '07' },
+  {
+    icon: MessageSquare,
+    step: '01',
+    title: 'Demande client',
+    desc: 'Le client remplit le formulaire guidé : trajet, date, nombre de passagers, options. L\'assistant collecte tout en quelques minutes.',
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    icon: SlidersHorizontal,
+    step: '02',
+    title: 'Qualification automatique',
+    desc: 'La demande est scorée selon sa complétude. Les champs manquants sont identifiés et la demande est classée : qualifiée, incomplète ou cas complexe.',
+    color: 'text-indigo-400',
+    bg: 'bg-indigo-500/10',
+  },
+  {
+    icon: Calculator,
+    step: '03',
+    title: 'Calcul du devis',
+    desc: 'Un algorithme déterministe calcule le prix : distance, durée, nombre de pax, options, coefficients tarifaires. Le devis est généré en moins de 15 secondes.',
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10',
+  },
+  {
+    icon: Send,
+    step: '04',
+    title: 'Envoi au client',
+    desc: 'Le devis est formaté et envoyé par email au client avec le détail des lignes de calcul. Le statut du lead passe automatiquement à "Devis envoyé".',
+    color: 'text-sky-400',
+    bg: 'bg-sky-500/10',
+  },
+  {
+    icon: Bell,
+    step: '05',
+    title: 'Relance planifiée',
+    desc: 'Si pas de réponse sous 48 h, une relance est déclenchée. Elle peut être automatisée ou validée manuellement depuis le dashboard.',
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+  },
+  {
+    icon: LayoutDashboard,
+    step: '06',
+    title: 'Suivi dashboard',
+    desc: 'Chaque lead et chaque devis sont visibles dans le dashboard commercial. Statuts, logs, métriques : tout est centralisé et filtrable.',
+    color: 'text-green-400',
+    bg: 'bg-green-500/10',
+  },
+  {
+    icon: UserCheck,
+    step: '07',
+    title: 'Reprise humaine',
+    desc: 'Les cas complexes (circuit, demande spéciale, client stratégique) sont flaggés et transmis au commercial pour traitement manuel.',
+    color: 'text-rose-400',
+    bg: 'bg-rose-500/10',
+  },
 ]
 
 export default function SolutionFlow() {
   return (
-    <section id="solution" className="section-padding">
-      <div className="container-neo">
-        <AnimatedSection className="text-center mb-16">
-          <SectionLabel>La solution</SectionLabel>
-          <h2 className="mt-4 text-3xl sm:text-4xl font-bold text-white leading-tight">
-            Un pipeline commercial <span className="text-gradient-blue">entièrement automatisé</span>
-          </h2>
-          <p className="mt-4 text-white/50 max-w-xl mx-auto">
-            De la première demande à la clôture, chaque étape est instrumentée, traçable et pilotable depuis le dashboard.
-          </p>
+    <section id="parcours" className="section-padding bg-neo-800 relative overflow-hidden">
+      <div className="container-neo relative z-10">
+        <AnimatedSection>
+          <div className="text-center mb-14">
+            <span className="label-tag mb-4">Le parcours</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mt-4 mb-4">
+              De la demande au suivi,{' '}
+              <span className="text-gradient-blue">7 étapes automatisées</span>
+            </h2>
+            <p className="text-white/45 text-lg max-w-xl mx-auto">
+              Voici ce que NeoTravel fait à votre place — de la réception du lead jusqu&apos;à la relance planifiée.
+            </p>
+          </div>
         </AnimatedSection>
 
-        {/* Flow */}
+        {/* Vertical timeline on mobile, 2-col grid on desktop */}
         <div className="relative">
-          {/* Connecting line desktop */}
-          <div className="hidden lg:block absolute top-8 left-0 right-0 h-0.5"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(75,142,248,0.3) 10%, rgba(75,142,248,0.3) 90%, transparent)' }} />
+          {/* Connector line (desktop) */}
+          <div className="hidden lg:block absolute top-10 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.25) 10%, rgba(37,99,235,0.25) 90%, transparent)' }} />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 lg:gap-2">
-            {STEPS.map((step, i) => (
-              <AnimatedSection key={step.num} delay={i * 0.07}>
-                <motion.div
-                  className="flex flex-col items-center text-center p-4 rounded-2xl transition-all duration-300 group cursor-default"
-                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
-                  whileHover={{
-                    background: `${step.color}0D`,
-                    borderColor: `${step.color}30`,
-                    y: -4,
-                    transition: { duration: 0.2 },
-                  }}
-                >
-                  <div className="relative mb-3">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto transition-all duration-300"
-                      style={{ background: `${step.color}15`, border: `1px solid ${step.color}30` }}>
-                      <step.icon className="w-6 h-6 transition-colors duration-300" style={{ color: step.color }} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {STEPS.slice(0, 4).map(({ icon: Icon, step, title, desc, color, bg }, i) => (
+              <AnimatedSection key={step} delay={i * 0.07}>
+                <div className="card-neo h-full">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
                     </div>
-                    <span className="absolute -top-1 -right-1 text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                      style={{ background: step.color, color: '#040C1F' }}>
-                      {i + 1}
-                    </span>
+                    <span className="text-xs font-bold text-white/20 tracking-widest">{step}</span>
                   </div>
-                  <div className="font-semibold text-white text-xs mb-1 leading-tight">{step.label}</div>
-                  <div className="text-[10px] text-white/35 leading-relaxed hidden sm:block">{step.desc}</div>
-                </motion.div>
+                  <h3 className="font-semibold text-white mb-2">{title}</h3>
+                  <p className="text-white/40 text-sm leading-relaxed">{desc}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
 
-                {/* Arrow */}
-                {i < STEPS.length - 1 && (
-                  <div className="lg:hidden flex justify-center mt-2 mb-1">
-                    <ChevronRight className="w-3 h-3 text-white/20 rotate-90" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+            {STEPS.slice(4).map(({ icon: Icon, step, title, desc, color, bg }, i) => (
+              <AnimatedSection key={step} delay={(i + 4) * 0.07}>
+                <div className="card-neo h-full">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>
+                      <Icon className={`w-4 h-4 ${color}`} />
+                    </div>
+                    <span className="text-xs font-bold text-white/20 tracking-widest">{step}</span>
                   </div>
-                )}
+                  <h3 className="font-semibold text-white mb-2">{title}</h3>
+                  <p className="text-white/40 text-sm leading-relaxed">{desc}</p>
+                </div>
               </AnimatedSection>
             ))}
           </div>
         </div>
 
-        {/* Key insight */}
-        <AnimatedSection delay={0.5} className="mt-12">
-          <div className="glass-blue rounded-2xl p-6 sm:p-8 text-center max-w-2xl mx-auto">
-            <p className="text-white/60 text-sm mb-2">Principe fondamental</p>
-            <blockquote className="text-xl sm:text-2xl font-bold text-white">
-              &ldquo;<span className="text-gradient-blue">L&apos;agent collecte et orchestre</span>,<br className="hidden sm:block" />
-              le code calcule.&rdquo;
-            </blockquote>
-            <p className="text-white/40 text-sm mt-3 max-w-md mx-auto">
-              Le chatbot guide le client et structure les données. Le calcul du prix reste entièrement déterministe — jamais délégué à une IA.
-            </p>
+        {/* Principle callout */}
+        <AnimatedSection delay={0.5}>
+          <div
+            className="mt-10 rounded-2xl px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+            style={{
+              background: 'rgba(37,99,235,0.07)',
+              border: '1px solid rgba(37,99,235,0.2)',
+            }}
+          >
+            <span className="text-2xl">⚙️</span>
+            <div>
+              <p className="font-semibold text-white mb-1">
+                &ldquo;L&apos;agent collecte et orchestre, le code calcule.&rdquo;
+              </p>
+              <p className="text-white/40 text-sm">
+                Aucune génération de prix par IA. Le calcul suit des règles métier explicites, auditables et reproductibles.
+              </p>
+            </div>
           </div>
         </AnimatedSection>
       </div>
