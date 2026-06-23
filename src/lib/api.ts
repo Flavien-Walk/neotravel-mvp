@@ -1,10 +1,20 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('neo_token')
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  const token = getToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options?.headers as Record<string, string> ?? {}),
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers })
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Erreur réseau' }))
     throw new Error(err.message || `HTTP ${res.status}`)
@@ -13,6 +23,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    me: () => request<{ id: string; nom: string; email: string; role: string }>('/api/auth/me'),
+    forgotPassword: (email: string) =>
+      request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (token: string, password: string) =>
+      request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+  },
+
   leads: {
     create: (data: unknown) =>
       request('/api/leads', { method: 'POST', body: JSON.stringify(data) }),
@@ -34,11 +52,25 @@ export const api = {
   quotes: {
     calculate: (data: unknown) =>
       request('/api/quotes/calculate', { method: 'POST', body: JSON.stringify(data) }),
+
+    send: (id: string) =>
+      request(`/api/quotes/${id}/send`, { method: 'POST' }),
+
+    remind: (id: string) =>
+      request(`/api/quotes/${id}/remind`, { method: 'POST' }),
+  },
+
+  chat: {
+    message: (message: string, currentFields: Record<string, unknown> = {}) =>
+      request('/api/chat/message', {
+        method: 'POST',
+        body: JSON.stringify({ message, currentFields }),
+      }),
   },
 
   logs: {
-    list: (leadId?: string) => {
-      const qs = leadId ? `?leadId=${leadId}` : ''
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
       return request(`/api/logs${qs}`)
     },
 

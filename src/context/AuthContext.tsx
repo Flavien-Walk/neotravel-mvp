@@ -29,7 +29,7 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null)
-const API = process.env.NEXT_PUBLIC_API_URL ?? ''
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 const DEMO_USER: AuthUser = {
   id: 'demo-001',

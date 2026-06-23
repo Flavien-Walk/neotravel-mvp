@@ -98,7 +98,7 @@ export interface Log {
   action: string
   leadId?: string
   payload?: Record<string, unknown>
-  status: 'success' | 'error' | 'info'
+  status: 'success' | 'error' | 'info' | 'warning'
   message: string
   timestamp: string
 }

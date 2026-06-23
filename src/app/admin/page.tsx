@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { RefreshCw, Search, Users, TrendingUp, CheckCircle, AlertCircle, Filter, ExternalLink, Bell } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -9,6 +10,7 @@ import { Lead, LeadStatus, LEAD_STATUS_LABELS } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import UrgencyBadge from '@/components/UrgencyBadge'
 import Logo from '@/components/brand/Logo'
+import { useAuth } from '@/context/AuthContext'
 
 const STATUS_OPTIONS: LeadStatus[] = [
   'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
@@ -16,11 +18,18 @@ const STATUS_OPTIONS: LeadStatus[] = [
 ]
 
 export default function AdminPage() {
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [search, setSearch] = useState('')
   const [stats, setStats] = useState({ total: 0, nouveau: 0, enCours: 0, accepte: 0 })
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login')
+    if (!authLoading && user && user.role === 'client') router.replace('/dashboard')
+  }, [user, authLoading, router])
 
   const fetchLeads = useCallback(async () => {
     setLoading(true)
@@ -65,6 +74,12 @@ export default function AdminPage() {
     { label: 'En pipeline', value: stats.enCours, icon: TrendingUp, color: '#818CF8', bg: 'rgba(129,140,248,0.1)' },
     { label: 'Acceptés', value: stats.accepte, icon: CheckCircle, color: '#22C55E', bg: 'rgba(34,197,94,0.1)' },
   ]
+
+  if (authLoading || !user) return (
+    <div className="min-h-screen bg-neo-900 flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-neo-blue/30 border-t-neo-blue animate-spin" />
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-neo-900 flex flex-col">

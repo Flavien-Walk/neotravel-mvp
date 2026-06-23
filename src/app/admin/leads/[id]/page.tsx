@@ -31,7 +31,7 @@ export default function LeadDetailPage() {
     try {
       const [leadData, logsData] = await Promise.all([
         api.leads.get(id) as Promise<Lead & { quote?: Quote }>,
-        api.logs.list(id) as Promise<Log[]>,
+        api.logs.list({ leadId: id }) as Promise<Log[]>,
       ])
       setLead(leadData)
       if (leadData.quote) setQuote(leadData.quote)
