@@ -7,7 +7,6 @@ import PourQuiSection from '@/components/sections/PourQuiSection'
 import ProblemSection from '@/components/sections/ProblemSection'
 import UserJourneySection from '@/components/sections/UserJourneySection'
 import SolutionFlow from '@/components/sections/SolutionFlow'
-import ReliabilitySection from '@/components/sections/ReliabilitySection'
 import CorporatePhotoSection from '@/components/sections/CorporatePhotoSection'
 import DashboardPreview from '@/components/sections/DashboardPreview'
 import MVPSection from '@/components/sections/MVPSection'
@@ -26,7 +25,6 @@ export default function HomePage() {
         <ProblemSection />
         <UserJourneySection />
         <SolutionFlow />
-        <ReliabilitySection />
         <CorporatePhotoSection />
         <DashboardPreview />
         <MVPSection />
