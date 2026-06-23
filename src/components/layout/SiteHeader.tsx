@@ -4,14 +4,16 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, ArrowRight, LayoutDashboard, LogIn } from 'lucide-react'
+import { Menu, X, ArrowRight, LayoutDashboard, LogIn, LogOut, User } from 'lucide-react'
 import Logo from '@/components/brand/Logo'
+import { useAuth } from '@/context/AuthContext'
+import { useRouter } from 'next/navigation'
 
 const NAV = [
   { href: '/#pour-qui',  label: 'Pour qui ?' },
   { href: '/#parcours',  label: 'Parcours' },
   { href: '/#fiabilite', label: 'Fiabilité' },
-  { href: '/#dashboard', label: 'Dashboard' },
+  { href: '/#faq',       label: 'FAQ' },
 ]
 
 export default function SiteHeader() {
@@ -19,6 +21,8 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const isHome = pathname === '/'
+  const { user, logout } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 24)
@@ -26,12 +30,18 @@ export default function SiteHeader() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
+  function handleLogout() {
+    logout()
+    router.push('/')
+    setOpen(false)
+  }
+
   return (
     <>
       <motion.header
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.55, ease: [0.21, 0.47, 0.32, 0.98] }}
+        transition={{ duration: 0.55, ease: [0.21, 0.47, 0.32, 0.98] as const }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
             ? 'bg-neo-900/90 backdrop-blur-xl border-b border-white/8'
@@ -58,20 +68,36 @@ export default function SiteHeader() {
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-white/55 hover:text-white rounded-lg hover:bg-white/5 transition-all"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              Connexion
-            </Link>
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 px-4 py-2 text-sm text-white/55 hover:text-white rounded-lg hover:bg-white/5 transition-all"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard
-            </Link>
+            {user ? (
+              <>
+                <span className="text-sm text-white/40 px-2 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  {user.nom}
+                </span>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm text-white/55 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  Dashboard
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/8 transition-all"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm text-white/55 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Connexion
+              </Link>
+            )}
             <Link href="/devis" className="btn-gold !px-4 !py-2 !text-sm gap-1.5">
               Demander un devis
               <ArrowRight className="w-3.5 h-3.5" />
@@ -110,20 +136,31 @@ export default function SiteHeader() {
                   {item.label}
                 </a>
               ))}
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
-              >
-                <LogIn className="w-4 h-4" /> Connexion
-              </Link>
-              <Link
-                href="/dashboard"
-                onClick={() => setOpen(false)}
-                className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
-              >
-                <LayoutDashboard className="w-4 h-4" /> Dashboard
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="w-4 h-4" /> Dashboard
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-3 text-sm text-left text-white/45 hover:text-red-400 rounded-xl hover:bg-red-500/8 transition-all flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Déconnexion
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" /> Connexion
+                </Link>
+              )}
             </nav>
             <Link href="/devis" onClick={() => setOpen(false)} className="btn-gold w-full !justify-center">
               Demander un devis <ArrowRight className="w-4 h-4" />

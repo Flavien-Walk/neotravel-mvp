@@ -8,6 +8,7 @@ import ReliabilitySection from '@/components/sections/ReliabilitySection'
 import DashboardPreview from '@/components/sections/DashboardPreview'
 import MVPSection from '@/components/sections/MVPSection'
 import FinalCTA from '@/components/sections/FinalCTA'
+import FAQSection from '@/components/sections/FAQSection'
 
 export default function HomePage() {
   return (
@@ -21,6 +22,7 @@ export default function HomePage() {
         <ReliabilitySection />
         <DashboardPreview />
         <MVPSection />
+        <FAQSection />
         <FinalCTA />
       </main>
       <SiteFooter />

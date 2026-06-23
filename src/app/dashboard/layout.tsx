@@ -21,12 +21,10 @@ function Sidebar() {
 
   return (
     <aside className="w-60 border-r border-white/8 flex flex-col h-screen sticky top-0 flex-shrink-0">
-      {/* Logo */}
       <div className="h-14 flex items-center px-5 border-b border-white/8">
         <Link href="/"><Logo size="sm" /></Link>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 p-3 flex flex-col gap-0.5 overflow-y-auto">
         {NAV.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href)
@@ -58,7 +56,6 @@ function Sidebar() {
         </div>
       </nav>
 
-      {/* User + logout */}
       <div className="p-3 border-t border-white/8">
         {user && (
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/3 mb-1">
@@ -92,17 +89,17 @@ function LoadingScreen() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, loginDemo } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!loading && !user) {
-      // Auto-login en mode démo pour faciliter la navigation
-      loginDemo()
+      router.replace('/login')
     }
-  }, [user, loading, loginDemo])
+  }, [user, loading, router])
 
   if (loading) return <LoadingScreen />
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-neo-900 text-white flex">
