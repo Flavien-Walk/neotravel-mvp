@@ -4,7 +4,7 @@ export interface ILog extends Document {
   action: string
   leadId?: Types.ObjectId
   payload?: Record<string, unknown>
-  status: 'success' | 'error' | 'info'
+  status: 'success' | 'error' | 'info' | 'warning'
   message: string
   timestamp: Date
 }
@@ -13,7 +13,7 @@ const logSchema = new Schema<ILog>({
   action:    { type: String, required: true },
   leadId:    { type: Schema.Types.ObjectId, ref: 'Lead' },
   payload:   { type: Schema.Types.Mixed },
-  status:    { type: String, enum: ['success', 'error', 'info'], default: 'info' },
+  status:    { type: String, enum: ['success', 'error', 'info', 'warning'], default: 'info' },
   message:   { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 })

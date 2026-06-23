@@ -2,11 +2,13 @@ import { Router, Request, Response } from 'express'
 import { Lead } from '../models/Lead'
 import { Quote } from '../models/Quote'
 import { Log } from '../models/Log'
+import { requireAuth } from '../middleware/requireAuth'
+import { sendLeadReceivedEmail, sendNewLeadInternalEmail } from '../services/email/emailService'
 
 const router = Router()
 
-// GET /api/leads
-router.get('/', async (req: Request, res: Response) => {
+// GET /api/leads — protégé (dashboard commercial)
+router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const filter: Record<string, unknown> = {}
     if (req.query.statut) filter.statut = req.query.statut
@@ -17,8 +19,8 @@ router.get('/', async (req: Request, res: Response) => {
   }
 })
 
-// GET /api/leads/:id
-router.get('/:id', async (req: Request, res: Response) => {
+// GET /api/leads/:id — protégé
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const lead = await Lead.findById(req.params.id).lean()
     if (!lead) {
@@ -32,7 +34,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 })
 
-// POST /api/leads
+// POST /api/leads — public (client crée sa demande)
 router.post('/', async (req: Request, res: Response) => {
   try {
     const lead = new Lead(req.body)
@@ -42,9 +44,13 @@ router.post('/', async (req: Request, res: Response) => {
       action: 'LEAD_CREATED',
       leadId: lead._id,
       status: 'success',
-      message: `Nouveau lead reçu de ${lead.nom} (${lead.email}) — score ${lead.score_completude}%`,
+      message: `Nouveau lead : ${lead.nom} (${lead.email}) — ${lead.depart} → ${lead.destination} — score ${lead.score_completude}%`,
       payload: { email: lead.email, depart: lead.depart, destination: lead.destination },
     })
+
+    // Emails non bloquants
+    sendLeadReceivedEmail(lead).catch(() => {})
+    sendNewLeadInternalEmail(lead).catch(() => {})
 
     res.status(201).json(lead)
   } catch (err: unknown) {
@@ -53,8 +59,8 @@ router.post('/', async (req: Request, res: Response) => {
   }
 })
 
-// PATCH /api/leads/:id/status
-router.patch('/:id/status', async (req: Request, res: Response) => {
+// PATCH /api/leads/:id/status — protégé
+router.patch('/:id/status', requireAuth, async (req: Request, res: Response) => {
   try {
     const { statut } = req.body
     if (!statut) {

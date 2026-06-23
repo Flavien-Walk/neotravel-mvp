@@ -31,12 +31,16 @@ export interface DevisResult {
   prix_ttc: number
   lignes_calcul: LigneCalcul[]
   coefficients: Record<string, number>
+  warnings: string[]
+  besoin_reprise_humaine: boolean
+  raison_reprise_humaine: string | null
 }
 
 export interface DevisError {
   success: false
   error: string
-  needs_human_review?: boolean
+  besoin_reprise_humaine: boolean
+  raison_reprise_humaine: string | null
 }
 
 // ─── Table de distances mockées [MOCK MVP] ───────────────────────────────────
@@ -112,7 +116,6 @@ function valider(input: DevisInput): string | null {
   if (!input.date_depart)          return 'Date de départ manquante.'
   if (input.nb_passagers === undefined || input.nb_passagers === null) return 'Nombre de passagers manquant.'
   if (input.nb_passagers === 0)    return 'Le nombre de passagers ne peut pas être 0.'
-  if (input.nb_passagers > 85)     return `${input.nb_passagers} passagers dépasse la capacité maximale (85). Contactez-nous pour les grands groupes.`
   if (input.nb_passagers < 1)      return 'Le nombre de passagers doit être un entier positif.'
 
   if (input.date_retour) {
@@ -131,7 +134,7 @@ export function calculer_devis(input: DevisInput): DevisResult | DevisError {
   // 1. Validation
   const errValidation = valider(input)
   if (errValidation) {
-    return { success: false, error: errValidation }
+    return { success: false, error: errValidation, besoin_reprise_humaine: false, raison_reprise_humaine: null }
   }
 
   // 2. Distance
@@ -140,8 +143,32 @@ export function calculer_devis(input: DevisInput): DevisResult | DevisError {
     return {
       success: false,
       error: `Trajet "${input.depart} → ${input.destination}" hors zone ou distance à valider. Ce cas nécessite une reprise humaine.`,
-      needs_human_review: true,
+      besoin_reprise_humaine: true,
+      raison_reprise_humaine: `Distance inconnue pour "${input.depart} → ${input.destination}"`,
     }
+  }
+
+  const warnings: string[] = []
+  let besoin_reprise_humaine = false
+  let raison_reprise_humaine: string | null = null
+
+  // Détection reprise humaine
+  if (input.nb_passagers > 85) {
+    besoin_reprise_humaine = true
+    raison_reprise_humaine = `Groupe de ${input.nb_passagers} passagers dépasse la capacité standard (85). Contactez-nous pour les grands groupes.`
+  }
+  if (input.type_trajet === 'circuit') {
+    besoin_reprise_humaine = true
+    raison_reprise_humaine = raison_reprise_humaine ?? 'Circuit multi-étapes — validation humaine recommandée'
+  }
+  if (input.urgence === 'tres_urgent') {
+    warnings.push('Demande très urgente — le prix inclut une majoration de 30%.')
+  }
+  if (input.nb_passagers > 50) {
+    warnings.push('Grand groupe (>50 pax) — vérification capacité autocar recommandée.')
+  }
+  if (input.options?.includes('hostesse')) {
+    warnings.push('Hôtesse : disponibilité à confirmer selon le prestataire.')
   }
 
   // 3. Calcul ligne par ligne
@@ -226,5 +253,8 @@ export function calculer_devis(input: DevisInput): DevisResult | DevisError {
     prix_ttc,
     lignes_calcul: lignes,
     coefficients,
+    warnings,
+    besoin_reprise_humaine,
+    raison_reprise_humaine,
   }
 }
