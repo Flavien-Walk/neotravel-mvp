@@ -2,30 +2,30 @@ import AnimatedSection from '@/components/ui/AnimatedSection'
 import { CheckCircle2, Circle } from 'lucide-react'
 
 const DONE = [
-  'Inscription / connexion / déconnexion (auth JWT réelle)',
-  'Protection des routes dashboard par token Bearer',
-  'Mot de passe oublié + réinitialisation par email',
+  'Création de compte et connexion sécurisée',
+  'Accès dashboard protégé par compte commercial',
+  'Réinitialisation du mot de passe par email',
   'Formulaire guidé de demande (étape par étape)',
-  'Stockage des leads en base MongoDB Atlas',
-  'Scoring de complétude et qualification automatique',
+  'Enregistrement des leads en base de données',
+  'Score de complétude calculé automatiquement',
   'Calcul déterministe du devis (distance, durée, coefficients)',
-  'Détail devis avec lignes de calcul et coefficients',
-  'Changement de statut (nouveau → qualifié → devis_genere → envoyé)',
-  'Envoi devis client par email Brevo (email réel)',
-  'Envoi relance par email Brevo (email réel)',
-  'Dashboard commercial avec filtres, recherche, stats',
-  'Logs horodatés de chaque action (EMAIL_SENT, QUOTE_GENERATED…)',
-  'Reprise humaine : passage en cas_complexe + log HUMAN_HANDOFF',
-  'Page confirmation post-devis (/merci)',
+  'Détail du devis avec lignes de calcul explicites',
+  'Changement de statut tout au long du cycle de vie',
+  'Envoi du devis par email au client',
+  'Relance email si pas de réponse',
+  'Dashboard commercial avec filtres, recherche, indicateurs',
+  'Historique de chaque action (email envoyé, devis calculé…)',
+  'Reprise humaine : passage en cas complexe et log d\'escalade',
+  'Page de confirmation après soumission du formulaire',
 ]
 
 const NEXT = [
-  'Intégration API géocodage réelle (distances kilométriques précises)',
-  'Matching autocaristes partenaires (attribution automatique)',
+  'Distances kilométriques réelles via API géocodage',
+  'Matching automatique avec les autocaristes partenaires',
   'Signature électronique du devis (DocuSign / Yousign)',
-  'CRM complet multi-rôles (admin / commercial / client)',
-  'Paiement et facturation',
-  'Notifications push et relances automatisées (cron)',
+  'Espace client pour suivre sa demande',
+  'Paiement et facturation intégrés',
+  'Relances automatisées planifiées (cron)',
 ]
 
 export default function MVPSection() {
@@ -36,12 +36,12 @@ export default function MVPSection() {
       <div className="container-neo relative z-10">
         <AnimatedSection>
           <div className="text-center mb-12">
-            <span className="label-tag-dark mb-4">Ce que fait le prototype</span>
+            <span className="label-tag-dark mb-4">Ce que fait le produit</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mt-4 mb-4">
-              Un MVP fonctionnel, pas une démo vide.
+              Disponible maintenant — pas une démo vide.
             </h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-              Voici exactement ce que vous pouvez tester aujourd&apos;hui — et ce qui sera disponible
+              Voici exactement ce que vous pouvez utiliser aujourd&apos;hui — et ce qui arrivera
               dans les prochaines itérations.
             </p>
           </div>
@@ -71,7 +71,7 @@ export default function MVPSection() {
             <div className="card-light-flat h-full" style={{ borderColor: '#E0E7FF' }}>
               <div className="flex items-center gap-2 mb-5">
                 <Circle className="w-5 h-5 text-slate-300" />
-                <h3 className="font-bold text-slate-900 text-lg">Prochaines itérations</h3>
+                <h3 className="font-bold text-slate-900 text-lg">Prochaines évolutions</h3>
               </div>
               <ul className="space-y-3">
                 {NEXT.map(item => (
@@ -82,8 +82,8 @@ export default function MVPSection() {
                 ))}
               </ul>
               <p className="mt-6 text-xs text-slate-400 border-t border-slate-100 pt-4">
-                Ces fonctionnalités ne sont pas encore implémentées et ne sont pas promises dans le MVP.
-                Le prototype est honnête sur ce qu&apos;il fait.
+                Ces fonctionnalités ne sont pas encore disponibles.
+                Le produit est honnête sur ce qu&apos;il fait.
               </p>
             </div>
           </AnimatedSection>

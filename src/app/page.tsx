@@ -3,12 +3,13 @@ import SiteFooter from '@/components/layout/SiteFooter'
 import HeroSection from '@/components/sections/HeroSection'
 import PourQuiSection from '@/components/sections/PourQuiSection'
 import ProblemSection from '@/components/sections/ProblemSection'
+import UserJourneySection from '@/components/sections/UserJourneySection'
 import SolutionFlow from '@/components/sections/SolutionFlow'
 import ReliabilitySection from '@/components/sections/ReliabilitySection'
 import DashboardPreview from '@/components/sections/DashboardPreview'
 import MVPSection from '@/components/sections/MVPSection'
-import FinalCTA from '@/components/sections/FinalCTA'
 import FAQSection from '@/components/sections/FAQSection'
+import FinalCTA from '@/components/sections/FinalCTA'
 
 export default function HomePage() {
   return (
@@ -18,6 +19,7 @@ export default function HomePage() {
         <HeroSection />
         <PourQuiSection />
         <ProblemSection />
+        <UserJourneySection />
         <SolutionFlow />
         <ReliabilitySection />
         <DashboardPreview />

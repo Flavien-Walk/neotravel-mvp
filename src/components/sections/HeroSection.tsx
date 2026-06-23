@@ -53,7 +53,7 @@ export default function HeroSection() {
             <motion.div variants={item}>
               <span className="label-tag mb-7">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                Prototype opérationnel · Transport de groupe
+                Transport de groupe · Disponible maintenant
               </span>
             </motion.div>
 

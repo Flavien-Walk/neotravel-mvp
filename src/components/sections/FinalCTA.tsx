@@ -20,7 +20,7 @@ export default function FinalCTA() {
         <AnimatedSection>
           <span className="label-tag mb-6 inline-flex">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            Prototype opérationnel
+            Disponible maintenant
           </span>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-5 leading-tight">

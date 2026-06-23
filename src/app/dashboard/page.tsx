@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Users, Clock, Bell, CheckCircle, TrendingUp, RefreshCw, ExternalLink, Search, Filter, AlertCircle } from 'lucide-react'
+import { Users, Clock, Bell, CheckCircle, TrendingUp, RefreshCw, ExternalLink, Search, Filter, AlertCircle, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus, LEAD_STATUS_LABELS } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
@@ -61,7 +61,7 @@ export default function DashboardPage() {
     setRelancing(id)
     try {
       await api.leads.updateStatus(id, 'relance_1')
-      await api.logs.create({ action: 'relance_simulee', leadId: id, status: 'success', message: 'Relance simulée depuis le dashboard' })
+      await api.logs.create({ action: 'RELANCE_EMAIL', leadId: id, status: 'success', message: 'Relance envoyée depuis le dashboard' })
       await fetchLeads()
     } catch {}
     setRelancing(null)
@@ -111,6 +111,37 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* À traiter maintenant */}
+      {!loading && (() => {
+        const urgents    = leads.filter(l => l.urgence === 'urgent' && !['accepte','refuse','cloture'].includes(l.statut))
+        const incomplets = leads.filter(l => l.statut === 'incomplet')
+        const aRelancer  = leads.filter(l => ['devis_envoye','relance_1'].includes(l.statut))
+        const aEnvoyer   = leads.filter(l => l.statut === 'devis_genere')
+        const items = [
+          urgents.length    > 0 && { label: `${urgents.length} lead${urgents.length>1?'s':''} urgent${urgents.length>1?'s':''}`,     color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+          incomplets.length > 0 && { label: `${incomplets.length} demande${incomplets.length>1?'s':''} incomplète${incomplets.length>1?'s':''}`, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+          aEnvoyer.length   > 0 && { label: `${aEnvoyer.length} devis à envoyer`,                                                    color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+          aRelancer.length  > 0 && { label: `${aRelancer.length} relance${aRelancer.length>1?'s':''} à envoyer`,                    color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
+        ].filter(Boolean) as { label: string; color: string }[]
+
+        if (items.length === 0) return null
+        return (
+          <div className="mb-6 rounded-2xl border border-white/8 px-5 py-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-semibold text-white">À traiter maintenant</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {items.map(({ label, color }) => (
+                <span key={label} className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-medium border ${color}`}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
@@ -205,7 +236,7 @@ export default function DashboardPage() {
                 onClick={() => handleRelance(lead._id)}
                 disabled={relancing === lead._id}
                 className="p-1.5 rounded-lg text-white/30 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
-                title="Simuler une relance"
+                title="Envoyer une relance"
               >
                 <Bell className={`w-3.5 h-3.5 ${relancing === lead._id ? 'animate-pulse' : ''}`} />
               </button>
