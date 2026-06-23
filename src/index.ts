@@ -10,10 +10,17 @@ const app = express()
 const PORT = process.env.PORT || 4000
 
 // Middleware
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [
+      process.env.FRONTEND_URL,
+      /\.vercel\.app$/,
+    ].filter(Boolean)
+  : '*'
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://neotravel-mvp.vercel.app', /\.vercel\.app$/]
-    : '*',
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-admin-secret'],
 }))
 app.use(express.json({ limit: '1mb' }))
 
