@@ -112,13 +112,19 @@ export function tplLeadReceived(lead: ILead): { subject: string; html: string; t
     </div>
     ${p('Un conseiller NeoTravel va qualifier votre demande et vous enverra un devis dans les <strong>2 heures ouvrées</strong>.')}
     ${p('Ce devis est entièrement <strong>gratuit et sans engagement</strong>.')}
+    ${lead.trackingToken ? btn('Suivre ma demande en temps réel', `${FRONTEND_URL}/suivi/${lead.trackingToken}`) : ''}
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin:16px 0;">
+      <p style="margin:0;font-size:13px;color:#166534;">
+        <strong>Suivi sans compte :</strong> vous pouvez consulter l'avancement de votre dossier à tout moment via le lien ci-dessus, sans créer de compte.
+      </p>
+    </div>
     ${divider()}
     ${p('En cas de question, répondez directement à cet email ou contactez <a href="mailto:commercial@neotravel.fr" style="color:#2563eb;">commercial@neotravel.fr</a>.', '#64748b')}
   `
   return {
     subject: `Votre demande ${lead.depart} → ${lead.destination} a bien été reçue`,
     html: layout('Demande reçue', body),
-    text: `Votre demande NeoTravel (${lead.depart} → ${lead.destination}, ${lead.nb_passagers} pax) est bien enregistrée. Réponse sous 2h ouvrées.`,
+    text: `Votre demande NeoTravel (${lead.depart} → ${lead.destination}, ${lead.nb_passagers} pax) est bien enregistrée. Réponse sous 2h ouvrées.${lead.trackingToken ? ` Suivez votre demande : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : ''}`,
   }
 }
 
@@ -172,8 +178,9 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
     ${p(`Voici votre devis pour le trajet <strong>${lead.depart} → ${lead.destination}</strong> (${lead.nb_passagers} passagers) :`)}
 
     <div style="background:#f0f5ff;border-radius:12px;padding:20px 24px;margin:16px 0;">
-      <div style="font-size:32px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_ttc)}</div>
-      <div style="color:#64748b;font-size:13px;">TTC · dont ${fmt(quote.prix_ht)} HT + ${fmt(quote.tva)} TVA (10%)</div>
+      <div style="font-size:32px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_final_ttc || quote.prix_ttc)}</div>
+      <div style="color:#64748b;font-size:13px;">TTC · dont ${fmt(quote.prix_final_ht || quote.prix_ht)} HT + ${fmt(quote.tva)} TVA (10%)</div>
+      ${quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0 ? `<div style="color:#92400e;font-size:12px;margin-top:6px;">Dont ajustement commercial : ${fmt(quote.ajustement_manuel_ht)} HT${quote.raison_ajustement ? ` (${quote.raison_ajustement})` : ''}</div>` : ''}
     </div>
 
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0;">
@@ -181,14 +188,15 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
     </table>
 
     ${divider()}
+    ${p('<strong>Note de calcul :</strong> Ce devis est calculé par un moteur déterministe basé sur des règles métier explicites, et non par une IA. Il est vérifiable et traçable.', '#64748b')}
     ${p('Ce devis est <strong>gratuit et sans engagement</strong>. Pour l\'accepter ou demander des précisions, répondez directement à cet email.')}
+    ${lead.trackingToken ? btn('Suivre mon dossier en ligne', `${FRONTEND_URL}/suivi/${lead.trackingToken}`) : btn('Contacter un conseiller', 'mailto:commercial@neotravel.fr')}
     ${p('Un conseiller NeoTravel prend en charge les demandes spéciales ou les groupes de grande taille.', '#64748b')}
-    ${btn('Contacter un conseiller', `mailto:commercial@neotravel.fr`)}
   `
   return {
-    subject: `Votre devis NeoTravel — ${lead.depart} → ${lead.destination} — ${fmt(quote.prix_ttc)} TTC`,
+    subject: `Votre devis NeoTravel — ${lead.depart} → ${lead.destination} — ${fmt(quote.prix_final_ttc || quote.prix_ttc)} TTC`,
     html: layout('Votre devis', body),
-    text: `Votre devis NeoTravel pour ${lead.depart} → ${lead.destination} : ${fmt(quote.prix_ttc)} TTC. Gratuit et sans engagement. Contactez commercial@neotravel.fr pour accepter ou modifier.`,
+    text: `Votre devis NeoTravel pour ${lead.depart} → ${lead.destination} : ${fmt(quote.prix_final_ttc || quote.prix_ttc)} TTC. Gratuit et sans engagement.${lead.trackingToken ? ` Suivez votre dossier : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : ''}`,
   }
 }
 

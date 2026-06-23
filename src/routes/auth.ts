@@ -17,8 +17,8 @@ const router = Router()
 const JWT_SECRET      = process.env.JWT_SECRET || 'fallback-dev-secret'
 const JWT_EXPIRES_IN  = process.env.JWT_EXPIRES_IN || '7d'
 
-function signToken(userId: string): string {
-  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions)
+function signToken(userId: string, role: string): string {
+  return jwt.sign({ sub: userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions)
 }
 
 // ─── Schemas de validation ────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ router.post('/register', async (req: Request, res: Response) => {
     // Email de bienvenue (non bloquant)
     sendWelcomeEmail(user).catch(() => {})
 
-    const token = signToken(String(user._id))
+    const token = signToken(String(user._id), user.role)
     res.status(201).json({
       token,
       user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
@@ -115,7 +115,7 @@ router.post('/login', async (req: Request, res: Response) => {
       message: `Connexion réussie : ${user.email}`,
     })
 
-    const token = signToken(String(user._id))
+    const token = signToken(String(user._id), user.role)
     res.json({
       token,
       user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
@@ -213,6 +213,85 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     res.json({ message: 'Mot de passe mis à jour avec succès. Vous pouvez maintenant vous connecter.' })
   } catch {
     res.status(500).json({ message: 'Erreur serveur' })
+  }
+})
+
+// ─── PATCH /api/auth/me ──────────────────────────────────────────────────────
+
+router.patch('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+  const schema = z.object({
+    nom:          z.string().min(2).max(80).optional(),
+    email:        z.string().email().optional(),
+    organisation: z.string().max(120).optional(),
+  })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() })
+    return
+  }
+
+  try {
+    const updates = parsed.data
+    if (updates.email) {
+      const exists = await User.findOne({ email: updates.email, _id: { $ne: req.userId } })
+      if (exists) { res.status(409).json({ message: 'Cette adresse email est déjà utilisée.' }); return }
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-passwordHash -resetPasswordToken -resetPasswordExpires')
+
+    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+
+    await Log.create({
+      action: 'USER_PROFILE_UPDATED',
+      status: 'success',
+      message: `Profil mis à jour : ${user.email}`,
+      payload: updates,
+    }).catch(() => {})
+
+    res.json({ id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur mise à jour profil', error: String(err) })
+  }
+})
+
+// ─── PATCH /api/auth/password ────────────────────────────────────────────────
+
+router.patch('/password', requireAuth, async (req: AuthRequest, res: Response) => {
+  const schema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword:     z.string().min(8).max(100),
+  })
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() })
+    return
+  }
+
+  try {
+    const user = await User.findById(req.userId)
+    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+
+    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash)
+    if (!valid) { res.status(401).json({ message: 'Mot de passe actuel incorrect.' }); return }
+
+    user.passwordHash = await bcrypt.hash(parsed.data.newPassword, 12)
+    await user.save()
+
+    await Log.create({
+      action: 'USER_PASSWORD_UPDATED',
+      status: 'success',
+      message: `Mot de passe modifié : ${user.email}`,
+    }).catch(() => {})
+
+    sendPasswordChangedEmail(user).catch(() => {})
+
+    res.json({ message: 'Mot de passe modifié avec succès.' })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur changement mot de passe', error: String(err) })
   }
 })
 
