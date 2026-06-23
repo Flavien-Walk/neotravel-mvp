@@ -1,4 +1,5 @@
 import SiteHeader from '@/components/layout/SiteHeader'
+import AuthRedirect from '@/components/ui/AuthRedirect'
 import SiteFooter from '@/components/layout/SiteFooter'
 import HeroSection from '@/components/sections/HeroSection'
 import PourQuiSection from '@/components/sections/PourQuiSection'
@@ -14,6 +15,7 @@ import FinalCTA from '@/components/sections/FinalCTA'
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <AuthRedirect />
       <SiteHeader />
       <main className="flex-1">
         <HeroSection />

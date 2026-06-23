@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, LayoutDashboard, Users, Clock, CheckCircle } from 'lucide-react'
+import { ArrowRight, Users, Clock, CheckCircle } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
@@ -71,9 +71,9 @@ export default function HeroSection() {
                 Demander un devis
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="/login" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
-                <LayoutDashboard className="w-4 h-4" />
-                Accéder au dashboard
+              <Link href="/register" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
+                Créer un compte
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </motion.div>
 

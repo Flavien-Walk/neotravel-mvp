@@ -3,17 +3,17 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Loader2, LogIn } from 'lucide-react'
+import { Loader2, LogIn } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import Logo from '@/components/brand/Logo'
 
 export default function LoginPage() {
-  const { login, loginDemo } = useAuth()
+  const { login } = useAuth()
   const router = useRouter()
-  const [email, setEmail]     = useState('')
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]     = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -23,12 +23,6 @@ export default function LoginPage() {
     const res = await login(email, password)
     setLoading(false)
     if (res.error) { setError(res.error); return }
-    router.replace('/dashboard')
-  }
-
-  async function handleDemo() {
-    setLoading(true)
-    await loginDemo()
     router.replace('/dashboard')
   }
 
@@ -50,7 +44,7 @@ export default function LoginPage() {
         <div className="card-premium !p-8">
           <h1 className="text-xl font-bold text-white mb-1">Connexion</h1>
           <p className="text-white/40 text-sm mb-7">
-            Accédez au dashboard NeoTravel.
+            Accédez à votre espace commercial NeoTravel.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,6 +57,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 autoComplete="email"
+                autoFocus
               />
             </div>
             <div>
@@ -98,24 +93,6 @@ export default function LoginPage() {
               Se connecter
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-5">
-            <div className="divider flex-1" />
-            <span className="text-white/25 text-xs">ou</span>
-            <div className="divider flex-1" />
-          </div>
-
-          {/* Demo button */}
-          <button
-            onClick={handleDemo}
-            disabled={loading}
-            className="btn-ghost w-full !justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Mode démo — accès immédiat
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
 
           <p className="text-center text-white/30 text-xs mt-6">
             Pas encore de compte ?{' '}
