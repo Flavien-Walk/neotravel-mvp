@@ -3,7 +3,8 @@ import AnimatedSection from '@/components/ui/AnimatedSection'
 
 const CLIENTS = [
   {
-    img: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&q=75',
+    // Autocar sur autoroute + équipe corporate en réunion
+    img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
     tag: 'Entreprises',
     title: 'Séminaires & événements pro',
     desc: 'Séminaires, team buildings, conventions, transferts aéroport. Vous avez besoin d\'un autocar fiable, d\'un devis rapide et d\'une facturation propre.',
@@ -11,7 +12,8 @@ const CLIENTS = [
     accent: 'from-blue-500/30 to-blue-900/60',
   },
   {
-    img: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=75',
+    // Flotte d'autocars stationnés
+    img: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80',
     tag: 'Collectivités',
     title: 'Mairies & institutions',
     desc: 'Événements municipaux, sorties institutionnelles, transports de seniors. Nous gérons le dossier, vous validez le devis.',
@@ -19,7 +21,8 @@ const CLIENTS = [
     accent: 'from-indigo-500/30 to-indigo-900/60',
   },
   {
-    img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&q=75',
+    // Autocar jaune scolaire / jeunes en excursion
+    img: 'https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=600&q=80',
     tag: 'Établissements scolaires',
     title: 'Sorties & voyages scolaires',
     desc: 'Voyages de fin d\'année, sorties culturelles, classes découverte. Transport sécurisé, devis conforme aux procédures administratives.',
@@ -27,7 +30,8 @@ const CLIENTS = [
     accent: 'from-emerald-500/30 to-emerald-900/60',
   },
   {
-    img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&q=75',
+    // Autocar charter / bus de club sportif
+    img: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80',
     tag: 'Associations & clubs',
     title: 'Sport & culture',
     desc: 'Déplacements pour compétitions, tournois, weekends culturels ou pèlerinages. On s\'occupe de la logistique, vous vous concentrez sur l\'événement.',
@@ -35,7 +39,8 @@ const CLIENTS = [
     accent: 'from-violet-500/30 to-violet-900/60',
   },
   {
-    img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=75',
+    // Autocar de voyage touristique / luxe
+    img: 'https://images.unsplash.com/photo-1566087140622-e9b7a71ffff7?w=600&q=80',
     tag: 'Groupes privés',
     title: 'Mariages & événements',
     desc: 'Mariage, EVJF/EVG, anniversaire, réunion de famille. Un autocar privatisé, un chauffeur professionnel, aucune contrainte de stationnement.',

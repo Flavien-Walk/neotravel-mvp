@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight, Users, Clock, CheckCircle } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
@@ -23,6 +24,24 @@ const METRICS = [
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-16 bg-gradient-hero">
+      {/* Background photo de bus (bas-gauche) */}
+      <div className="absolute bottom-0 left-0 w-[480px] h-[280px] pointer-events-none hidden lg:block">
+        <Image
+          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=70"
+          alt="Autocar de transport de groupe"
+          fill
+          className="object-cover object-right-top"
+          priority={false}
+        />
+        {/* Dégradé pour fondre dans le fond */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to right, transparent 0%, #030D20 70%), linear-gradient(to top, transparent 0%, #030D20 55%)',
+          }}
+        />
+      </div>
+
       {/* Background grid */}
       <div className="absolute inset-0 bg-grid-dark opacity-40" />
       {/* Blue glow top */}
