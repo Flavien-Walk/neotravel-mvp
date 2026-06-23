@@ -3,18 +3,17 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Users, ScrollText, Settings, LogOut, ChevronRight } from 'lucide-react'
+import { FileText, PlusCircle, Settings, LogOut, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import Logo from '@/components/brand/Logo'
 
 const NAV = [
-  { href: '/dashboard',          label: 'Vue d\'ensemble', icon: LayoutDashboard, exact: true  },
-  { href: '/dashboard/leads',    label: 'Leads',           icon: Users,           exact: false },
-  { href: '/dashboard/logs',     label: 'Logs',            icon: ScrollText,      exact: false },
-  { href: '/dashboard/settings', label: 'Paramètres',      icon: Settings,        exact: false },
+  { href: '/client',          label: 'Mes demandes',   icon: FileText,   exact: true  },
+  { href: '/devis',           label: 'Nouvelle demande', icon: PlusCircle, exact: true  },
+  { href: '/client/settings', label: 'Mon compte',     icon: Settings,   exact: false },
 ]
 
-function Sidebar() {
+function ClientSidebar() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
   const router   = useRouter()
@@ -44,8 +43,6 @@ function Sidebar() {
             </Link>
           )
         })}
-
-        {/* Lien retiré — le commercial ne saisit pas lui-même les demandes */}
       </nav>
 
       <div className="p-3 border-t border-white/8">
@@ -56,7 +53,7 @@ function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-white truncate">{user.nom}</div>
-              <div className="text-[10px] text-white/35 truncate capitalize">{user.role}</div>
+              <div className="text-[10px] text-white/35">Compte client</div>
             </div>
           </div>
         )}
@@ -72,29 +69,27 @@ function Sidebar() {
   )
 }
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen bg-neo-900 flex items-center justify-center">
-      <div className="w-8 h-8 rounded-full border-2 border-neo-blue/30 border-t-neo-blue animate-spin" />
-    </div>
-  )
-}
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login')
-    if (!loading && user && user.role === 'client') router.replace('/client')
+    if (!loading && user && user.role !== 'client') router.replace('/dashboard')
   }, [user, loading, router])
 
-  if (loading) return <LoadingScreen />
-  if (!user) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neo-900 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-neo-blue/30 border-t-neo-blue animate-spin" />
+      </div>
+    )
+  }
+  if (!user || user.role !== 'client') return null
 
   return (
     <div className="min-h-screen bg-neo-900 text-white flex">
-      <Sidebar />
+      <ClientSidebar />
       <main className="flex-1 min-w-0 overflow-auto">
         {children}
       </main>

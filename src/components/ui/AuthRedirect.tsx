@@ -14,7 +14,7 @@ export default function AuthRedirect() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/dashboard')
+      router.replace(user.role === 'client' ? '/client' : '/dashboard')
     }
   }, [user, loading, router])
 

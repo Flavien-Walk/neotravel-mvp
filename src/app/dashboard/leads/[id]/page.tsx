@@ -7,10 +7,11 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Calculator, Bell, UserCheck, RefreshCw,
   CheckCircle, Activity, MapPin, Users, Calendar,
-  Send, Mail, AlertTriangle, XCircle, X,
+  Send, Mail, AlertTriangle, XCircle, X, Edit2, Save,
+  Info, ChevronDown, ChevronUp, Euro,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS } from '@/types'
+import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import UrgencyBadge from '@/components/UrgencyBadge'
 
@@ -26,6 +27,13 @@ const LOG_DOT: Record<string, string> = {
   warning: 'bg-amber-400',
 }
 
+const SOURCE_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  regle_documentee: { label: 'Règle documentée',  color: 'text-green-400  bg-green-500/10  border-green-500/20'  },
+  mock_mvp:         { label: 'Estimation MVP',     color: 'text-amber-400  bg-amber-500/10  border-amber-500/20'  },
+  hypothese_mvp:    { label: 'Hypothèse MVP',      color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
+  a_definir:        { label: 'À affiner',          color: 'text-white/35   bg-white/5       border-white/10'      },
+}
+
 export default function DashboardLeadDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -34,10 +42,15 @@ export default function DashboardLeadDetailPage() {
   const [quote, setQuote]     = useState<Quote | null>(null)
   const [logs, setLogs]       = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
-  const [calculating, setCalc] = useState(false)
-  const [sending, setSending]  = useState(false)
-  const [reminding, setRemind] = useState(false)
-  const [actionMsg, setMsg]    = useState<{ text: string; ok: boolean } | null>(null)
+  const [calculating, setCalc]    = useState(false)
+  const [sending, setSending]     = useState(false)
+  const [reminding, setRemind]    = useState(false)
+  const [editingQuote, setEditQ]  = useState(false)
+  const [adjAmount, setAdjAmount] = useState('')
+  const [adjReason, setAdjReason] = useState('')
+  const [savingAdj, setSavingAdj] = useState(false)
+  const [showSources, setShowSrc] = useState(false)
+  const [actionMsg, setMsg]       = useState<{ text: string; ok: boolean } | null>(null)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -46,7 +59,11 @@ export default function DashboardLeadDetailPage() {
         api.logs.list({ leadId: id }) as Promise<Log[]>,
       ])
       setLead(leadData)
-      if (leadData.quote) setQuote(leadData.quote)
+      if (leadData.quote) {
+        setQuote(leadData.quote)
+        setAdjAmount(String(leadData.quote.ajustement_manuel_ht ?? 0))
+        setAdjReason(leadData.quote.raison_ajustement ?? '')
+      }
       setLogs(logsData)
     } catch {
       router.push('/dashboard')
@@ -68,12 +85,35 @@ export default function DashboardLeadDetailPage() {
     try {
       const q = await api.quotes.calculate({ leadId: lead._id }) as Quote
       setQuote(q)
+      setAdjAmount('0')
+      setAdjReason('')
       await fetchAll()
       flash('Devis calculé avec succès.', true)
+      if (q.besoin_reprise_humaine) {
+        flash(`⚠ Reprise humaine : ${q.raison_reprise_humaine}`, false)
+      }
     } catch (e: unknown) {
       flash((e as Error).message || 'Erreur calcul devis', false)
     }
     setCalc(false)
+  }
+
+  async function saveAdjustment() {
+    if (!quote) return
+    setSavingAdj(true)
+    try {
+      const updated = await api.quotes.update(quote._id, {
+        ajustement_manuel_ht: Number(adjAmount) || 0,
+        raison_ajustement: adjReason,
+      }) as Quote
+      setQuote(updated)
+      setEditQ(false)
+      await fetchAll()
+      flash('Devis modifié.', true)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur modification devis', false)
+    }
+    setSavingAdj(false)
   }
 
   async function sendQuote() {
@@ -108,9 +148,7 @@ export default function DashboardLeadDetailPage() {
       await api.leads.updateStatus(lead._id, 'cas_complexe')
       await fetchAll()
       flash('Dossier transmis pour reprise humaine.', true)
-    } catch {
-      flash('Erreur mise à jour statut', false)
-    }
+    } catch { flash('Erreur mise à jour statut', false) }
   }
 
   async function markAccepted() {
@@ -119,9 +157,7 @@ export default function DashboardLeadDetailPage() {
       await api.leads.updateStatus(lead._id, 'accepte')
       await fetchAll()
       flash('Dossier marqué comme accepté.', true)
-    } catch {
-      flash('Erreur mise à jour statut', false)
-    }
+    } catch { flash('Erreur mise à jour statut', false) }
   }
 
   async function markRefused() {
@@ -130,9 +166,7 @@ export default function DashboardLeadDetailPage() {
       await api.leads.updateStatus(lead._id, 'refuse')
       await fetchAll()
       flash('Dossier marqué comme refusé.', true)
-    } catch {
-      flash('Erreur mise à jour statut', false)
-    }
+    } catch { flash('Erreur mise à jour statut', false) }
   }
 
   async function closeLead() {
@@ -141,9 +175,7 @@ export default function DashboardLeadDetailPage() {
       await api.leads.updateStatus(lead._id, 'cloture')
       await fetchAll()
       flash('Dossier clôturé.', true)
-    } catch {
-      flash('Erreur mise à jour statut', false)
-    }
+    } catch { flash('Erreur mise à jour statut', false) }
   }
 
   if (loading) {
@@ -158,13 +190,17 @@ export default function DashboardLeadDetailPage() {
 
   const canSend    = quote && ['devis_genere'].includes(lead.statut)
   const canRemind  = quote && ['devis_envoye', 'relance_1'].includes(lead.statut)
+  const finalTtc   = quote ? (quote.prix_final_ttc || quote.prix_ttc) : 0
+  const finalHt    = quote ? (quote.prix_final_ht  || quote.prix_ht)  : 0
+  const hasAdj     = quote && quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0
+  const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
 
   return (
     <div className="p-6 sm:p-8">
       {/* Flash message */}
       {actionMsg && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           className={`mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2 ${
             actionMsg.ok ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'
           }`}
@@ -252,34 +288,53 @@ export default function DashboardLeadDetailPage() {
                 <p className="text-white/60 text-sm">{lead.commentaire}</p>
               </div>
             )}
+            {lead.trackingToken && (
+              <div className="mt-4 pt-4 border-t border-white/6 flex items-center gap-2 text-xs text-white/30">
+                <span>Lien de suivi client :</span>
+                <a
+                  href={`/suivi/${lead.trackingToken}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-neo-blue hover:underline font-mono break-all"
+                >
+                  /suivi/{lead.trackingToken.slice(0, 12)}…
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Devis */}
           <div className="card-neo">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider">Devis calculé</h2>
-              {!quote && (
-                <button onClick={calculateQuote} disabled={calculating} className="btn-gold !px-4 !py-2 !text-sm gap-2">
-                  {calculating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
-                  {calculating ? 'Calcul…' : 'Calculer le devis'}
-                </button>
-              )}
-              {quote && (
-                <div className="flex gap-2">
-                  {canSend && (
-                    <button onClick={sendQuote} disabled={sending} className="btn-primary !px-4 !py-2 !text-sm gap-2">
-                      {sending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      {sending ? 'Envoi…' : 'Envoyer par email'}
+              <div className="flex gap-2">
+                {!quote && (
+                  <button onClick={calculateQuote} disabled={calculating} className="btn-gold !px-4 !py-2 !text-sm gap-2">
+                    {calculating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Calculator className="w-3.5 h-3.5" />}
+                    {calculating ? 'Calcul…' : 'Calculer le devis'}
+                  </button>
+                )}
+                {quote && !editingQuote && (
+                  <>
+                    <button onClick={() => setEditQ(true)} className="btn-ghost !px-3 !py-2 !text-sm gap-1.5">
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Modifier
                     </button>
-                  )}
-                  {canRemind && (
-                    <button onClick={remindQuote} disabled={reminding} className="btn-ghost !px-4 !py-2 !text-sm gap-2">
-                      {reminding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                      {reminding ? 'Envoi…' : 'Relance email'}
-                    </button>
-                  )}
-                </div>
-              )}
+                    {canSend && (
+                      <button onClick={sendQuote} disabled={sending} className="btn-primary !px-4 !py-2 !text-sm gap-2">
+                        {sending ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        {sending ? 'Envoi…' : 'Envoyer'}
+                      </button>
+                    )}
+                    {canRemind && (
+                      <button onClick={remindQuote} disabled={reminding} className="btn-ghost !px-4 !py-2 !text-sm gap-2">
+                        {reminding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                        {reminding ? 'Envoi…' : 'Relance'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {!quote && !calculating && (
@@ -291,28 +346,147 @@ export default function DashboardLeadDetailPage() {
 
             {quote && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {/* Warnings */}
+                {quote.warnings?.length > 0 && (
+                  <div className="mb-4 space-y-1">
+                    {quote.warnings.map((w, i) => (
+                      <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        {w}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reprise humaine */}
+                {quote.besoin_reprise_humaine && (
+                  <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold">Reprise humaine :</span> {quote.raison_reprise_humaine}
+                    </div>
+                  </div>
+                )}
+
+                {/* Prix */}
                 <div className="text-center mb-6">
-                  <div className="text-4xl font-bold text-neo-gold mb-1">
-                    {quote.prix_ttc.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-                  </div>
+                  <div className="text-4xl font-bold text-neo-gold mb-1">{fmt(finalTtc)}</div>
                   <div className="text-white/35 text-sm">
-                    TTC · dont {quote.prix_ht.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })} HT
+                    TTC · dont {fmt(finalHt)} HT + {fmt(quote.tva)} TVA (10%)
                   </div>
+                  {hasAdj && (
+                    <div className="mt-2 text-xs text-amber-400/80">
+                      Dont ajustement commercial : {fmt(quote.ajustement_manuel_ht!)} HT
+                      {quote.raison_ajustement ? ` — ${quote.raison_ajustement}` : ''}
+                    </div>
+                  )}
                 </div>
+
+                {/* Formulaire modification */}
+                {editingQuote && (
+                  <div className="mb-6 p-4 rounded-xl bg-white/4 border border-white/8 space-y-3">
+                    <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider">Ajustement commercial</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-white/40 mb-1 block">Montant HT (€ positif ou négatif)</label>
+                        <div className="relative">
+                          <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                          <input
+                            type="number"
+                            step="10"
+                            value={adjAmount}
+                            onChange={e => setAdjAmount(e.target.value)}
+                            className="w-full bg-white/6 border border-white/10 rounded-xl pl-8 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-neo-blue/50"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-white/40 mb-1 block">Motif de l&apos;ajustement</label>
+                        <input
+                          type="text"
+                          value={adjReason}
+                          onChange={e => setAdjReason(e.target.value)}
+                          className="w-full bg-white/6 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-neo-blue/50"
+                          placeholder="Ex: remise fidélité"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setEditQ(false)} className="btn-ghost !px-3 !py-2 !text-sm">
+                        Annuler
+                      </button>
+                      <button onClick={saveAdjustment} disabled={savingAdj} className="btn-primary !px-4 !py-2 !text-sm gap-2">
+                        {savingAdj ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        {savingAdj ? 'Sauvegarde…' : 'Sauvegarder'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lignes de calcul */}
                 {quote.lignes_calcul?.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-white/30 text-xs uppercase tracking-wider mb-2">Détail du calcul</div>
-                    {quote.lignes_calcul.map((ligne, i) => (
-                      <div key={i} className="flex justify-between items-center py-2.5 px-3 rounded-lg bg-white/3">
-                        <div>
+                    {quote.lignes_calcul.map((ligne: LigneCalcul, i) => (
+                      <div key={i} className="flex justify-between items-start py-2.5 px-3 rounded-lg bg-white/3">
+                        <div className="flex-1 min-w-0 mr-3">
                           <div className="text-white text-sm">{ligne.label}</div>
-                          {ligne.detail && <div className="text-white/30 text-[11px]">{ligne.detail}</div>}
+                          {ligne.justification && (
+                            <div className="text-white/30 text-[11px] mt-0.5">{ligne.justification}</div>
+                          )}
                         </div>
-                        <div className="text-white font-mono text-sm">
-                          {ligne.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {ligne.source_type && SOURCE_TYPE_LABELS[ligne.source_type] && (
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${SOURCE_TYPE_LABELS[ligne.source_type].color}`}>
+                              {SOURCE_TYPE_LABELS[ligne.source_type].label}
+                            </span>
+                          )}
+                          <div className="text-white font-mono text-sm text-right">{fmt(ligne.montant)}</div>
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Sources & justification (toggle) */}
+                {(quote.sources_calcul?.length > 0 || quote.explication_calcul) && (
+                  <div className="mt-4 pt-4 border-t border-white/6">
+                    <button
+                      onClick={() => setShowSrc(!showSources)}
+                      className="flex items-center gap-2 text-xs text-white/40 hover:text-white/60 transition-colors mb-3"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                      Sources et justification du calcul
+                      {showSources ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+
+                    {showSources && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                        {quote.explication_calcul && (
+                          <div className="mb-3 px-3 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/15">
+                            <p className="text-blue-300 text-xs leading-relaxed">{quote.explication_calcul}</p>
+                          </div>
+                        )}
+                        {quote.sources_calcul?.length > 0 && (
+                          <div className="space-y-1.5">
+                            {quote.sources_calcul.map((src: CalculationSource, i) => (
+                              <div key={i} className="flex items-start gap-2 py-2 px-3 rounded-lg bg-white/2 text-xs">
+                                <div className="flex-1">
+                                  <span className="text-white/55 font-medium">{src.label} :</span>{' '}
+                                  <span className="text-white/75">{src.valeur}</span>
+                                </div>
+                                {SOURCE_TYPE_LABELS[src.source_type] && (
+                                  <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] border ${SOURCE_TYPE_LABELS[src.source_type].color}`}>
+                                    {SOURCE_TYPE_LABELS[src.source_type].label}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -416,6 +590,11 @@ export default function DashboardLeadDetailPage() {
           <div className="card-neo text-[12px] text-white/35 space-y-1.5">
             <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
             <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
+            {quote?.modifiedAt && (
+              <div className="text-amber-400/60">
+                Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
+              </div>
+            )}
             <div className="font-mono text-[10px] text-white/15 pt-1">{lead._id}</div>
           </div>
         </div>

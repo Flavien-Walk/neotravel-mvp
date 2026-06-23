@@ -25,6 +25,20 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   cloture:         'Clôturé sans réponse',
 }
 
+export const LEAD_STATUS_LABELS_CLIENT: Record<LeadStatus, string> = {
+  nouveau:         'Demande reçue',
+  incomplet:       'En attente d\'informations',
+  qualifie:        'Dossier en cours',
+  devis_genere:    'Devis en préparation',
+  devis_envoye:    'Devis envoyé',
+  relance_1:       'Rappel envoyé',
+  relance_2:       'Second rappel envoyé',
+  accepte:         'Devis accepté',
+  refuse:          'Devis refusé',
+  cas_complexe:    'Suivi par un conseiller',
+  cloture:         'Dossier clôturé',
+}
+
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
   nouveau:      'bg-blue-500/12 text-blue-300 border border-blue-500/20',
   incomplet:    'bg-yellow-500/12 text-yellow-300 border border-yellow-500/20',
@@ -53,10 +67,24 @@ export const URGENCE_COLORS: Record<UrgenceLevel, string> = {
   tres_urgent: 'bg-red-500/12 text-red-300 border border-red-500/20',
 }
 
+export type SourceType = 'mock_mvp' | 'regle_documentee' | 'hypothese_mvp' | 'a_definir'
+
 export interface LigneCalcul {
   label: string
   montant: number
+  formule?: string
+  variables?: Record<string, number | string>
+  source_regle?: string
+  source_type?: SourceType
+  justification?: string
   detail?: string
+}
+
+export interface CalculationSource {
+  label: string
+  valeur: string | number
+  source_type: SourceType
+  justification: string
 }
 
 export interface Quote {
@@ -67,8 +95,20 @@ export interface Quote {
   prix_ttc: number
   lignes_calcul: LigneCalcul[]
   coefficients: Record<string, number>
+  warnings: string[]
+  besoin_reprise_humaine: boolean
+  raison_reprise_humaine?: string
+  sources_calcul: CalculationSource[]
+  explication_calcul?: string
   statut_devis: string
+  ajustement_manuel_ht: number
+  raison_ajustement?: string
+  prix_final_ht: number
+  prix_final_ttc: number
+  modifiedBy?: string
+  modifiedAt?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface Lead {
@@ -88,6 +128,8 @@ export interface Lead {
   commentaire?: string
   statut: LeadStatus
   score_completude: number
+  userId?: string
+  trackingToken?: string
   quote?: Quote
   createdAt: string
   updatedAt: string
@@ -128,4 +170,24 @@ export interface LeadFormData {
   urgence: string
   options: string[]
   commentaire: string
+}
+
+export interface TrackingData {
+  tracking: true
+  statut: LeadStatus
+  statut_label: string
+  trajet: string
+  date_depart: string
+  date_retour?: string
+  nb_passagers: number
+  type_trajet: string
+  createdAt: string
+  updatedAt: string
+  devis: {
+    statut_devis: string
+    prix_ttc: number
+    warnings: string[]
+    besoin_reprise_humaine: boolean
+    createdAt: string
+  } | null
 }

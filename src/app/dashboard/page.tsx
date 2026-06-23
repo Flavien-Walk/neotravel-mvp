@@ -159,13 +159,27 @@ export default function DashboardPage() {
           <span className="text-xs text-white/30">— répartition par étape</span>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {PIPELINE_STAGES.map(({ label, statuts, color, bg }) => {
+          {PIPELINE_STAGES.map(({ label, statuts, color }) => {
             const count = leads.filter(l => statuts.includes(l.statut)).length
+            const cls = 'rounded-xl p-3 text-center border'
+            if (count === 0) {
+              return (
+                <div
+                  key={label}
+                  className={`${cls} border-white/3 cursor-default`}
+                  style={{ background: 'rgba(255,255,255,0.01)' }}
+                  title="Aucun lead dans cette étape"
+                >
+                  <div className="text-xl font-bold text-white/15 mb-0.5">0</div>
+                  <div className="text-[10px] text-white/18 leading-tight">{label}</div>
+                </div>
+              )
+            }
             return (
               <Link
                 key={label}
                 href="/dashboard/leads"
-                className="rounded-xl p-3 text-center transition-all hover:scale-[1.02] border border-white/5 hover:border-white/10"
+                className={`${cls} border-white/5 hover:border-white/10 transition-all hover:scale-[1.02]`}
                 style={{ background: 'rgba(255,255,255,0.02)' }}
               >
                 <div className={`text-xl font-bold ${color} mb-0.5`}>{count}</div>
