@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { RefreshCw, Search, Users, TrendingUp, CheckCircle, AlertCircle, Filter, ExternalLink, Bell } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus, LEAD_STATUS_LABELS } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import UrgencyBadge from '@/components/UrgencyBadge'
+import Logo from '@/components/brand/Logo'
 
 const STATUS_OPTIONS: LeadStatus[] = [
   'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
@@ -17,7 +20,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [search, setSearch] = useState('')
-  const [stats, setStats] = useState({ total: 0, nouveau: 0, qualifie: 0, accepte: 0 })
+  const [stats, setStats] = useState({ total: 0, nouveau: 0, enCours: 0, accepte: 0 })
 
   const fetchLeads = useCallback(async () => {
     setLoading(true)
@@ -29,201 +32,197 @@ export default function AdminPage() {
       setStats({
         total: data.length,
         nouveau: data.filter(l => l.statut === 'nouveau').length,
-        qualifie: data.filter(l => ['qualifie', 'devis_genere', 'devis_envoye'].includes(l.statut)).length,
+        enCours: data.filter(l => ['qualifie', 'devis_genere', 'devis_envoye', 'relance_1', 'relance_2'].includes(l.statut)).length,
         accepte: data.filter(l => l.statut === 'accepte').length,
       })
-    } catch {
-      console.error('Erreur chargement leads')
-    } finally {
-      setLoading(false)
-    }
+    } catch { /* silent */ } finally { setLoading(false) }
   }, [filterStatus])
 
   useEffect(() => { fetchLeads() }, [fetchLeads])
 
   const updateStatus = async (id: string, statut: LeadStatus) => {
-    try {
-      await api.leads.updateStatus(id, statut)
-      await fetchLeads()
-    } catch {
-      alert('Erreur lors de la mise à jour du statut')
-    }
+    try { await api.leads.updateStatus(id, statut); await fetchLeads() } catch { alert('Erreur mise à jour statut') }
   }
 
   const simulateRelance = async (lead: Lead) => {
-    const nextStatus: Partial<Record<LeadStatus, LeadStatus>> = {
-      devis_envoye: 'relance_1',
-      relance_1: 'relance_2',
-    }
+    const nextStatus: Partial<Record<LeadStatus, LeadStatus>> = { devis_envoye: 'relance_1', relance_1: 'relance_2' }
     const next = nextStatus[lead.statut]
     if (!next) { alert('Aucune relance prévue pour ce statut.'); return }
-    await api.logs.create({
-      action: 'RELANCE_SIMULEE',
-      leadId: lead._id,
-      status: 'info',
-      message: `Relance simulée vers ${lead.email} — statut → ${next}`,
-      payload: { email: lead.email, statut_precedent: lead.statut },
-    })
+    await api.logs.create({ action: 'RELANCE_SIMULEE', leadId: lead._id, status: 'info', message: `Relance simulée → ${lead.email} — statut → ${next}`, payload: { email: lead.email, statut_precedent: lead.statut } })
     await updateStatus(lead._id, next)
-    alert(`Relance simulée ! Email envoyé à ${lead.email}`)
   }
 
   const filtered = leads.filter(l =>
-    !search ||
-    l.nom.toLowerCase().includes(search.toLowerCase()) ||
+    !search || l.nom.toLowerCase().includes(search.toLowerCase()) ||
     l.email.toLowerCase().includes(search.toLowerCase()) ||
     l.depart.toLowerCase().includes(search.toLowerCase()) ||
     l.destination.toLowerCase().includes(search.toLowerCase())
   )
 
+  const STAT_CARDS = [
+    { label: 'Total leads', value: stats.total, icon: Users, color: '#4B8EF8', bg: 'rgba(75,142,248,0.1)' },
+    { label: 'Nouveaux', value: stats.nouveau, icon: AlertCircle, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+    { label: 'En pipeline', value: stats.enCours, icon: TrendingUp, color: '#818CF8', bg: 'rgba(129,140,248,0.1)' },
+    { label: 'Acceptés', value: stats.accepte, icon: CheckCircle, color: '#22C55E', bg: 'rgba(34,197,94,0.1)' },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neo-900 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="glass border-b border-white/6 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-              </div>
-              <span className="font-bold text-gray-900">NeoTravel</span>
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-gray-600 font-medium">Dashboard Admin</span>
+            <Logo size="sm" />
+            <span className="text-white/20">/</span>
+            <span className="text-sm text-white/60 font-medium">Dashboard Admin</span>
           </div>
-          <button onClick={fetchLeads} className="btn-secondary !py-2 !px-4 text-sm">
-            Actualiser
-          </button>
+          <div className="flex items-center gap-3">
+            <Link href="/devis" className="btn-gold !px-4 !py-2 text-xs gap-1.5">
+              + Nouveau lead
+            </Link>
+            <button onClick={fetchLeads} className="btn-ghost !px-3 !py-2" aria-label="Actualiser">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full flex-1">
+
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: 'Total leads', value: stats.total, color: 'text-gray-900' },
-            { label: 'Nouveaux', value: stats.nouveau, color: 'text-blue-600' },
-            { label: 'En cours', value: stats.qualifie, color: 'text-indigo-600' },
-            { label: 'Acceptés', value: stats.accepte, color: 'text-green-600' },
-          ].map((s) => (
-            <div key={s.label} className="card !p-4">
-              <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-sm text-gray-500 mt-1">{s.label}</div>
-            </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {STAT_CARDS.map((s, i) => (
+            <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+              <div className="card-premium !p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.bg, border: `1px solid ${s.color}30` }}>
+                  <s.icon className="w-5 h-5" style={{ color: s.color }} />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">{loading ? '—' : s.value}</div>
+                  <div className="text-xs text-white/40">{s.label}</div>
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Filtres */}
-        <div className="card !p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher par nom, email, ville..."
-            className="input !py-2 flex-1"
-          />
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="select !py-2 sm:w-56"
-          >
-            <option value="">Tous les statuts</option>
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-            ))}
-          </select>
+        {/* Filters */}
+        <div className="card-premium !p-4 mb-5 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher nom, email, ville..."
+              className="input !pl-9 w-full" />
+          </div>
+          <div className="relative sm:w-52">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25" />
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="select !pl-9 w-full">
+              <option value="">Tous les statuts</option>
+              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
+            </select>
+          </div>
+          {(search || filterStatus) && (
+            <button onClick={() => { setSearch(''); setFilterStatus('') }} className="btn-ghost !px-4 text-xs shrink-0">
+              Effacer
+            </button>
+          )}
         </div>
 
         {/* Table */}
         {loading ? (
-          <div className="card flex items-center justify-center py-20 text-gray-400">
-            Chargement...
+          <div className="card-premium flex items-center justify-center py-24">
+            <div className="flex flex-col items-center gap-4 text-white/30">
+              <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-neo-blue animate-spin" />
+              <span className="text-sm">Chargement des leads...</span>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
-            <p className="text-lg">Aucun lead trouvé</p>
-            <Link href="/devis" className="btn-primary mt-4 text-sm">
-              Créer un lead de test
+          <div className="card-premium flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/4 flex items-center justify-center mb-4">
+              <Users className="w-7 h-7 text-white/20" />
+            </div>
+            <p className="text-white/50 mb-2 font-medium">Aucun lead{search || filterStatus ? ' pour ces filtres' : ''}</p>
+            <p className="text-sm text-white/25 mb-6">Soumettez une demande de devis pour créer un lead de test</p>
+            <Link href="/devis" className="btn-primary text-sm gap-2">
+              Créer un lead test <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
         ) : (
-          <div className="card !p-0 overflow-hidden">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-premium !p-0 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Contact</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Trajet</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Passagers</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Statut</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Urgence</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Score</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Créé le</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
+                  <tr className="border-b border-white/6">
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Contact</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Trajet</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Pax</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Statut</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Urgence</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Score</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Date</th>
+                    <th className="text-left px-4 py-3.5 text-xs text-white/35 font-semibold uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map((lead) => (
-                    <tr key={lead._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{lead.nom}</div>
-                        <div className="text-gray-400">{lead.email}</div>
-                        {lead.societe && <div className="text-gray-400 text-xs">{lead.societe}</div>}
+                <tbody>
+                  {filtered.map((lead, i) => (
+                    <motion.tr
+                      key={lead._id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="border-b border-white/4 hover:bg-white/2 transition-colors group"
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="font-medium text-white text-sm">{lead.nom}</div>
+                        <div className="text-xs text-white/40 mt-0.5">{lead.email}</div>
+                        {lead.societe && <div className="text-[10px] text-white/25 mt-0.5">{lead.societe}</div>}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="text-gray-900">{lead.depart} → {lead.destination}</div>
-                        <div className="text-gray-400 text-xs">{lead.date_depart}{lead.date_retour ? ` / ${lead.date_retour}` : ''}</div>
+                      <td className="px-4 py-3.5">
+                        <div className="text-white/80 text-sm">{lead.depart} → {lead.destination}</div>
+                        <div className="text-[10px] text-white/30 mt-0.5">{lead.date_depart}{lead.date_retour ? ` · R ${lead.date_retour}` : ''}</div>
                       </td>
-                      <td className="px-4 py-3 text-gray-900">{lead.nb_passagers}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={lead.statut} size="sm" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <UrgencyBadge urgence={lead.urgence} size="sm" />
-                      </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5 text-white/70 text-sm font-medium">{lead.nb_passagers}</td>
+                      <td className="px-4 py-3.5"><StatusBadge status={lead.statut} size="sm" /></td>
+                      <td className="px-4 py-3.5"><UrgencyBadge urgence={lead.urgence} size="sm" /></td>
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full ${lead.score_completude >= 80 ? 'bg-green-500' : lead.score_completude >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${lead.score_completude}%` }}
-                            />
+                          <div className="w-14 h-1 rounded-full bg-white/8 overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${lead.score_completude >= 80 ? 'bg-green-500' : lead.score_completude >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${lead.score_completude}%` }} />
                           </div>
-                          <span className="text-xs text-gray-500">{lead.score_completude}%</span>
+                          <span className="text-[10px] text-white/35 font-mono">{lead.score_completude}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">
-                        {new Date(lead.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      <td className="px-4 py-3.5 text-[10px] text-white/30 font-mono">
+                        {new Date(lead.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}<br />
+                        {new Date(lead.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link href={`/admin/leads/${lead._id}`} className="text-blue-600 hover:text-blue-800 font-medium text-xs">
-                            Voir
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/admin/leads/${lead._id}`} className="btn-outline !px-2.5 !py-1.5 text-[11px] gap-1 shrink-0">
+                            Voir <ExternalLink className="w-3 h-3" />
                           </Link>
-                          <select
-                            value={lead.statut}
-                            onChange={e => updateStatus(lead._id, e.target.value as LeadStatus)}
-                            className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            {STATUS_OPTIONS.map(s => (
-                              <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
-                            ))}
+                          <select value={lead.statut} onChange={e => updateStatus(lead._id, e.target.value as LeadStatus)}
+                            className="text-[11px] border border-white/10 rounded-lg px-2 py-1.5 bg-white/4 text-white/60 focus:outline-none focus:border-neo-blue/40 cursor-pointer max-w-[110px]">
+                            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
                           </select>
                           {(lead.statut === 'devis_envoye' || lead.statut === 'relance_1') && (
-                            <button onClick={() => simulateRelance(lead)} className="btn-danger !px-2 !py-1">
-                              Relancer
+                            <button onClick={() => simulateRelance(lead)} className="btn-danger gap-1 shrink-0" title="Simuler relance">
+                              <Bell className="w-3 h-3" />
                             </button>
                           )}
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+            <div className="px-4 py-3 border-t border-white/4 text-xs text-white/25 flex items-center justify-between">
+              <span>{filtered.length} lead{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}</span>
+              {search && <span>· filtrés sur &quot;{search}&quot;</span>}
+            </div>
+          </motion.div>
         )}
       </main>
     </div>

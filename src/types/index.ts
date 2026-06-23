@@ -26,17 +26,17 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
 }
 
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  nouveau:      'bg-blue-100 text-blue-800',
-  incomplet:    'bg-yellow-100 text-yellow-800',
-  qualifie:     'bg-indigo-100 text-indigo-800',
-  devis_genere: 'bg-purple-100 text-purple-800',
-  devis_envoye: 'bg-cyan-100 text-cyan-800',
-  relance_1:    'bg-orange-100 text-orange-800',
-  relance_2:    'bg-red-100 text-red-800',
-  accepte:      'bg-green-100 text-green-800',
-  refuse:       'bg-gray-100 text-gray-800',
-  cas_complexe: 'bg-pink-100 text-pink-800',
-  cloture:      'bg-slate-100 text-slate-600',
+  nouveau:      'bg-blue-500/12 text-blue-300 border border-blue-500/20',
+  incomplet:    'bg-yellow-500/12 text-yellow-300 border border-yellow-500/20',
+  qualifie:     'bg-indigo-500/12 text-indigo-300 border border-indigo-500/20',
+  devis_genere: 'bg-purple-500/12 text-purple-300 border border-purple-500/20',
+  devis_envoye: 'bg-cyan-500/12 text-cyan-300 border border-cyan-500/20',
+  relance_1:    'bg-orange-500/12 text-orange-300 border border-orange-500/20',
+  relance_2:    'bg-red-500/12 text-red-300 border border-red-500/20',
+  accepte:      'bg-green-500/12 text-green-300 border border-green-500/20',
+  refuse:       'bg-white/5 text-white/40 border border-white/10',
+  cas_complexe: 'bg-pink-500/12 text-pink-300 border border-pink-500/20',
+  cloture:      'bg-white/4 text-white/30 border border-white/8',
 }
 
 export type UrgenceLevel = 'normal' | 'urgent' | 'tres_urgent'
@@ -48,9 +48,9 @@ export const URGENCE_LABELS: Record<UrgenceLevel, string> = {
 }
 
 export const URGENCE_COLORS: Record<UrgenceLevel, string> = {
-  normal:      'bg-gray-100 text-gray-700',
-  urgent:      'bg-orange-100 text-orange-700',
-  tres_urgent: 'bg-red-100 text-red-700',
+  normal:      'bg-white/5 text-white/40 border border-white/10',
+  urgent:      'bg-orange-500/12 text-orange-300 border border-orange-500/20',
+  tres_urgent: 'bg-red-500/12 text-red-300 border border-red-500/20',
 }
 
 export interface LigneCalcul {
