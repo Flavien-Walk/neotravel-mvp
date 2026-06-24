@@ -53,6 +53,9 @@ export const api = {
       }),
 
     track: (token: string) => request(`/api/leads/track/${token}`),
+
+    claimByEmail: () =>
+      request('/api/leads/claim-by-email', { method: 'POST' }),
   },
 
   quotes: {

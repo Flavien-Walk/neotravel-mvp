@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { api } from '@/lib/api'
 
 export interface AuthUser {
   id: string
@@ -65,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (!res.ok) return { error: data.message ?? 'Identifiants incorrects.' }
       persist(data.user, data.token)
+      if (data.user.role === 'client') {
+        try { await api.leads.claimByEmail() } catch {}
+      }
       return {}
     } catch {
       return { error: 'Serveur inaccessible. Réessayez dans quelques instants.' }
@@ -81,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (!res.ok) return { error: data.message ?? 'Erreur lors de la création du compte.' }
       persist(data.user, data.token)
+      if (data.user.role === 'client') {
+        try { await api.leads.claimByEmail() } catch {}
+      }
       return {}
     } catch {
       return { error: 'Serveur inaccessible. Réessayez dans quelques instants.' }
