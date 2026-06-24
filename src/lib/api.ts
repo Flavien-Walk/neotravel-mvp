@@ -62,6 +62,9 @@ export const api = {
     calculate: (data: unknown) =>
       request('/api/quotes/calculate', { method: 'POST', body: JSON.stringify(data) }),
 
+    createManual: (data: unknown) =>
+      request('/api/quotes/manual', { method: 'POST', body: JSON.stringify(data) }),
+
     update: (id: string, data: { ajustement_manuel_ht: number; raison_ajustement?: string }) =>
       request(`/api/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 

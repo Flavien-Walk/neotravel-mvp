@@ -2,146 +2,145 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
-  Users, Clock, Bell, CheckCircle, TrendingUp, RefreshCw,
-  Send, ExternalLink, ArrowRight, AlertCircle, BarChart3,
-  UserCheck, ChevronRight, MapPin, Plus, Zap, Navigation,
+  Users, Clock, CheckCircle, TrendingUp, RefreshCw,
+  Send, ArrowRight, AlertCircle, BarChart3,
+  UserCheck, MapPin, ArrowUpRight, Activity,
+  ChevronRight, AlertTriangle,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
 import { useAuth } from '@/context/AuthContext'
-import StatusBadge from '@/components/StatusBadge'
-import UrgencyBadge from '@/components/UrgencyBadge'
 
-const EASE = [0.21, 0.47, 0.32, 0.98] as const
-
-const PIPELINE_STAGES: { label: string; statuts: LeadStatus[]; color: string; glow: string }[] = [
-  { label: 'Nouveau',    statuts: ['nouveau'],                              color: '#A78BFA', glow: 'rgba(167,139,250,0.4)' },
-  { label: 'Qualifié',  statuts: ['qualifie', 'incomplet'],               color: '#60A5FA', glow: 'rgba(96,165,250,0.4)'  },
-  { label: 'Devis prêt',statuts: ['devis_genere'],                         color: '#FBBF24', glow: 'rgba(251,191,36,0.4)'  },
-  { label: 'Envoyé',    statuts: ['devis_envoye'],                         color: '#38BDF8', glow: 'rgba(56,189,248,0.4)'  },
-  { label: 'Relance',   statuts: ['relance_1', 'relance_2'],               color: '#FB923C', glow: 'rgba(251,146,60,0.4)'  },
-  { label: 'Accepté',   statuts: ['accepte'],                              color: '#4ADE80', glow: 'rgba(74,222,128,0.4)'  },
-  { label: 'Reprise',   statuts: ['reprise_humaine', 'cas_complexe'],      color: '#F87171', glow: 'rgba(248,113,113,0.4)' },
+const PIPELINE_STAGES: { label: string; statuts: LeadStatus[]; color: string; lightBg: string }[] = [
+  { label: 'Nouveau',    statuts: ['nouveau'],                         color: '#7C3AED', lightBg: '#F5F3FF' },
+  { label: 'Qualifié',  statuts: ['qualifie', 'incomplet'],           color: '#2563EB', lightBg: '#EFF6FF' },
+  { label: 'Devis prêt',statuts: ['devis_genere'],                    color: '#D97706', lightBg: '#FFFBEB' },
+  { label: 'Envoyé',    statuts: ['devis_envoye'],                    color: '#0284C7', lightBg: '#F0F9FF' },
+  { label: 'Relance',   statuts: ['relance_1', 'relance_2'],          color: '#EA580C', lightBg: '#FFF7ED' },
+  { label: 'Accepté',   statuts: ['accepte'],                         color: '#16A34A', lightBg: '#F0FDF4' },
+  { label: 'Reprise',   statuts: ['reprise_humaine', 'cas_complexe'], color: '#DC2626', lightBg: '#FEF2F2' },
 ]
 
-function fade(i: number) {
-  return {
-    initial: { opacity: 0, y: 14 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.4, delay: i * 0.055, ease: EASE },
-  }
+const STATUS_DOT: Record<string, string> = {
+  nouveau: '#7C3AED', incomplet: '#D97706', qualifie: '#2563EB',
+  devis_genere: '#D97706', devis_envoye: '#0284C7',
+  relance_1: '#EA580C', relance_2: '#DC2626',
+  accepte: '#16A34A', refuse: '#94A3B8',
+  cas_complexe: '#DB2777', reprise_humaine: '#DC2626', cloture: '#94A3B8',
 }
 
-function RouteSVG() {
+const STATUS_LABEL: Record<string, string> = {
+  nouveau: 'Nouveau', incomplet: 'Incomplet', qualifie: 'Qualifié',
+  devis_genere: 'Devis prêt', devis_envoye: 'Envoyé',
+  relance_1: 'Relance 1', relance_2: 'Relance 2',
+  accepte: 'Accepté', refuse: 'Refusé',
+  cas_complexe: 'Cas complexe', reprise_humaine: 'Reprise humaine', cloture: 'Clôturé',
+}
+
+function StatusChip({ statut }: { statut: string }) {
+  const color = STATUS_DOT[statut] ?? '#94A3B8'
   return (
-    <svg viewBox="0 0 280 80" fill="none" className="w-full h-full">
-      <path
-        d="M 24 58 C 70 16, 190 72, 254 28"
-        stroke="url(#rg)" strokeWidth="1.8" strokeDasharray="5 3.5"
-        strokeLinecap="round"
-      />
-      <circle cx="24"  cy="58" r="5"   fill="rgba(167,139,250,0.2)" stroke="#A78BFA" strokeWidth="1.5" />
-      <circle cx="24"  cy="58" r="2"   fill="#A78BFA" />
-      <circle cx="254" cy="28" r="5"   fill="rgba(56,189,248,0.2)"  stroke="#38BDF8" strokeWidth="1.5" />
-      <circle cx="254" cy="28" r="2"   fill="#38BDF8" />
-      <circle cx="139" cy="46" r="3.5" fill="rgba(251,191,36,0.2)"  stroke="#FBBF24" strokeWidth="1.2" />
-      <defs>
-        <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#A78BFA" />
-          <stop offset="50%"  stopColor="#60A5FA" />
-          <stop offset="100%" stopColor="#38BDF8" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium"
+      style={{
+        background: color + '14',
+        color,
+        border: `1px solid ${color}28`,
+      }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+      {STATUS_LABEL[statut] ?? statut}
+    </span>
+  )
+}
+
+function UrgencyChip({ urgence }: { urgence: string }) {
+  const map: Record<string, { label: string; color: string }> = {
+    normal:      { label: 'Normal',      color: '#64748B' },
+    urgent:      { label: 'Urgent',      color: '#EA580C' },
+    tres_urgent: { label: 'Très urgent', color: '#DC2626' },
+  }
+  const { label, color } = map[urgence] ?? map.normal
+  if (urgence === 'normal') return null
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+      style={{ background: color + '14', color, border: `1px solid ${color}28` }}
+    >
+      {label}
+    </span>
   )
 }
 
 function KPICard({
-  label, value, Icon, color, bg, accent, loading, pct,
+  label, value, sub, icon: Icon, accent, loading,
 }: {
-  label: string; value: number; Icon: typeof BarChart3; color: string; bg: string;
-  accent: string; loading: boolean; pct?: number;
+  label: string; value: number | string; sub?: string;
+  icon: typeof BarChart3; accent: string; loading: boolean;
 }) {
   return (
     <div
-      className="rounded-2xl p-5 relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 cursor-default group"
+      className="rounded-xl p-4 transition-all duration-150 hover:-translate-y-px"
       style={{
-        background: 'linear-gradient(145deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.025) 100%)',
-        border: '1px solid rgba(255,255,255,0.09)',
-        boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.35)',
+        background: 'var(--dash-surface)',
+        border: '1px solid var(--dash-border)',
+        boxShadow: 'var(--dash-shadow)',
+        borderTop: `3px solid ${accent}`,
       }}
     >
-      <div className="absolute top-0 inset-x-0 h-[3px] rounded-t-2xl" style={{ background: accent }} />
-      <div
-        className="absolute -top-8 -right-8 w-24 h-24 rounded-full transition-opacity opacity-20 group-hover:opacity-30"
-        style={{ background: `radial-gradient(circle, ${color} 0%, transparent 70%)` }}
-      />
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-4" style={{ background: bg }}>
-        <Icon className="w-4 h-4" style={{ color }} />
-      </div>
-      <div className="text-3xl font-bold text-white tabular-nums mb-0.5">
-        {loading ? <span className="text-white/10">—</span> : value}
-      </div>
-      <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.28)' }}>
-        {label}
-      </div>
-      {pct !== undefined && (
-        <div className="mt-3.5 h-[3px] rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-          <div
-            className="h-full rounded-full transition-all duration-1000"
-            style={{ width: `${Math.max(pct, 0)}%`, background: accent }}
-          />
+      <div className="flex items-start justify-between mb-3">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: accent + '14' }}
+        >
+          <Icon className="w-4 h-4" style={{ color: accent }} />
         </div>
+      </div>
+      {loading ? (
+        <div className="h-7 w-12 rounded-md animate-pulse" style={{ background: 'var(--dash-border)' }} />
+      ) : (
+        <div className="text-2xl font-bold" style={{ color: 'var(--dash-text)' }}>{value}</div>
       )}
+      <div className="mt-0.5 text-xs" style={{ color: 'var(--dash-text-muted)' }}>{label}</div>
+      {sub && <div className="mt-1 text-[10px]" style={{ color: 'var(--dash-text-faint)' }}>{sub}</div>}
     </div>
   )
 }
 
 function ActionCard({
-  count, label, description, color, bg, border, Icon, href, loading,
+  label, count, desc, color, lightBg, href, cta,
+  loading,
 }: {
-  count: number; label: string; description: string; color: string; bg: string;
-  border: string; Icon: typeof Send; href: string; loading: boolean;
+  label: string; count: number; desc: string; color: string; lightBg: string;
+  href: string; cta: string; loading: boolean;
 }) {
-  if (loading) {
-    return (
-      <div className="rounded-2xl p-5 h-[152px] animate-pulse" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }} />
-    )
-  }
   return (
     <Link
       href={href}
-      className="group rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 hover:-translate-y-1"
+      className="group rounded-xl p-5 flex flex-col gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
       style={{
-        background: bg,
-        border: `1px solid ${border}`,
-        boxShadow: count > 0 ? `0 6px 28px ${color}18` : 'none',
+        background: 'var(--dash-surface)',
+        border: `1px solid var(--dash-border)`,
+        boxShadow: 'var(--dash-shadow)',
+        borderLeft: `4px solid ${color}`,
       }}
     >
-      <div className="flex items-center justify-between">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
-          <Icon className="w-4 h-4" style={{ color }} />
-        </div>
-        {count > 0 && (
-          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: color, color: '#030D20' }}>
-            {count}
-          </span>
-        )}
-      </div>
       <div>
-        <div className="text-3xl font-bold tabular-nums mb-0.5" style={{ color: count > 0 ? color : 'rgba(255,255,255,0.15)' }}>
-          {count}
-        </div>
-        <div className="text-[13px] font-semibold text-white leading-tight">{label}</div>
-        <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.28)' }}>{description}</div>
+        {loading ? (
+          <div className="h-9 w-8 rounded-md animate-pulse mb-1" style={{ background: 'var(--dash-border)' }} />
+        ) : (
+          <div className="text-3xl font-bold leading-none" style={{ color }}>{count}</div>
+        )}
+        <div className="font-semibold text-sm mt-1" style={{ color: 'var(--dash-text)' }}>{label}</div>
+        <div className="text-xs mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>{desc}</div>
       </div>
       <div
-        className="flex items-center gap-1 text-xs font-semibold transition-all opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-1"
+        className="flex items-center gap-1 text-xs font-medium mt-auto transition-all group-hover:gap-2"
         style={{ color }}
       >
-        Voir les dossiers <ChevronRight className="w-3.5 h-3.5" />
+        {cta}
+        <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
       </div>
     </Link>
   )
@@ -149,473 +148,359 @@ function ActionCard({
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [leads, setLeads]  = useState<Lead[]>([])
-  const [loading, setLoad] = useState(true)
-  const [stats, setStats]  = useState({ total: 0, nouveau: 0, enCours: 0, aEnvoyer: 0, relance: 0, accepte: 0 })
+  const [leads, setLeads]     = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRef]  = useState(false)
 
-  const fetchLeads = useCallback(async () => {
-    setLoad(true)
+  const fetch = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true); else setRef(true)
     try {
-      const data = await api.leads.list({}) as Lead[]
-      setLeads(data)
-      setStats({
-        total:    data.length,
-        nouveau:  data.filter(l => l.statut === 'nouveau').length,
-        enCours:  data.filter(l => ['qualifie', 'incomplet'].includes(l.statut)).length,
-        aEnvoyer: data.filter(l => l.statut === 'devis_genere').length,
-        relance:  data.filter(l => ['relance_1', 'relance_2'].includes(l.statut)).length,
-        accepte:  data.filter(l => l.statut === 'accepte').length,
-      })
-    } catch { setLeads([]) }
-    setLoad(false)
+      const data = await api.leads.list() as Lead[]
+      setLeads(Array.isArray(data) ? data : [])
+    } catch { /* ignore */ }
+    finally { setLoading(false); setRef(false) }
   }, [])
 
-  useEffect(() => { fetchLeads() }, [fetchLeads])
+  useEffect(() => { fetch() }, [fetch])
 
-  const prenom       = user?.nom?.split(' ')[0] ?? 'Commercial'
-  const today        = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const urgents      = leads.filter(l => l.urgence === 'urgent' && !['accepte', 'refuse', 'cloture'].includes(l.statut))
-  const aEnvoyer     = leads.filter(l => l.statut === 'devis_genere')
-  const aRelancer    = leads.filter(l => ['devis_envoye', 'relance_1'].includes(l.statut))
-  const needsHuman   = leads.filter(l => ['cas_complexe', 'reprise_humaine'].includes(l.statut))
-  const recentLeads  = [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10)
-  const activeleads  = leads.filter(l => !['accepte', 'refuse', 'cloture'].includes(l.statut))
-  const conversion   = stats.total > 0 ? Math.round((stats.accepte / stats.total) * 100) : 0
-  const totalActions = aEnvoyer.length + urgents.length + needsHuman.length
+  /* ── computed stats ── */
+  const total    = leads.length
+  const enCours  = leads.filter(l => !['accepte','refuse','cloture'].includes(l.statut)).length
+  const devisEnv = leads.filter(l => ['devis_envoye','relance_1','relance_2'].includes(l.statut)).length
+  const acceptes = leads.filter(l => l.statut === 'accepte').length
+  const taux     = total > 0 ? Math.round((acceptes / total) * 100) : 0
+
+  const aEnvoyer      = leads.filter(l => l.statut === 'devis_genere').length
+  const aRelancer     = leads.filter(l => ['relance_1','relance_2'].includes(l.statut)).length
+  const repriseHumaine = leads.filter(l => ['reprise_humaine','cas_complexe'].includes(l.statut)).length
+
+  const urgents = leads
+    .filter(l => l.urgence !== 'normal' && !['accepte','refuse','cloture'].includes(l.statut))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3)
+
+  const recent = leads
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 8)
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bonne après-midi' : 'Bonsoir'
+  const firstName = user?.nom?.split(' ')[0] ?? 'Commercial'
 
   return (
-    <div
-      className="min-h-screen relative"
-      style={{ background: 'linear-gradient(145deg, #0F1F3E 0%, #0B1730 55%, #080F22 100%)' }}
-    >
-      {/* Dot grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.028) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
-      {/* Gradient orb */}
-      <div
-        className="absolute top-0 right-1/4 w-[600px] h-[400px] pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse, rgba(37,99,235,0.07) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-        }}
-      />
+    <div className="p-6 lg:p-8 min-h-full" style={{ background: 'var(--dash-bg)' }}>
 
-      <div className="relative p-6 lg:p-8 space-y-7">
-
-        {/* ═══ HEADER ═══ */}
-        <motion.div {...fade(0)} className="grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-5 items-start">
-          <div>
-            <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-              <span
-                className="text-[10px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(37,99,235,0.1)', color: '#93C5FD', border: '1px solid rgba(37,99,235,0.2)' }}
-              >
-                Cockpit commercial
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--dash-text)' }}>
+            {greeting}, {firstName}
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {(aEnvoyer + aRelancer + repriseHumaine) > 0 && (
+              <span className="ml-2 font-medium" style={{ color: '#DC2626' }}>
+                — {aEnvoyer + aRelancer + repriseHumaine} action{(aEnvoyer + aRelancer + repriseHumaine) > 1 ? 's' : ''} en attente
               </span>
-              {totalActions > 0 && (
-                <span
-                  className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                  style={{ background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.22)' }}
-                >
-                  <Zap className="w-2.5 h-2.5 inline mr-1" />
-                  {totalActions} action{totalActions > 1 ? 's' : ''} à traiter
-                </span>
-              )}
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-1">Bonjour, {prenom}</h1>
-            <p className="text-sm capitalize" style={{ color: 'rgba(255,255,255,0.3)' }}>{today}</p>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() => fetch(true)}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all"
+          style={{
+            background: 'var(--dash-surface)',
+            border: '1px solid var(--dash-border)',
+            color: 'var(--dash-text-muted)',
+            boxShadow: 'var(--dash-shadow)',
+          }}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
+      </div>
 
-            <div className="flex items-center gap-2.5 mt-5 flex-wrap">
-              <button
-                onClick={fetchLeads}
-                disabled={loading}
-                className="flex items-center justify-center w-9 h-9 rounded-xl transition-all hover:bg-white/8"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} style={{ color: 'rgba(255,255,255,0.38)' }} />
-              </button>
-              <Link
-                href="/dashboard/leads"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-white/8"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.6)' }}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Tous les leads
-              </Link>
-              <Link
-                href="/devis"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110 active:scale-95"
-                style={{
-                  background: 'linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 100%)',
-                  color: '#fff',
-                  boxShadow: '0 4px 18px rgba(37,99,235,0.35)',
-                }}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Nouveau lead
-              </Link>
-            </div>
-          </div>
+      {/* ── KPI row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <KPICard label="Total leads"    value={total}    icon={Users}       accent="#2563EB" loading={loading} sub={`${enCours} actifs`} />
+        <KPICard label="Devis envoyés"  value={devisEnv} icon={Send}        accent="#0284C7" loading={loading} sub="en attente réponse" />
+        <KPICard label="Acceptés"       value={acceptes} icon={CheckCircle} accent="#16A34A" loading={loading} />
+        <KPICard label="Taux conversion" value={`${taux}%`} icon={TrendingUp} accent="#7C3AED" loading={loading} sub={`sur ${total} leads`} />
+      </div>
 
-          {/* Route card */}
-          <div
-            className="rounded-2xl p-5 relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.02) 100%)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.3)',
-              height: 148,
-            }}
+      {/* ── Action cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <ActionCard
+          label="Devis à envoyer" count={aEnvoyer} loading={loading}
+          desc="Devis calculés non encore transmis"
+          color="#D97706" lightBg="#FFFBEB"
+          href="/dashboard/leads?statut=devis_genere" cta="Traiter maintenant"
+        />
+        <ActionCard
+          label="Relances à faire" count={aRelancer} loading={loading}
+          desc="Clients sans réponse — 1re ou 2e relance"
+          color="#EA580C" lightBg="#FFF7ED"
+          href="/dashboard/leads?statut=relance_1" cta="Voir les leads"
+        />
+        <ActionCard
+          label="Reprise humaine" count={repriseHumaine} loading={loading}
+          desc="Cas complexes nécessitant votre attention"
+          color="#DC2626" lightBg="#FEF2F2"
+          href="/dashboard/leads?statut=reprise_humaine" cta="Traiter les cas"
+        />
+      </div>
+
+      {/* ── Pipeline ── */}
+      <div
+        className="rounded-xl p-5 mb-6"
+        style={{
+          background: 'var(--dash-surface)',
+          border: '1px solid var(--dash-border)',
+          boxShadow: 'var(--dash-shadow)',
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-semibold text-sm" style={{ color: 'var(--dash-text)' }}>Pipeline commercial</div>
+          <Link
+            href="/dashboard/leads"
+            className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            style={{ color: '#2563EB' }}
           >
-            <div className="relative z-10">
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.22)' }}>
-                Trajets actifs
-              </div>
-              <div className="text-3xl font-bold text-white tabular-nums">
-                {loading ? '—' : activeleads.length}
-              </div>
-            </div>
-            <div className="absolute inset-x-3 bottom-3 top-[52px]">
-              <RouteSVG />
-            </div>
-            <div className="absolute left-5 bottom-3 flex items-center gap-1 text-[10px] font-medium" style={{ color: 'rgba(167,139,250,0.65)' }}>
-              <MapPin className="w-2.5 h-2.5" />Départ
-            </div>
-            <div className="absolute right-5 bottom-3 flex items-center gap-1 text-[10px] font-medium" style={{ color: 'rgba(56,189,248,0.65)' }}>
-              Arrivée<MapPin className="w-2.5 h-2.5" />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ═══ KPI BENTO ═══ */}
-        <motion.div {...fade(1)} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-          {[
-            { label: 'Total leads',   value: stats.total,    Icon: BarChart3,   color: '#60A5FA', bg: 'rgba(96,165,250,0.1)',  accent: 'linear-gradient(90deg,#1D4ED8,#0EA5E9)', pct: 100 },
-            { label: 'Nouveaux',      value: stats.nouveau,  Icon: TrendingUp,  color: '#A78BFA', bg: 'rgba(167,139,250,0.1)', accent: '#A78BFA', pct: stats.total > 0 ? (stats.nouveau  / stats.total) * 100 : 0 },
-            { label: 'Qualification', value: stats.enCours,  Icon: Clock,       color: '#38BDF8', bg: 'rgba(56,189,248,0.1)',  accent: '#38BDF8', pct: stats.total > 0 ? (stats.enCours  / stats.total) * 100 : 0 },
-            { label: 'À envoyer',     value: stats.aEnvoyer, Icon: Send,        color: '#FBBF24', bg: 'rgba(251,191,36,0.1)',  accent: '#FBBF24', pct: stats.total > 0 ? (stats.aEnvoyer / stats.total) * 100 : 0 },
-            { label: 'Relances',      value: stats.relance,  Icon: Bell,        color: '#FB923C', bg: 'rgba(251,146,60,0.1)',  accent: '#FB923C', pct: stats.total > 0 ? (stats.relance  / stats.total) * 100 : 0 },
-            { label: 'Acceptés',      value: stats.accepte,  Icon: CheckCircle, color: '#4ADE80', bg: 'rgba(74,222,128,0.1)',  accent: '#4ADE80', pct: stats.total > 0 ? (stats.accepte  / stats.total) * 100 : 0 },
-          ].map(({ label, value, Icon, color, bg, accent, pct }) => (
-            <KPICard key={label} label={label} value={value} Icon={Icon} color={color} bg={bg} accent={accent} loading={loading} pct={pct} />
-          ))}
-        </motion.div>
-
-        {/* ═══ ACTION CARDS ═══ */}
-        <motion.div {...fade(2)} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <ActionCard
-            count={aEnvoyer.length} loading={loading}
-            label="Devis à envoyer"
-            description={aEnvoyer.length === 0 ? 'Aucun devis en attente' : 'Calculés, prêts à être envoyés'}
-            color="#FBBF24" bg="rgba(251,191,36,0.07)" border="rgba(251,191,36,0.18)"
-            Icon={Send} href="/dashboard/leads"
-          />
-          <ActionCard
-            count={aRelancer.length} loading={loading}
-            label="Relances à faire"
-            description={aRelancer.length === 0 ? 'Aucune relance en attente' : 'Clients en attente de réponse'}
-            color="#FB923C" bg="rgba(251,146,60,0.07)" border="rgba(251,146,60,0.18)"
-            Icon={Bell} href="/dashboard/leads"
-          />
-          <ActionCard
-            count={needsHuman.length} loading={loading}
-            label="Reprise humaine"
-            description={needsHuman.length === 0 ? 'Aucun dossier complexe' : 'Dossiers nécessitant une intervention'}
-            color="#F87171" bg="rgba(248,113,113,0.07)" border="rgba(248,113,113,0.18)"
-            Icon={UserCheck} href="/dashboard/leads"
-          />
-        </motion.div>
-
-        {/* ═══ PIPELINE TIMELINE ═══ */}
-        <motion.div {...fade(3)}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Navigation className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.22)' }} />
-              <span className="text-sm font-bold text-white">Pipeline commercial</span>
-              {!loading && (
-                <span
-                  className="text-xs px-2.5 py-1 rounded-full tabular-nums"
-                  style={{ background: 'rgba(74,222,128,0.08)', color: '#4ADE80', border: '1px solid rgba(74,222,128,0.18)' }}
+            Tous les leads <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+          {PIPELINE_STAGES.map(({ label, statuts, color, lightBg }) => {
+            const count = leads.filter(l => statuts.includes(l.statut)).length
+            return (
+              <div key={label} className="flex flex-col items-center gap-1.5 text-center">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-transform hover:scale-105 cursor-default"
+                  style={{
+                    background: count > 0 ? color : 'var(--dash-muted)',
+                    color: count > 0 ? '#fff' : 'var(--dash-text-faint)',
+                  }}
                 >
-                  {conversion}% conversion
-                </span>
-              )}
-            </div>
-            <Link href="/dashboard/leads" className="text-xs font-medium hover:underline" style={{ color: '#60A5FA' }}>
-              Vue complète →
+                  {loading ? '–' : count}
+                </div>
+                <div className="text-[10px] font-medium leading-tight" style={{ color: 'var(--dash-text-muted)' }}>
+                  {label}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Bottom grid ── */}
+      <div className="grid lg:grid-cols-[1fr_280px] gap-6">
+
+        {/* Leads récents */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: 'var(--dash-surface)',
+            border: '1px solid var(--dash-border)',
+            boxShadow: 'var(--dash-shadow)',
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-5 py-3.5"
+            style={{ borderBottom: '1px solid var(--dash-border)' }}
+          >
+            <div className="font-semibold text-sm" style={{ color: 'var(--dash-text)' }}>Leads récents</div>
+            <Link
+              href="/dashboard/leads"
+              className="text-xs font-medium transition-colors hover:opacity-75"
+              style={{ color: '#2563EB' }}
+            >
+              Voir tout <ChevronRight className="w-3 h-3 inline" />
             </Link>
           </div>
 
-          <div
-            className="rounded-2xl p-5 lg:p-6 relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.018) 100%)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.3)',
-            }}
-          >
-            {/* Connection line */}
-            <div
-              className="hidden sm:block absolute h-[1.5px] pointer-events-none"
-              style={{
-                top: 45, left: 80, right: 80,
-                background: 'linear-gradient(90deg, #A78BFA40, #60A5FA40, #FBBF2440, #38BDF840, #FB923C40, #4ADE8040, #F8717140)',
-              }}
-            />
-
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-              {PIPELINE_STAGES.map(({ label, statuts, color, glow }) => {
-                const count = leads.filter(l => statuts.includes(l.statut)).length
-                return (
-                  <Link
-                    key={label}
-                    href="/dashboard/leads"
-                    className="flex flex-col items-center gap-2.5 py-2 group"
+          {loading ? (
+            <div className="p-5 space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--dash-muted)' }} />
+              ))}
+            </div>
+          ) : recent.length === 0 ? (
+            <div className="p-10 text-center" style={{ color: 'var(--dash-text-faint)' }}>
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Aucun lead pour l&apos;instant</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--dash-border)' }}>
+                  {['Client', 'Trajet', 'Statut', 'Urgence', ''].map(h => (
+                    <th
+                      key={h}
+                      className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider"
+                      style={{ color: 'var(--dash-text-faint)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map(lead => (
+                  <tr
+                    key={lead._id}
+                    className="group transition-colors"
+                    style={{ borderBottom: '1px solid var(--dash-border)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--dash-muted)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <div
-                      className="relative w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold tabular-nums transition-all duration-200 group-hover:scale-110 z-10"
-                      style={{
-                        background:  count > 0 ? `${color}16` : 'rgba(255,255,255,0.04)',
-                        border:      `2px solid ${count > 0 ? color : 'rgba(255,255,255,0.1)'}`,
-                        color:       count > 0 ? color : 'rgba(255,255,255,0.2)',
-                        boxShadow:   count > 0 ? `0 0 18px ${glow}, 0 0 6px ${glow}` : 'none',
-                      }}
-                    >
-                      {loading ? '—' : count}
-                    </div>
-                    <span
-                      className="text-[10px] font-medium text-center leading-tight"
-                      style={{ color: count > 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.18)' }}
-                    >
-                      {label}
-                    </span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </motion.div>
+                    <td className="px-5 py-3">
+                      <div className="font-medium" style={{ color: 'var(--dash-text)' }}>{lead.nom}</div>
+                      {lead.societe && (
+                        <div className="text-[11px]" style={{ color: 'var(--dash-text-faint)' }}>{lead.societe}</div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--dash-text-muted)' }}>
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-[120px]">{lead.depart} → {lead.destination}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <StatusChip statut={lead.statut} />
+                    </td>
+                    <td className="px-5 py-3">
+                      <UrgencyChip urgence={lead.urgence} />
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <Link
+                        href={`/dashboard/leads/${lead._id}`}
+                        className="opacity-0 group-hover:opacity-100 flex items-center justify-end gap-1 text-xs font-medium transition-all"
+                        style={{ color: '#2563EB' }}
+                      >
+                        Ouvrir <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
-        {/* ═══ BOTTOM: TABLE + PILOTAGE ═══ */}
-        <motion.div {...fade(4)} className="grid lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_320px] gap-6 items-start">
+        {/* Pilotage column */}
+        <div className="flex flex-col gap-4">
 
-          {/* ─── Leads table ─── */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-bold text-white">Leads récents</span>
-              <Link href="/dashboard/leads" className="flex items-center gap-1 text-xs font-medium hover:underline" style={{ color: '#60A5FA' }}>
-                Voir tous <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-
+          {/* Urgents */}
+          {urgents.length > 0 && (
             <div
-              className="rounded-2xl overflow-hidden"
+              className="rounded-xl p-4"
               style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.018) 100%)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset, 0 8px 32px rgba(0,0,0,0.28)',
+                background: 'var(--dash-surface)',
+                border: '1px solid #FED7AA',
+                boxShadow: 'var(--dash-shadow)',
               }}
             >
-              <div
-                className="grid grid-cols-12 gap-2 px-5 py-3 text-[10px] font-bold uppercase tracking-wider"
-                style={{ background: 'rgba(255,255,255,0.025)', borderBottom: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.22)' }}
-              >
-                <span className="col-span-4">Client</span>
-                <span className="col-span-3 hidden sm:block">Trajet</span>
-                <span className="col-span-2">Statut</span>
-                <span className="col-span-2 hidden md:block">Urgence</span>
-                <span className="col-span-1" />
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
+                  Urgents ({urgents.length})
+                </span>
               </div>
-
-              {loading && (
-                <div className="px-5 py-12 flex justify-center">
-                  <RefreshCw className="w-4 h-4 animate-spin" style={{ color: 'rgba(255,255,255,0.18)' }} />
-                </div>
-              )}
-
-              {!loading && recentLeads.length === 0 && (
-                <div className="px-5 py-16 text-center">
-                  <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <Users className="w-5 h-5" style={{ color: 'rgba(255,255,255,0.14)' }} />
-                  </div>
-                  <p className="text-sm font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.22)' }}>Aucun lead pour l&apos;instant.</p>
-                  <Link href="/devis" className="text-xs hover:underline" style={{ color: '#60A5FA' }}>
-                    Créer une première demande →
-                  </Link>
-                </div>
-              )}
-
-              {!loading && recentLeads.map((lead, i) => (
-                <div
-                  key={lead._id}
-                  className="grid grid-cols-12 gap-2 px-5 py-4 items-center text-sm cursor-pointer group"
-                  style={{
-                    borderBottom: i < recentLeads.length - 1 ? '1px solid rgba(255,255,255,0.04)' : undefined,
-                    transition: 'background 0.15s',
-                  }}
-                  onClick={() => { window.location.href = `/dashboard/leads/${lead._id}` }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.028)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                >
-                  <div className="col-span-4 flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-transform group-hover:scale-105"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(37,99,235,0.2), rgba(14,165,233,0.12))',
-                        color: '#93C5FD',
-                        border: '1px solid rgba(37,99,235,0.22)',
-                      }}
-                    >
-                      {lead.nom.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-semibold text-white truncate">{lead.nom}</div>
-                      <div className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                        {lead.societe || lead.email}
+              <div className="space-y-2">
+                {urgents.map(l => (
+                  <Link
+                    key={l._id}
+                    href={`/dashboard/leads/${l._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg transition-colors hover:bg-amber-50 dark:hover:bg-amber-900/10"
+                  >
+                    <div>
+                      <div className="text-xs font-medium" style={{ color: 'var(--dash-text)' }}>{l.nom}</div>
+                      <div className="text-[10px]" style={{ color: 'var(--dash-text-faint)' }}>
+                        {l.depart} → {l.destination}
                       </div>
                     </div>
+                    <UrgencyChip urgence={l.urgence} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick stats */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="text-sm font-semibold mb-3" style={{ color: 'var(--dash-text)' }}>
+              Activité
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Leads actifs',     value: enCours,  icon: Activity,   color: '#2563EB' },
+                { label: 'Devis en attente', value: devisEnv, icon: Clock,      color: '#0284C7' },
+                { label: 'Taux conversion',  value: `${taux}%`, icon: TrendingUp, color: '#16A34A' },
+                { label: 'Reprise humaine',  value: repriseHumaine, icon: UserCheck, color: '#DC2626' },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: color + '14' }}>
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
                   </div>
-                  <div className="col-span-3 hidden sm:flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(167,139,250,0.5)' }} />
-                    <span className="text-[12px] truncate" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                      {lead.depart} → {lead.destination}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <StatusBadge status={lead.statut} size="sm" />
-                  </div>
-                  <div className="col-span-2 hidden md:block">
-                    <UrgencyBadge urgence={lead.urgence} size="sm" />
-                  </div>
-                  <div className="col-span-1 flex justify-end">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ background: 'rgba(96,165,250,0.1)' }}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" style={{ color: '#60A5FA' }} />
-                    </div>
-                  </div>
+                  <span className="flex-1 text-xs" style={{ color: 'var(--dash-text-muted)' }}>{label}</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--dash-text)' }}>
+                    {loading ? '–' : value}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* ─── Pilotage column ─── */}
-          <div className="space-y-4">
-
-            {/* Stats rapides */}
-            <div
-              className="rounded-2xl p-4"
-              style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.018) 100%)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                boxShadow: '0 2px 0 rgba(255,255,255,0.06) inset',
-              }}
-            >
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.22)' }}>
-                Pilotage rapide
-              </div>
-              <div className="space-y-2.5">
-                {[
-                  { label: 'Taux de conversion', value: `${conversion}%`,     color: '#4ADE80' },
-                  { label: 'Leads urgents',       value: urgents.length,       color: urgents.length > 0 ? '#F87171' : 'rgba(255,255,255,0.22)' },
-                  { label: 'Incomplets',          value: leads.filter(l => l.statut === 'incomplet').length, color: '#FBBF24' },
-                  { label: 'Actifs total',        value: activeleads.length,   color: '#60A5FA' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.32)' }}>{label}</span>
-                    <span className="text-sm font-bold tabular-nums" style={{ color }}>
-                      {loading ? '—' : value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Urgents */}
-            {!loading && urgents.length > 0 && (
-              <div
-                className="rounded-2xl p-4"
-                style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)' }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="w-3.5 h-3.5" style={{ color: '#F87171' }} />
-                  <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#F87171' }}>
-                    Urgents · {urgents.length}
-                  </div>
+          {/* Garanties */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="text-sm font-semibold mb-3" style={{ color: 'var(--dash-text)' }}>Garanties NeoTravel</div>
+            <div className="space-y-1.5">
+              {[
+                'Calcul 100% traçable',
+                'Prix déterministe + auditable',
+                'Reprise humaine systématique si cas complexe',
+                'Devis valable 30 jours',
+              ].map(g => (
+                <div key={g} className="flex items-start gap-2 text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>
+                  <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-green-500" />
+                  {g}
                 </div>
-                <div className="space-y-2">
-                  {urgents.slice(0, 3).map(lead => (
-                    <Link
-                      key={lead._id}
-                      href={`/dashboard/leads/${lead._id}`}
-                      className="flex items-center gap-2 group"
-                    >
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                        style={{ background: 'rgba(248,113,113,0.14)', color: '#F87171' }}
-                      >
-                        {lead.nom.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-white truncate">{lead.nom}</div>
-                        <div className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.28)' }}>
-                          {lead.depart} → {lead.destination}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#F87171' }} />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Garanties NeoTravel */}
-            <div
-              className="rounded-2xl p-4"
-              style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.012) 100%)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-            >
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                Engagements NeoTravel
-              </div>
-              <div className="space-y-2">
-                {[
-                  { label: 'Calcul 100% traçable', color: '#4ADE80' },
-                  { label: 'Reprise humaine si besoin', color: '#C084FC' },
-                  { label: 'Réponse en moins de 2h', color: '#38BDF8' },
-                  { label: 'Prix déterministe & auditable', color: '#FBBF24' },
-                ].map(({ label, color }) => (
-                  <div key={label} className="flex items-center gap-2 text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                    {label}
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-
-            {/* Lien paramètres */}
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-medium transition-all hover:bg-white/8"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                color: 'rgba(255,255,255,0.38)',
-              }}
-            >
-              <span>Paramètres de calcul</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
-        </motion.div>
+
+          <Link
+            href="/dashboard/settings"
+            className="flex items-center justify-between p-3 rounded-xl transition-all hover:-translate-y-px"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div>
+              <div className="text-xs font-semibold" style={{ color: 'var(--dash-text)' }}>Paramètres calcul</div>
+              <div className="text-[10px]" style={{ color: 'var(--dash-text-faint)' }}>Carburant, marges, TVA…</div>
+            </div>
+            <ArrowRight className="w-4 h-4" style={{ color: 'var(--dash-text-faint)' }} />
+          </Link>
+        </div>
       </div>
     </div>
   )

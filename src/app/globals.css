@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* Landing page / dark sections (unchanged) */
     --bg-base:        #030D20;
     --bg-surface:     #061435;
     --bg-elevated:    #0A1C48;
@@ -14,6 +15,44 @@
     --text-muted:     #64748B;
     --accent-blue:    #2563EB;
     --accent-gold:    #F59E0B;
+
+    /* Dashboard — light mode (default) */
+    --dash-bg:            #F8FAFC;
+    --dash-surface:       #FFFFFF;
+    --dash-muted:         #F1F5F9;
+    --dash-border:        #E2E8F0;
+    --dash-text:          #0F172A;
+    --dash-text-muted:    #64748B;
+    --dash-text-faint:    #94A3B8;
+    --dash-sidebar-bg:    #FFFFFF;
+    --dash-sidebar-border:#E2E8F0;
+    --dash-sidebar-text:  #374151;
+    --dash-active-bg:     #EFF6FF;
+    --dash-active-text:   #1D4ED8;
+    --dash-active-border: #BFDBFE;
+    --dash-primary:       #2563EB;
+    --dash-shadow:        0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --dash-shadow-md:     0 4px 12px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  .dark {
+    /* Dashboard — dark mode */
+    --dash-bg:            #07111F;
+    --dash-surface:       #0F1B2D;
+    --dash-muted:         #111827;
+    --dash-border:        rgba(255,255,255,0.08);
+    --dash-text:          #F8FAFC;
+    --dash-text-muted:    #94A3B8;
+    --dash-text-faint:    rgba(255,255,255,0.28);
+    --dash-sidebar-bg:    #071028;
+    --dash-sidebar-border:rgba(255,255,255,0.07);
+    --dash-sidebar-text:  rgba(255,255,255,0.45);
+    --dash-active-bg:     rgba(37,99,235,0.14);
+    --dash-active-text:   #FFFFFF;
+    --dash-active-border: rgba(37,99,235,0.22);
+    --dash-primary:       #3B82F6;
+    --dash-shadow:        0 1px 3px rgba(0,0,0,0.35);
+    --dash-shadow-md:     0 4px 24px rgba(0,0,0,0.4);
   }
 
   html {

@@ -43,18 +43,18 @@ export const LEAD_STATUS_LABELS_CLIENT: Record<LeadStatus, string> = {
 }
 
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  nouveau:          'bg-blue-500/12 text-blue-300 border border-blue-500/20',
-  incomplet:        'bg-yellow-500/12 text-yellow-300 border border-yellow-500/20',
-  qualifie:         'bg-indigo-500/12 text-indigo-300 border border-indigo-500/20',
-  devis_genere:     'bg-purple-500/12 text-purple-300 border border-purple-500/20',
-  devis_envoye:     'bg-cyan-500/12 text-cyan-300 border border-cyan-500/20',
-  relance_1:        'bg-orange-500/12 text-orange-300 border border-orange-500/20',
-  relance_2:        'bg-red-500/12 text-red-300 border border-red-500/20',
-  accepte:          'bg-green-500/12 text-green-300 border border-green-500/20',
-  refuse:           'bg-white/5 text-white/40 border border-white/10',
-  cas_complexe:     'bg-pink-500/12 text-pink-300 border border-pink-500/20',
-  reprise_humaine:  'bg-rose-500/12 text-rose-300 border border-rose-500/20',
-  cloture:          'bg-white/4 text-white/30 border border-white/8',
+  nouveau:          'bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/12 dark:text-blue-300 dark:border-blue-500/20',
+  incomplet:        'bg-yellow-100 text-yellow-700 border border-yellow-200 dark:bg-yellow-500/12 dark:text-yellow-300 dark:border-yellow-500/20',
+  qualifie:         'bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-500/12 dark:text-indigo-300 dark:border-indigo-500/20',
+  devis_genere:     'bg-amber-100 text-amber-700 border border-amber-200 dark:bg-purple-500/12 dark:text-purple-300 dark:border-purple-500/20',
+  devis_envoye:     'bg-sky-100 text-sky-700 border border-sky-200 dark:bg-cyan-500/12 dark:text-cyan-300 dark:border-cyan-500/20',
+  relance_1:        'bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-500/12 dark:text-orange-300 dark:border-orange-500/20',
+  relance_2:        'bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/12 dark:text-red-300 dark:border-red-500/20',
+  accepte:          'bg-green-100 text-green-700 border border-green-200 dark:bg-green-500/12 dark:text-green-300 dark:border-green-500/20',
+  refuse:           'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-white/5 dark:text-white/40 dark:border-white/10',
+  cas_complexe:     'bg-pink-100 text-pink-700 border border-pink-200 dark:bg-pink-500/12 dark:text-pink-300 dark:border-pink-500/20',
+  reprise_humaine:  'bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-500/12 dark:text-rose-300 dark:border-rose-500/20',
+  cloture:          'bg-slate-100 text-slate-400 border border-slate-200 dark:bg-white/4 dark:text-white/30 dark:border-white/8',
 }
 
 export type UrgenceLevel = 'normal' | 'urgent' | 'tres_urgent'
@@ -72,6 +72,42 @@ export const URGENCE_COLORS: Record<UrgenceLevel, string> = {
 }
 
 export type SourceType = 'mock_mvp' | 'regle_documentee' | 'hypothese_mvp' | 'a_definir'
+
+export interface QuoteLine {
+  label: string
+  quantity: number
+  unit: string
+  unit_price_ht: number
+  tva_rate: number
+  total_ht: number
+}
+
+export interface ManualQuotePayload {
+  client: {
+    nom: string
+    email: string
+    telephone?: string
+    societe?: string
+  }
+  trajet: {
+    depart: string
+    destination: string
+    date_depart?: string
+    date_retour?: string
+    nb_passagers: number
+    type_trajet: string
+    urgence: string
+  }
+  lignes: QuoteLine[]
+  remise_pct?: number
+  validite_jours?: number
+  commentaire?: string
+  conditions?: string
+  total_ht: number
+  tva: number
+  total_ttc: number
+  leadId?: string
+}
 
 export interface LigneCalcul {
   label: string
