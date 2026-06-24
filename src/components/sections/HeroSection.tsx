@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight, Shield, Clock, FileText } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
@@ -11,48 +10,208 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.11, delayChildren: 0.25 } },
 }
 const item = {
-  hidden:   { opacity: 0, y: 24 },
-  visible:  { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] as const } },
+  hidden:  { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] as const } },
 }
 
 const REASSURANCES = [
-  { icon: FileText, value: 'Devis gratuit',   label: 'sans engagement' },
-  { icon: Clock,    value: 'Réponse 2h',       label: 'en heures ouvrées' },
-  { icon: Shield,   value: 'Prix traçable',    label: 'ligne par ligne' },
+  { icon: FileText, value: 'Devis gratuit',  label: 'sans engagement' },
+  { icon: Clock,    value: 'Réponse 2h',     label: 'en heures ouvrées' },
+  { icon: Shield,   value: 'Prix traçable',  label: 'ligne par ligne' },
 ]
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden pt-16 bg-gradient-hero">
-      {/* Background photo de bus bas-gauche */}
-      <div className="absolute bottom-0 left-0 w-[480px] h-[280px] pointer-events-none hidden lg:block">
-        <Image
-          src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=70"
-          alt="Autocar de transport de groupe"
-          fill
-          className="object-cover object-right-top"
-          priority={false}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to right, transparent 0%, #030D20 70%), linear-gradient(to top, transparent 0%, #030D20 55%)',
-          }}
-        />
-      </div>
+    <section className="relative min-h-screen flex items-center overflow-hidden pt-16">
 
-      {/* Background grid */}
-      <div className="absolute inset-0 bg-grid-dark opacity-40" />
-      {/* Blue glow top */}
+      {/* ── Background system ── */}
+
+      {/* 1. Base — deep atmospheric gradient */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 70% 40% at 60% -5%, rgba(37,99,235,0.2) 0%, transparent 70%)' }}
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(168deg, #010C1E 0%, #030D20 38%, #061435 68%, #020A16 100%)',
+        }}
       />
 
+      {/* 2. Blue aurora — top-left */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 75% 62% at 12% -8%, rgba(37,99,235,0.26) 0%, rgba(37,99,235,0.07) 45%, transparent 68%)',
+        }}
+      />
+
+      {/* 3. Sky accent — top-right */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 55% 48% at 95% -2%, rgba(14,165,233,0.12) 0%, transparent 55%)',
+        }}
+      />
+
+      {/* 4. Route horizon glow — bottom warm */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 110% 42% at 50% 108%, rgba(245,158,11,0.055) 0%, transparent 62%)',
+        }}
+      />
+
+      {/* 5. Vignette — edge depth */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 115% 95% at 50% 50%, transparent 42%, rgba(1,7,16,0.45) 100%)',
+        }}
+      />
+
+      {/* 6. Animated SVG route paths */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 1440 900"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="hrg1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#2563EB" stopOpacity="0" />
+            <stop offset="35%"  stopColor="#60A5FA" stopOpacity="1" />
+            <stop offset="70%"  stopColor="#2563EB" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="hrg2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#0EA5E9" stopOpacity="0" />
+            <stop offset="50%"  stopColor="#38BDF8" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="hrg3" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#F59E0B" stopOpacity="0" />
+            <stop offset="45%"  stopColor="#FCD34D" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Route 1 — main diagonal, top-left → bottom-right */}
+        <motion.path
+          d="M 80 60 C 280 150 460 230 640 360 S 900 510 1140 590 S 1360 640 1480 660"
+          stroke="url(#hrg1)"
+          strokeWidth="1.5"
+          fill="none"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{
+            pathLength: [0, 0, 1, 1, 1],
+            opacity:    [0, 0.75, 0.75, 0.75, 0],
+          }}
+          transition={{
+            duration:    10,
+            repeat:      Infinity,
+            repeatDelay: 4,
+            ease:        'easeInOut',
+            times:       [0, 0.06, 0.68, 0.88, 1],
+          }}
+        />
+
+        {/* Route 2 — secondary, more horizontal */}
+        <motion.path
+          d="M -60 530 C 180 500 370 450 570 420 S 840 385 1060 355 S 1300 325 1500 315"
+          stroke="url(#hrg2)"
+          strokeWidth="1"
+          fill="none"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{
+            pathLength: [0, 0, 1, 1, 1],
+            opacity:    [0, 0.55, 0.55, 0.55, 0],
+          }}
+          transition={{
+            duration:    10,
+            repeat:      Infinity,
+            repeatDelay: 4,
+            ease:        'easeInOut',
+            times:       [0, 0.06, 0.68, 0.88, 1],
+            delay:       3.8,
+          }}
+        />
+
+        {/* Route 3 — bottom accent, gold */}
+        <motion.path
+          d="M 200 820 C 400 780 560 740 720 700 S 960 660 1200 640 S 1380 630 1480 625"
+          stroke="url(#hrg3)"
+          strokeWidth="0.8"
+          fill="none"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{
+            pathLength: [0, 0, 1, 1, 1],
+            opacity:    [0, 0.4, 0.4, 0.4, 0],
+          }}
+          transition={{
+            duration:    10,
+            repeat:      Infinity,
+            repeatDelay: 4,
+            ease:        'easeInOut',
+            times:       [0, 0.06, 0.68, 0.88, 1],
+            delay:       6.2,
+          }}
+        />
+
+        {/* Waypoints — city dots that pop at path midpoints */}
+        <motion.circle
+          cx="640" cy="360" r="3"
+          fill="#60A5FA"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0, 0.9, 0.9, 0], scale: [0.5, 0.5, 1.3, 1, 0] }}
+          transition={{ duration: 10, repeat: Infinity, repeatDelay: 4, times: [0, 0.32, 0.42, 0.85, 1] }}
+        />
+        <motion.circle
+          cx="640" cy="360" r="8"
+          fill="#60A5FA"
+          fillOpacity="0"
+          stroke="#60A5FA"
+          strokeWidth="1"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0, 0.3, 0, 0], scale: [0, 0, 2.5, 3.5, 0] }}
+          transition={{ duration: 10, repeat: Infinity, repeatDelay: 4, times: [0, 0.35, 0.46, 0.58, 1] }}
+        />
+        <motion.circle
+          cx="1140" cy="590" r="2.5"
+          fill="#38BDF8"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0, 0.7, 0.7, 0], scale: [0.5, 0.5, 1.2, 1, 0] }}
+          transition={{ duration: 10, repeat: Infinity, repeatDelay: 4, times: [0, 0.52, 0.60, 0.85, 1] }}
+        />
+        <motion.circle
+          cx="570" cy="420" r="2"
+          fill="#38BDF8"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0, 0.6, 0.6, 0], scale: [0.5, 0.5, 1.1, 1, 0] }}
+          transition={{ duration: 10, repeat: Infinity, repeatDelay: 4, times: [0, 0.38, 0.46, 0.85, 1], delay: 3.8 }}
+        />
+      </svg>
+
+      {/* 7. Dot matrix — replaces grid, more premium */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.065) 1px, transparent 1px)',
+          backgroundSize:  '36px 36px',
+          opacity: 0.85,
+        }}
+      />
+
+      {/* 8. Noise texture */}
+      <div className="absolute inset-0 bg-noise pointer-events-none" style={{ opacity: 0.55 }} />
+
+      {/* 9. Top divider */}
+      <div
+        className="absolute top-0 inset-x-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }}
+      />
+
+      {/* ── Content ── */}
       <div className="container-neo px-4 sm:px-6 relative z-10 w-full py-24">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-6 items-center min-h-[calc(100vh-96px)]">
 
-          {/* ─── Left — copy ─────────────────────────── */}
+          {/* Left — copy */}
           <motion.div
             className="flex flex-col items-start"
             variants={stagger}
@@ -116,7 +275,7 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* ─── Right — transport route map ─────────── */}
+          {/* Right — transport route map */}
           <motion.div
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}

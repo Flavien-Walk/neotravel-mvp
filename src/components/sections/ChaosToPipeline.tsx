@@ -1,9 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import {
-  motion, useScroll, useTransform, useMotionValueEvent,
-} from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import {
   Inbox, Phone, MessageSquare, BellOff, FileSpreadsheet,
   Zap, CheckCircle2, Send, Bell, ArrowRight, Euro,
@@ -21,26 +19,15 @@ const CHAOS = [
 ]
 
 const PIPELINE = [
-  { Icon: Inbox,        label: 'Demande centralisée', color: '#60A5FA' },
-  { Icon: Zap,          label: 'Trajet qualifié',      color: '#A78BFA' },
-  { Icon: Euro,         label: 'Prix calculé',         color: '#4ADE80' },
-  { Icon: Send,         label: 'Devis envoyé',         color: '#38BDF8' },
-  { Icon: Bell,         label: 'Suivi automatique',    color: '#FCD34D' },
+  { Icon: Inbox, label: 'Demande centralisée', color: '#60A5FA' },
+  { Icon: Zap,   label: 'Trajet qualifié',      color: '#A78BFA' },
+  { Icon: Euro,  label: 'Prix calculé',         color: '#4ADE80' },
+  { Icon: Send,  label: 'Devis envoyé',         color: '#38BDF8' },
+  { Icon: Bell,  label: 'Suivi automatique',    color: '#FCD34D' },
 ]
-
-const pipelineVar = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
-}
-const pipeItemVar = {
-  hidden:  { opacity: 0, x: -18 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.48, ease: EASE } },
-}
 
 export default function ChaosToPipeline() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [pipeVisible, setPipeVisible]   = useState(false)
-  const [statsVisible, setStatsVisible] = useState(false)
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -56,8 +43,20 @@ export default function ChaosToPipeline() {
   const statsY  = useTransform(scrollYProgress, [0.73, 0.90], [20, 0])
   const hintOp  = useTransform(scrollYProgress, [0, 0.06], [1, 0])
 
-  useMotionValueEvent(pipeOp,  'change', (v) => { if (v > 0.05 && !pipeVisible)  setPipeVisible(true) })
-  useMotionValueEvent(statsOp, 'change', (v) => { if (v > 0.05 && !statsVisible) setStatsVisible(true) })
+  // Pipeline items — scroll-driven stagger, no state/events needed
+  const pi0o = useTransform(scrollYProgress, [0.44,  0.54 ], [0, 1])
+  const pi1o = useTransform(scrollYProgress, [0.462, 0.562], [0, 1])
+  const pi2o = useTransform(scrollYProgress, [0.484, 0.584], [0, 1])
+  const pi3o = useTransform(scrollYProgress, [0.506, 0.606], [0, 1])
+  const pi4o = useTransform(scrollYProgress, [0.528, 0.628], [0, 1])
+  const pi0x = useTransform(scrollYProgress, [0.44,  0.54 ], [-18, 0])
+  const pi1x = useTransform(scrollYProgress, [0.462, 0.562], [-18, 0])
+  const pi2x = useTransform(scrollYProgress, [0.484, 0.584], [-18, 0])
+  const pi3x = useTransform(scrollYProgress, [0.506, 0.606], [-18, 0])
+  const pi4x = useTransform(scrollYProgress, [0.528, 0.628], [-18, 0])
+
+  const PIPE_OPS = [pi0o, pi1o, pi2o, pi3o, pi4o]
+  const PIPE_XS  = [pi0x, pi1x, pi2x, pi3x, pi4x]
 
   return (
     <section
@@ -81,7 +80,6 @@ export default function ChaosToPipeline() {
           style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(37,99,235,0.05) 0%, transparent 70%)' }}
         />
 
-        {/* Content */}
         <div className="flex-1 flex flex-col justify-center container-neo px-4 sm:px-6 relative z-10">
 
           {/* Header */}
@@ -102,7 +100,7 @@ export default function ChaosToPipeline() {
             style={{ height: 300, width: '100%', maxWidth: 540 }}
           >
 
-            {/* ── CHAOS ─────────────────────────────────── */}
+            {/* ── CHAOS ── */}
             <motion.div
               style={{ opacity: chaosOp }}
               className="absolute inset-0 flex items-center justify-center"
@@ -119,12 +117,12 @@ export default function ChaosToPipeline() {
                   key={text}
                   className="absolute flex items-center gap-3 px-3.5 py-2.5 rounded-2xl select-none"
                   style={{
-                    left:   `calc(50% + ${x}px)`,
-                    top:    `calc(50% + ${y}px)`,
-                    translate: '-50% -50%',
-                    rotate: rot,
-                    background: 'rgba(239,68,68,0.07)',
-                    border: '1px solid rgba(239,68,68,0.2)',
+                    left:           `calc(50% + ${x}px)`,
+                    top:            `calc(50% + ${y}px)`,
+                    translate:      '-50% -50%',
+                    rotate:         rot,
+                    background:     'rgba(239,68,68,0.07)',
+                    border:         '1px solid rgba(239,68,68,0.2)',
                     backdropFilter: 'blur(10px)',
                   }}
                   animate={{
@@ -152,7 +150,7 @@ export default function ChaosToPipeline() {
               ))}
             </motion.div>
 
-            {/* ── TRANSFORMATION ARROW ──────────────────── */}
+            {/* ── TRANSFORMATION ARROW ── */}
             <motion.div
               style={{ opacity: arrowOp, scale: arrowSc }}
               className="absolute z-20 flex flex-col items-center gap-2 pointer-events-none"
@@ -161,8 +159,8 @@ export default function ChaosToPipeline() {
                 className="w-14 h-14 rounded-full flex items-center justify-center"
                 style={{
                   background: 'rgba(37,99,235,0.2)',
-                  border: '1px solid rgba(37,99,235,0.5)',
-                  boxShadow: '0 0 40px rgba(37,99,235,0.35), 0 0 80px rgba(37,99,235,0.1)',
+                  border:     '1px solid rgba(37,99,235,0.5)',
+                  boxShadow:  '0 0 40px rgba(37,99,235,0.35), 0 0 80px rgba(37,99,235,0.1)',
                 }}
               >
                 <ArrowRight className="w-7 h-7 text-neo-blue" />
@@ -170,7 +168,7 @@ export default function ChaosToPipeline() {
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/35">NeoTravel</span>
             </motion.div>
 
-            {/* ── PIPELINE ──────────────────────────────── */}
+            {/* ── PIPELINE — scroll-driven opacity per item ── */}
             <motion.div
               style={{ opacity: pipeOp, y: pipeY }}
               className="absolute inset-0 flex items-center justify-center"
@@ -178,37 +176,32 @@ export default function ChaosToPipeline() {
               <div
                 className="absolute rounded-full pointer-events-none"
                 style={{
-                  inset: '5%',
+                  inset:      '5%',
                   background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.09) 0%, transparent 70%)',
                 }}
               />
-              <motion.div
-                variants={pipelineVar}
-                initial="hidden"
-                animate={pipeVisible ? 'visible' : 'hidden'}
-                className="relative flex flex-col gap-2.5"
-                style={{ width: 320 }}
-              >
+              <div className="relative flex flex-col gap-2.5" style={{ width: 320 }}>
                 {/* Connector line */}
                 <div
                   className="absolute z-0 pointer-events-none"
                   style={{
-                    left: 26,
-                    top: 18,
-                    bottom: 18,
-                    width: 1,
+                    left:       26,
+                    top:        18,
+                    bottom:     18,
+                    width:      1,
                     background: 'linear-gradient(to bottom, rgba(96,165,250,0.5), rgba(252,211,77,0.5))',
                   }}
                 />
-                {PIPELINE.map(({ Icon, label, color }) => (
+                {PIPELINE.map(({ Icon, label, color }, i) => (
                   <motion.div
                     key={label}
-                    variants={pipeItemVar}
-                    className="relative z-10 flex items-center gap-3 px-4 py-2.5 rounded-2xl"
                     style={{
+                      opacity:    PIPE_OPS[i],
+                      x:          PIPE_XS[i],
                       background: 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${color}22`,
+                      border:     `1px solid ${color}22`,
                     }}
+                    className="relative z-10 flex items-center gap-3 px-4 py-2.5 rounded-2xl"
                   >
                     <div
                       className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -220,7 +213,7 @@ export default function ChaosToPipeline() {
                     <CheckCircle2 className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
                   </motion.div>
                 ))}
-              </motion.div>
+              </div>
             </motion.div>
           </div>
 
@@ -241,7 +234,7 @@ export default function ChaosToPipeline() {
             ))}
           </motion.div>
 
-          {/* CTA appears with stats */}
+          {/* CTA */}
           <motion.div
             style={{ opacity: statsOp }}
             className="flex justify-center mt-6"
