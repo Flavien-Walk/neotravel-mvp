@@ -3,13 +3,12 @@ import AuthRedirect from '@/components/ui/AuthRedirect'
 import SiteFooter from '@/components/layout/SiteFooter'
 import HeroSection from '@/components/sections/HeroSection'
 import BusPhotoStrip from '@/components/sections/BusPhotoStrip'
-import ProblemSection from '@/components/sections/ProblemSection'
+import BeforeAfterPipeline from '@/components/sections/BeforeAfterPipeline'
 import PourQuiSection from '@/components/sections/PourQuiSection'
-import UserJourneySection from '@/components/sections/UserJourneySection'
-import SolutionFlow from '@/components/sections/SolutionFlow'
-import ReliabilitySection from '@/components/sections/ReliabilitySection'
+import ScrollTimeline from '@/components/sections/ScrollTimeline'
+import TraceableQuoteSection from '@/components/sections/TraceableQuoteSection'
 import CorporatePhotoSection from '@/components/sections/CorporatePhotoSection'
-import DashboardPreview from '@/components/sections/DashboardPreview'
+import ProductDemoSplit from '@/components/sections/ProductDemoSplit'
 import FAQSection from '@/components/sections/FAQSection'
 import FinalCTA from '@/components/sections/FinalCTA'
 
@@ -21,13 +20,12 @@ export default function HomePage() {
       <main className="flex-1">
         <HeroSection />
         <BusPhotoStrip />
-        <ProblemSection />
+        <BeforeAfterPipeline />
         <PourQuiSection />
-        <UserJourneySection />
-        <SolutionFlow />
-        <ReliabilitySection />
+        <ScrollTimeline />
+        <TraceableQuoteSection />
         <CorporatePhotoSection />
-        <DashboardPreview />
+        <ProductDemoSplit />
         <FAQSection />
         <FinalCTA />
       </main>
