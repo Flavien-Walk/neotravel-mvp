@@ -25,10 +25,12 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.5.1",
     "openai": "^6.44.0",
+    "pdfkit": "^0.19.1",
     "typescript": "^5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/pdfkit": "^0.17.6",
     "tsx": "^4.16.2"
   }
 }

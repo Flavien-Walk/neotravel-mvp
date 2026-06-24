@@ -20,6 +20,7 @@ export interface ICalculationSource {
 
 export interface IQuote extends Document {
   leadId: Types.ObjectId
+  source: string  // 'auto' | 'manuel_commercial'
   prix_ht: number
   tva: number
   prix_ttc: number
@@ -63,6 +64,7 @@ const sourceSchema = new Schema({
 const quoteSchema = new Schema<IQuote>(
   {
     leadId:      { type: Schema.Types.ObjectId, ref: 'Lead', required: true },
+    source:      { type: String, default: 'auto' },
     prix_ht:     { type: Number, required: true },
     tva:         { type: Number, required: true },
     prix_ttc:    { type: Number, required: true },

@@ -5,7 +5,7 @@ import crypto from 'crypto'
 import { z } from 'zod'
 import { User } from '../models/User'
 import { Log } from '../models/Log'
-import { requireAuth, AuthRequest } from '../middleware/requireAuth'
+import { requireAuth, requireRole, AuthRequest } from '../middleware/requireAuth'
 import {
   sendWelcomeEmail,
   sendPasswordResetEmail,
@@ -23,11 +23,19 @@ function signToken(userId: string, role: string): string {
 
 // ─── Schemas de validation ────────────────────────────────────────────────────
 
+// Le rôle n'est jamais accepté du frontend — toujours forcé à 'client'
 const registerSchema = z.object({
   nom:          z.string().min(2).max(80),
   email:        z.string().email(),
   password:     z.string().min(8).max(100),
-  role:         z.enum(['admin', 'commercial', 'client']).optional(),
+  organisation: z.string().max(120).optional(),
+})
+
+const staffSchema = z.object({
+  nom:          z.string().min(2).max(80),
+  email:        z.string().email(),
+  password:     z.string().min(8).max(100),
+  role:         z.enum(['commercial', 'admin']),
   organisation: z.string().max(120).optional(),
 })
 
@@ -45,7 +53,7 @@ const resetSchema = z.object({
   password: z.string().min(8).max(100),
 })
 
-// ─── POST /api/auth/register ─────────────────────────────────────────────────
+// ─── POST /api/auth/register — création compte client uniquement ─────────────
 
 router.post('/register', async (req: Request, res: Response) => {
   const parsed = registerSchema.safeParse(req.body)
@@ -54,25 +62,26 @@ router.post('/register', async (req: Request, res: Response) => {
     return
   }
 
-  const { nom, email, password, role, organisation } = parsed.data
+  // Le rôle est TOUJOURS 'client' — jamais accepté du payload
+  const { nom, email, organisation } = parsed.data
+  const password = parsed.data.password
 
   try {
-    const existing = await User.findOne({ email })
+    const existing = await User.findOne({ email: email.toLowerCase() })
     if (existing) {
       res.status(409).json({ message: 'Un compte existe déjà avec cette adresse email.' })
       return
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({ nom, email, passwordHash, role: role ?? 'client', organisation })
+    const user = await User.create({ nom, email: email.toLowerCase(), passwordHash, role: 'client', organisation })
 
     await Log.create({
       action: 'USER_REGISTERED',
       status: 'success',
-      message: `Nouveau compte créé : ${nom} (${email}) — rôle ${role ?? 'client'}`,
+      message: `Nouveau compte client créé : ${nom} (${email})`,
     })
 
-    // Email de bienvenue (non bloquant)
     sendWelcomeEmail(user).catch(() => {})
 
     const token = signToken(String(user._id), user.role)
@@ -82,6 +91,42 @@ router.post('/register', async (req: Request, res: Response) => {
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la création du compte', error: String(err) })
+  }
+})
+
+// ─── POST /api/auth/staff — création compte NeoTravel (admin uniquement) ─────
+
+router.post('/staff', requireAuth, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+  const parsed = staffSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() })
+    return
+  }
+
+  const { nom, email, password, role, organisation } = parsed.data
+
+  try {
+    const existing = await User.findOne({ email: email.toLowerCase() })
+    if (existing) {
+      res.status(409).json({ message: 'Un compte existe déjà avec cette adresse email.' })
+      return
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+    const user = await User.create({ nom, email: email.toLowerCase(), passwordHash, role, organisation })
+
+    await Log.create({
+      action: 'STAFF_CREATED',
+      status: 'success',
+      message: `Compte NeoTravel créé par admin : ${nom} (${email}) — rôle ${role}`,
+      payload: { createdBy: req.userId },
+    })
+
+    res.status(201).json({
+      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
+    })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur création compte NeoTravel', error: String(err) })
   }
 })
 

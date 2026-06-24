@@ -3,6 +3,7 @@ import { Types } from 'mongoose'
 import { Lead } from '../models/Lead'
 import { Quote } from '../models/Quote'
 import { Log } from '../models/Log'
+import { User } from '../models/User'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { sendLeadReceivedEmail, sendNewLeadInternalEmail } from '../services/email/emailService'
 
@@ -134,6 +135,37 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erreur création lead'
     res.status(400).json({ message })
+  }
+})
+
+// POST /api/leads/claim-by-email — rattacher les leads anonymes au compte connecté
+router.post('/claim-by-email', requireAuth, async (req: AuthRequest, res: Response) => {
+  if (req.userRole !== 'client') {
+    res.status(403).json({ message: 'Réservé aux comptes clients.' })
+    return
+  }
+
+  try {
+    const user = await User.findById(req.userId).lean()
+    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+
+    const result = await Lead.updateMany(
+      { email: user.email, userId: null },
+      { $set: { userId: req.userId } }
+    )
+
+    if (result.modifiedCount > 0) {
+      await Log.create({
+        action: 'LEADS_CLAIMED',
+        status: 'success',
+        message: `${result.modifiedCount} demande(s) rattachée(s) au compte ${user.email}`,
+        payload: { userId: req.userId, email: user.email, count: result.modifiedCount },
+      })
+    }
+
+    res.json({ claimed: result.modifiedCount })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur rattachement leads', error: String(err) })
   }
 })
 
