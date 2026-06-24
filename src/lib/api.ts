@@ -70,6 +70,15 @@ export const api = {
 
     remind: (id: string) =>
       request(`/api/quotes/${id}/remind`, { method: 'POST' }),
+
+    downloadPdf: (id: string): Promise<Response> => {
+      const token = getToken()
+      return fetch(`${API_URL}/api/quotes/${id}/pdf`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      })
+    },
   },
 
   chat: {

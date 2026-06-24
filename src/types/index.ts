@@ -9,48 +9,52 @@ export type LeadStatus =
   | 'accepte'
   | 'refuse'
   | 'cas_complexe'
+  | 'reprise_humaine'
   | 'cloture'
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  nouveau:         'Nouveau lead',
-  incomplet:       'Demande incomplète',
-  qualifie:        'Demande qualifiée',
-  devis_genere:    'Devis généré',
-  devis_envoye:    'Devis envoyé',
-  relance_1:       'Relance 1',
-  relance_2:       'Relance 2',
-  accepte:         'Accepté',
-  refuse:          'Refusé',
-  cas_complexe:    'Cas complexe transmis',
-  cloture:         'Clôturé sans réponse',
+  nouveau:          'Nouveau lead',
+  incomplet:        'Demande incomplète',
+  qualifie:         'Demande qualifiée',
+  devis_genere:     'Devis généré',
+  devis_envoye:     'Devis envoyé',
+  relance_1:        'Relance 1',
+  relance_2:        'Relance 2',
+  accepte:          'Accepté',
+  refuse:           'Refusé',
+  cas_complexe:     'Cas complexe',
+  reprise_humaine:  'Reprise humaine',
+  cloture:          'Clôturé sans réponse',
 }
 
 export const LEAD_STATUS_LABELS_CLIENT: Record<LeadStatus, string> = {
-  nouveau:         'Demande reçue',
-  incomplet:       'En attente d\'informations',
-  qualifie:        'Dossier en cours',
-  devis_genere:    'Devis en préparation',
-  devis_envoye:    'Devis envoyé',
-  relance_1:       'Rappel envoyé',
-  relance_2:       'Second rappel envoyé',
-  accepte:         'Devis accepté',
-  refuse:          'Devis refusé',
-  cas_complexe:    'Suivi par un conseiller',
-  cloture:         'Dossier clôturé',
+  nouveau:          'Demande reçue',
+  incomplet:        'En attente d\'informations',
+  qualifie:         'Dossier en cours',
+  devis_genere:     'Devis en préparation',
+  devis_envoye:     'Devis envoyé',
+  relance_1:        'Rappel envoyé',
+  relance_2:        'Second rappel envoyé',
+  accepte:          'Devis accepté',
+  refuse:           'Devis refusé',
+  cas_complexe:     'Suivi par un conseiller',
+  reprise_humaine:  'Suivi par un conseiller',
+  cloture:          'Dossier clôturé',
 }
 
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  nouveau:      'bg-blue-500/12 text-blue-300 border border-blue-500/20',
-  incomplet:    'bg-yellow-500/12 text-yellow-300 border border-yellow-500/20',
-  qualifie:     'bg-indigo-500/12 text-indigo-300 border border-indigo-500/20',
-  devis_genere: 'bg-purple-500/12 text-purple-300 border border-purple-500/20',
-  devis_envoye: 'bg-cyan-500/12 text-cyan-300 border border-cyan-500/20',
-  relance_1:    'bg-orange-500/12 text-orange-300 border border-orange-500/20',
-  relance_2:    'bg-red-500/12 text-red-300 border border-red-500/20',
-  accepte:      'bg-green-500/12 text-green-300 border border-green-500/20',
-  refuse:       'bg-white/5 text-white/40 border border-white/10',
-  cas_complexe: 'bg-pink-500/12 text-pink-300 border border-pink-500/20',
-  cloture:      'bg-white/4 text-white/30 border border-white/8',
+  nouveau:          'bg-blue-500/12 text-blue-300 border border-blue-500/20',
+  incomplet:        'bg-yellow-500/12 text-yellow-300 border border-yellow-500/20',
+  qualifie:         'bg-indigo-500/12 text-indigo-300 border border-indigo-500/20',
+  devis_genere:     'bg-purple-500/12 text-purple-300 border border-purple-500/20',
+  devis_envoye:     'bg-cyan-500/12 text-cyan-300 border border-cyan-500/20',
+  relance_1:        'bg-orange-500/12 text-orange-300 border border-orange-500/20',
+  relance_2:        'bg-red-500/12 text-red-300 border border-red-500/20',
+  accepte:          'bg-green-500/12 text-green-300 border border-green-500/20',
+  refuse:           'bg-white/5 text-white/40 border border-white/10',
+  cas_complexe:     'bg-pink-500/12 text-pink-300 border border-pink-500/20',
+  reprise_humaine:  'bg-rose-500/12 text-rose-300 border border-rose-500/20',
+  cloture:          'bg-white/4 text-white/30 border border-white/8',
 }
 
 export type UrgenceLevel = 'normal' | 'urgent' | 'tres_urgent'

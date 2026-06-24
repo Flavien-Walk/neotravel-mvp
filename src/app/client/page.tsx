@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   PlusCircle, RefreshCw, ExternalLink, CheckCircle, Clock,
-  FileText, MapPin, AlertCircle, ArrowRight,
+  FileText, MapPin, AlertCircle, ArrowRight, UserCheck,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus, LEAD_STATUS_LABELS_CLIENT } from '@/types'
@@ -23,8 +23,9 @@ const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string }> = {
   relance_2:    { color: '#FB923C', bg: 'rgba(251,146,60,0.12)'  },
   accepte:      { color: '#4ADE80', bg: 'rgba(74,222,128,0.12)'  },
   refuse:       { color: '#F87171', bg: 'rgba(248,113,113,0.12)' },
-  cloture:      { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
-  cas_complexe: { color: '#C084FC', bg: 'rgba(192,132,252,0.12)' },
+  cloture:          { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
+  cas_complexe:     { color: '#C084FC', bg: 'rgba(192,132,252,0.12)' },
+  reprise_humaine:  { color: '#F87171', bg: 'rgba(248,113,113,0.12)' },
 }
 
 const fade = (i: number) => ({
@@ -53,9 +54,10 @@ export default function ClientDashboardPage() {
 
   const prenom = user?.nom?.split(' ')[0] ?? 'Client'
 
-  const hasQuote  = leads.filter(l => ['devis_genere', 'devis_envoye', 'relance_1', 'relance_2', 'accepte'].includes(l.statut))
-  const accepted  = leads.filter(l => l.statut === 'accepte')
-  const inProcess = leads.filter(l => !['accepte', 'refuse', 'cloture'].includes(l.statut))
+  const hasQuote       = leads.filter(l => ['devis_genere', 'devis_envoye', 'relance_1', 'relance_2', 'accepte'].includes(l.statut))
+  const accepted       = leads.filter(l => l.statut === 'accepte')
+  const inProcess      = leads.filter(l => !['accepte', 'refuse', 'cloture'].includes(l.statut))
+  const needsAdvisor   = leads.filter(l => ['cas_complexe', 'reprise_humaine'].includes(l.statut))
 
   const sortedLeads = [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
@@ -144,6 +146,25 @@ export default function ClientDashboardPage() {
             </p>
             <p className="text-[11px] mt-0.5" style={{ color: 'rgba(125,211,252,0.5)' }}>
               L&apos;équipe NeoTravel traite votre demande. Vous recevrez un email dès qu&apos;un devis sera prêt.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Conseiller en charge — bannière rassurante */}
+      {!loading && needsAdvisor.length > 0 && (
+        <motion.div
+          {...fade(4.5)}
+          className="flex items-start gap-3 px-4 py-3.5 rounded-2xl"
+          style={{ background: 'rgba(192,132,252,0.06)', border: '1px solid rgba(192,132,252,0.15)' }}
+        >
+          <UserCheck className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C084FC' }} />
+          <div>
+            <p className="text-sm font-medium" style={{ color: '#DDD6FE' }}>
+              Un conseiller NeoTravel s&apos;occupe de votre dossier
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(221,214,254,0.5)' }}>
+              Votre demande nécessite une validation personnalisée. Vous serez recontacté rapidement par notre équipe.
             </p>
           </div>
         </motion.div>

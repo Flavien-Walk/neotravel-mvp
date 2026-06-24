@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, Shield, Clock, CheckCircle, Phone } from 'lucide-react'
 import Logo from '@/components/brand/Logo'
-import ChatBot from '@/components/ChatBot'
+import DevisTabSwitcher from './DevisTabSwitcher'
 
 export const metadata: Metadata = {
   title: 'Demande de devis — NeoTravel',
@@ -130,9 +130,9 @@ export default function DevisPage() {
               </div>
             </div>
 
-            {/* Right — ChatBot */}
+            {/* Right — Formulaire guidé ou Assistant IA */}
             <div>
-              <ChatBot />
+              <DevisTabSwitcher />
             </div>
           </div>
         </div>

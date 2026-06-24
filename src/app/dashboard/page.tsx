@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import {
   Users, Clock, Bell, CheckCircle, TrendingUp, RefreshCw,
   Send, AlertTriangle, ExternalLink, Zap, ArrowRight,
-  FileText, AlertCircle, BarChart3,
+  FileText, AlertCircle, BarChart3, UserCheck,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const [leads, setLeads]     = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats]     = useState({
-    total: 0, nouveau: 0, enCours: 0, aEnvoyer: 0, relance: 0, accepte: 0, casComplexe: 0,
+    total: 0, nouveau: 0, enCours: 0, aEnvoyer: 0, relance: 0, accepte: 0, casComplexe: 0, repriseHumaine: 0,
   })
 
   const fetchLeads = useCallback(async () => {
@@ -45,13 +45,14 @@ export default function DashboardPage() {
       const data = await api.leads.list({}) as Lead[]
       setLeads(data)
       setStats({
-        total:       data.length,
-        nouveau:     data.filter(l => l.statut === 'nouveau').length,
-        enCours:     data.filter(l => ['qualifie', 'incomplet'].includes(l.statut)).length,
-        aEnvoyer:    data.filter(l => l.statut === 'devis_genere').length,
-        relance:     data.filter(l => ['relance_1', 'relance_2'].includes(l.statut)).length,
-        accepte:     data.filter(l => l.statut === 'accepte').length,
-        casComplexe: data.filter(l => l.statut === 'cas_complexe').length,
+        total:          data.length,
+        nouveau:        data.filter(l => l.statut === 'nouveau').length,
+        enCours:        data.filter(l => ['qualifie', 'incomplet'].includes(l.statut)).length,
+        aEnvoyer:       data.filter(l => l.statut === 'devis_genere').length,
+        relance:        data.filter(l => ['relance_1', 'relance_2'].includes(l.statut)).length,
+        accepte:        data.filter(l => l.statut === 'accepte').length,
+        casComplexe:    data.filter(l => l.statut === 'cas_complexe').length,
+        repriseHumaine: data.filter(l => l.statut === 'reprise_humaine').length,
       })
     } catch {
       setLeads([])
@@ -69,6 +70,8 @@ export default function DashboardPage() {
   const aEnvoyer   = leads.filter(l => l.statut === 'devis_genere')
   const aRelancer  = leads.filter(l => ['devis_envoye', 'relance_1'].includes(l.statut))
   const casComplx  = leads.filter(l => l.statut === 'cas_complexe')
+  const repriseH   = leads.filter(l => l.statut === 'reprise_humaine')
+  const needsHuman = [...casComplx, ...repriseH]
 
   const ALERTS = [
     urgents.length    > 0 && { label: `${urgents.length} urgent${urgents.length > 1 ? 's' : ''}`,               color: '#F87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)', Icon: AlertCircle  },
@@ -190,6 +193,65 @@ export default function DashboardPage() {
               >
                 <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                 {label}
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* HITL — Cas nécessitant une intervention humaine */}
+      {!loading && needsHuman.length > 0 && (
+        <motion.div
+          {...fade(8.5)}
+          className="rounded-2xl overflow-hidden"
+          style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.2)' }}
+        >
+          <div className="flex items-center gap-3 px-5 py-3.5" style={{ borderBottom: '1px solid rgba(248,113,113,0.12)' }}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(248,113,113,0.14)' }}>
+              <UserCheck className="w-4 h-4" style={{ color: '#F87171' }} />
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-semibold" style={{ color: '#FCA5A5' }}>
+                {needsHuman.length} dossier{needsHuman.length > 1 ? 's' : ''} nécessitent une intervention commerciale
+              </span>
+            </div>
+            <Link
+              href="/dashboard/leads"
+              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:opacity-80"
+              style={{ background: 'rgba(248,113,113,0.12)', color: '#F87171', border: '1px solid rgba(248,113,113,0.2)' }}
+            >
+              Voir tous →
+            </Link>
+          </div>
+          <div className="divide-y" style={{ borderColor: 'rgba(248,113,113,0.08)' }}>
+            {needsHuman.slice(0, 4).map(lead => (
+              <Link
+                key={lead._id}
+                href={`/dashboard/leads/${lead._id}`}
+                className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-white/[0.015]"
+              >
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={{ background: 'rgba(248,113,113,0.12)', color: '#F87171' }}
+                >
+                  {lead.nom.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{lead.nom}</div>
+                  <div className="text-[11px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    {lead.depart} → {lead.destination} · {lead.nb_passagers} pax
+                  </div>
+                </div>
+                <div
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{
+                    background: lead.statut === 'reprise_humaine' ? 'rgba(248,113,113,0.14)' : 'rgba(192,132,252,0.14)',
+                    color: lead.statut === 'reprise_humaine' ? '#F87171' : '#C084FC',
+                  }}
+                >
+                  {lead.statut === 'reprise_humaine' ? 'Reprise humaine' : 'Cas complexe'}
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }} />
               </Link>
             ))}
           </div>

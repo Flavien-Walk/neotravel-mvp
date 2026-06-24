@@ -8,7 +8,7 @@ import {
   ArrowLeft, Calculator, Bell, UserCheck, RefreshCw,
   CheckCircle, Activity, MapPin, Users, Calendar,
   Send, Mail, AlertTriangle, XCircle, X, Edit2, Save,
-  Info, ChevronDown, ChevronUp, Euro,
+  Info, ChevronDown, ChevronUp, Euro, Download,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul } from '@/types'
@@ -17,7 +17,7 @@ import UrgencyBadge from '@/components/UrgencyBadge'
 
 const STATUS_OPTIONS: LeadStatus[] = [
   'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
-  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'cloture',
+  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'reprise_humaine', 'cloture',
 ]
 
 const LOG_DOT: Record<string, string> = {
@@ -51,6 +51,7 @@ export default function DashboardLeadDetailPage() {
   const [savingAdj, setSavingAdj] = useState(false)
   const [showSources, setShowSrc] = useState(false)
   const [actionMsg, setMsg]       = useState<{ text: string; ok: boolean } | null>(null)
+  const [downloading, setDl]      = useState(false)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -167,6 +168,25 @@ export default function DashboardLeadDetailPage() {
       await fetchAll()
       flash('Dossier marqué comme refusé.', true)
     } catch { flash('Erreur mise à jour statut', false) }
+  }
+
+  async function downloadPdf() {
+    if (!quote) return
+    setDl(true)
+    try {
+      const res = await api.quotes.downloadPdf(quote._id)
+      if (!res.ok) throw new Error('PDF non disponible — le backend doit implémenter GET /api/quotes/:id/pdf')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `devis-neotravel-${lead?._id ?? quote._id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur téléchargement PDF', false)
+    }
+    setDl(false)
   }
 
   async function closeLead() {
@@ -565,6 +585,12 @@ export default function DashboardLeadDetailPage() {
                 <UserCheck className="w-4 h-4 text-rose-400" />
                 Reprise humaine
               </button>
+              {quote && (
+                <button onClick={downloadPdf} disabled={downloading} className="btn-ghost w-full !justify-start gap-2 text-sm">
+                  {downloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-blue-400" />}
+                  {downloading ? 'Génération…' : 'Télécharger PDF'}
+                </button>
+              )}
               {!['accepte', 'refuse', 'cloture'].includes(lead.statut) && (
                 <>
                   <button onClick={markAccepted} className="btn-ghost w-full !justify-start gap-2 text-sm border-green-500/20 hover:bg-green-500/10 hover:border-green-500/30">
