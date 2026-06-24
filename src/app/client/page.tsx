@@ -30,19 +30,19 @@ const CLIENT_LABELS: Record<LeadStatus, string> = {
   reprise_humaine: 'Suivi par un conseiller',
 }
 
-const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string }> = {
-  nouveau:         { color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' },
-  incomplet:       { color: '#FBBF24', bg: 'rgba(251,191,36,0.12)'  },
-  qualifie:        { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)'  },
-  devis_genere:    { color: '#38BDF8', bg: 'rgba(56,189,248,0.12)'  },
-  devis_envoye:    { color: '#38BDF8', bg: 'rgba(56,189,248,0.12)'  },
-  relance_1:       { color: '#FB923C', bg: 'rgba(251,146,60,0.12)'  },
-  relance_2:       { color: '#FB923C', bg: 'rgba(251,146,60,0.12)'  },
-  accepte:         { color: '#4ADE80', bg: 'rgba(74,222,128,0.12)'  },
-  refuse:          { color: '#F87171', bg: 'rgba(248,113,113,0.12)' },
-  cloture:         { color: '#94A3B8', bg: 'rgba(148,163,184,0.12)' },
-  cas_complexe:    { color: '#C084FC', bg: 'rgba(192,132,252,0.12)' },
-  reprise_humaine: { color: '#C084FC', bg: 'rgba(192,132,252,0.12)' },
+const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string; border: string }> = {
+  nouveau:         { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  incomplet:       { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
+  qualifie:        { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  devis_genere:    { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  devis_envoye:    { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  relance_1:       { color: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
+  relance_2:       { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  accepte:         { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  refuse:          { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  cloture:         { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  cas_complexe:    { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  reprise_humaine: { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
 }
 
 interface TimelineStep {
@@ -87,18 +87,18 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
       transition={{ delay: 0.06 + index * 0.05, duration: 0.38, ease: EASE }}
       className="rounded-2xl overflow-hidden"
       style={{
-        background: 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.016) 100%)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.2)',
+        background: 'var(--dash-surface)',
+        border: '1px solid var(--dash-border)',
+        boxShadow: 'var(--dash-shadow)',
       }}
     >
       {/* Card header */}
       <div className="flex items-center gap-4 px-5 py-4">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.16)' }}
+          style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}
         >
-          <MapPin className="w-4 h-4" style={{ color: '#60A5FA' }} />
+          <MapPin className="w-4 h-4" style={{ color: '#2563EB' }} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -107,8 +107,8 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
               {lead.depart} → {lead.destination}
             </span>
             <span
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-              style={{ background: st.bg, color: st.color }}
+              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border"
+              style={{ background: st.bg, color: st.color, borderColor: st.border }}
             >
               {label}
             </span>
@@ -129,7 +129,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
             <Link
               href={`/suivi/${lead.trackingToken}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-              style={{ background: 'rgba(96,165,250,0.1)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.2)' }}
+              style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
               onClick={e => e.stopPropagation()}
             >
               <ExternalLink className="w-3 h-3" />
@@ -139,7 +139,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
           <button
             onClick={() => setExpanded(e => !e)}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-white/6"
-            style={{ color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
@@ -162,7 +162,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
                       style={
                         done    ? { background: ts.color + '25', border: `1.5px solid ${ts.color}` } :
                         current ? { background: ts.color + '18', border: `1.5px solid ${ts.color}`, boxShadow: `0 0 10px ${ts.color}35` } :
-                        { background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.1)' }
+                        { background: 'var(--dash-muted)', border: '1.5px solid var(--dash-border)' }
                       }
                     >
                       {done
@@ -172,7 +172,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
                     </div>
                     <span
                       className="text-[9px] font-medium text-center leading-tight max-w-[52px] hidden sm:block"
-                      style={{ color: done || current ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.18)' }}
+                      style={{ color: done || current ? 'var(--dash-text-muted)' : 'var(--dash-text-faint)' }}
                     >
                       {ts.label}
                     </span>
@@ -180,7 +180,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
                   {i < TIMELINE.length - 1 && (
                     <div
                       className="flex-1 h-[1.5px] mx-1 transition-all"
-                      style={{ background: done ? ts.color + '50' : 'rgba(255,255,255,0.07)' }}
+                      style={{ background: done ? ts.color + '60' : 'var(--dash-border)' }}
                     />
                   )}
                 </div>
@@ -192,9 +192,9 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
 
       {/* Special state (cas_complexe / reprise_humaine) */}
       {special && (
-        <div className="mx-5 mb-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl" style={{ background: 'rgba(192,132,252,0.06)', border: '1px solid rgba(192,132,252,0.14)' }}>
+        <div className="mx-5 mb-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl" style={{ background: '#FAF5FF', border: '1px solid #E9D5FF' }}>
           <UserCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#C084FC' }} />
-          <p className="text-xs" style={{ color: '#DDD6FE' }}>
+          <p className="text-xs" style={{ color: '#6B21A8' }}>
             Un conseiller NeoTravel s&apos;occupe personnellement de votre dossier et vous recontactera rapidement.
           </p>
         </div>
@@ -210,7 +210,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
             transition={{ duration: 0.28, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-4 pt-1 space-y-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <div className="px-5 pb-4 pt-1 space-y-1" style={{ borderTop: '1px solid var(--dash-border)' }}>
               <div className="pt-3 grid grid-cols-2 gap-x-6 gap-y-1.5">
                 {[
                   { label: 'Départ',      value: lead.depart },
@@ -221,8 +221,8 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
                   { label: 'Urgence',     value: lead.urgence ?? '—' },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <span className="text-[10px] block" style={{ color: 'rgba(255,255,255,0.28)' }}>{label}</span>
-                    <span className="text-xs font-medium text-white capitalize">{value}</span>
+                    <span className="text-[10px] block" style={{ color: 'var(--dash-text-faint)' }}>{label}</span>
+                    <span className="text-xs font-medium capitalize" style={{ color: 'var(--dash-text)' }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -264,7 +264,7 @@ export default function ClientDashboardPage() {
   })
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #070F22 0%, #050C1B 100%)' }}>
+    <div className="min-h-screen transition-colors duration-200" style={{ background: 'var(--dash-bg)' }}>
       <div className="p-6 sm:p-8 max-w-3xl mx-auto space-y-5">
 
         {/* Header */}
@@ -273,13 +273,13 @@ export default function ClientDashboardPage() {
             <div className="flex items-center gap-2 mb-2">
               <span
                 className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(14,165,233,0.1)', color: '#38BDF8', border: '1px solid rgba(14,165,233,0.2)' }}
+                style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
               >
                 Espace client
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-white">Bonjour, {prenom}</h1>
-            <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--dash-text)' }}>Bonjour, {prenom}</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>
               Suivez l&apos;avancement de vos demandes de transport
             </p>
           </div>
@@ -288,7 +288,7 @@ export default function ClientDashboardPage() {
               onClick={fetchLeads}
               disabled={loading}
               className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-white/6"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', boxShadow: 'var(--dash-shadow)' }}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} style={{ color: 'rgba(255,255,255,0.38)' }} />
             </button>
@@ -317,20 +317,20 @@ export default function ClientDashboardPage() {
             <motion.div
               key={label}
               {...fade(i + 1)}
-              className="rounded-2xl p-4"
+              className="rounded-xl p-4"
               style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.2)',
+                background: 'var(--dash-surface)',
+                border: '1px solid var(--dash-border)',
+                boxShadow: 'var(--dash-shadow)',
               }}
             >
               <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-3" style={{ background: bg }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>
-              <div className="text-2xl font-bold text-white mb-0.5">
-                {loading ? <span style={{ color: 'rgba(255,255,255,0.15)' }}>—</span> : value}
+              <div className="text-2xl font-bold mb-0.5" style={{ color: 'var(--dash-text)' }}>
+                {loading ? <span style={{ color: 'var(--dash-text-faint)' }}>—</span> : value}
               </div>
-              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.28)' }}>{label}</div>
+              <div className="text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>{label}</div>
             </motion.div>
           ))}
         </div>
@@ -340,16 +340,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(4)}
             className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-            style={{ background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.14)' }}
+            style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}
           >
             <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(56,189,248,0.1)' }}>
               <Clock className="w-4 h-4" style={{ color: '#38BDF8' }} />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#7DD3FC' }}>
+              <p className="text-sm font-semibold" style={{ color: '#0369A1' }}>
                 {inProcess.length} dossier{inProcess.length > 1 ? 's' : ''} en traitement
               </p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(125,211,252,0.45)' }}>
+              <p className="text-[11px] mt-0.5" style={{ color: '#0284C7' }}>
                 Vous recevrez un email dès qu&apos;un devis sera prêt.
               </p>
             </div>
@@ -361,16 +361,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(4.5)}
             className="flex items-start gap-3 px-4 py-3.5 rounded-2xl"
-            style={{ background: 'rgba(192,132,252,0.05)', border: '1px solid rgba(192,132,252,0.14)' }}
+            style={{ background: '#FAF5FF', border: '1px solid #E9D5FF' }}
           >
             <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(192,132,252,0.1)' }}>
-              <UserCheck className="w-4 h-4" style={{ color: '#C084FC' }} />
+              <UserCheck className="w-4 h-4" style={{ color: '#7E22CE' }} />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#DDD6FE' }}>
+              <p className="text-sm font-semibold" style={{ color: '#6D28D9' }}>
                 Un conseiller NeoTravel s&apos;occupe de votre dossier
               </p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(221,214,254,0.45)' }}>
+              <p className="text-[11px] mt-0.5" style={{ color: '#7C3AED' }}>
                 Votre demande nécessite une validation personnalisée. Vous serez recontacté rapidement.
               </p>
             </div>
@@ -382,16 +382,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(5)}
             className="flex items-center gap-4 p-4 rounded-2xl"
-            style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)' }}
+            style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}
           >
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.12)' }}>
               <AlertCircle className="w-5 h-5 text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-white">
+              <p className="text-sm font-bold" style={{ color: 'var(--dash-text)' }}>
                 {hasQuote.length > 1 ? `${hasQuote.length} devis préparés` : 'Un devis préparé'} pour vous
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>
                 Consultez votre lien de suivi pour voir les détails.
               </p>
             </div>
@@ -402,25 +402,25 @@ export default function ClientDashboardPage() {
         {/* Liste demandes */}
         <motion.div {...fade(6)}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-white">Vos demandes</span>
+            <span className="text-sm font-bold" style={{ color: 'var(--dash-text)' }}>Vos demandes</span>
           </div>
 
           {loading && (
             <div className="py-14 flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 animate-spin" style={{ color: 'rgba(255,255,255,0.18)' }} />
+              <RefreshCw className="w-5 h-5 animate-spin" style={{ color: 'var(--dash-text-faint)' }} />
             </div>
           )}
 
           {!loading && leads.length === 0 && (
             <div
-              className="py-16 text-center rounded-2xl"
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+              className="py-16 text-center rounded-xl"
+              style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)' }}
             >
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
                 <MapPin className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.18)' }} />
               </div>
-              <h3 className="text-white font-bold mb-1.5">Aucune demande pour le moment</h3>
-              <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.28)' }}>
+              <h3 className="font-bold mb-1.5" style={{ color: 'var(--dash-text)' }}>Aucune demande pour le moment</h3>
+              <p className="text-sm mb-6" style={{ color: 'var(--dash-text-muted)' }}>
                 Faites votre première demande de transport de groupe.
               </p>
               <Link

@@ -7,17 +7,10 @@ import { Loader2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import Logo from '@/components/brand/Logo'
 
-const ROLES = [
-  { value: 'commercial', label: 'Commercial NeoTravel', desc: 'Accès complet au dashboard et aux leads' },
-  { value: 'client',     label: 'Client (entreprise, asso…)', desc: 'Suivi de vos demandes de devis' },
-]
-
 export default function RegisterPage() {
   const { register } = useAuth()
   const router = useRouter()
-  const [form, setForm] = useState({
-    nom: '', email: '', password: '', role: 'commercial' as 'commercial' | 'client', organisation: '',
-  })
+  const [form, setForm] = useState({ nom: '', email: '', password: '', organisation: '' })
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -40,13 +33,7 @@ export default function RegisterPage() {
     const res = await register(form)
     setLoading(false)
     if (res.error) { setError(res.error); return }
-    try {
-      const stored = localStorage.getItem('neo_user')
-      const u = stored ? JSON.parse(stored) : null
-      router.replace(u?.role === 'client' ? '/client' : '/dashboard')
-    } catch {
-      router.replace('/dashboard')
-    }
+    router.replace('/client')
   }
 
   return (
@@ -62,9 +49,9 @@ export default function RegisterPage() {
         </div>
 
         <div className="card-premium !p-8">
-          <h1 className="text-xl font-bold text-white mb-1">Créer un compte</h1>
+          <h1 className="text-xl font-bold text-white mb-1">Créer un compte client</h1>
           <p className="text-white/40 text-sm mb-7">
-            Accédez au dashboard ou suivez vos demandes de devis.
+            Suivez vos demandes de devis transport de groupe.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,7 +63,7 @@ export default function RegisterPage() {
               </div>
               <div>
                 <label className="label">Organisation</label>
-                <input type="text" className="input" placeholder="NeoTravel / Mairie de Lyon…"
+                <input type="text" className="input" placeholder="Mairie de Lyon…"
                   value={form.organisation} onChange={e => set('organisation', e.target.value)} />
               </div>
             </div>
@@ -91,35 +78,6 @@ export default function RegisterPage() {
               <label className="label">Mot de passe * (8 caractères min.)</label>
               <input type="password" className="input" placeholder="••••••••"
                 value={form.password} onChange={e => set('password', e.target.value)} autoComplete="new-password" />
-            </div>
-
-            <div>
-              <label className="label">Rôle</label>
-              <div className="space-y-2">
-                {ROLES.map(r => (
-                  <label
-                    key={r.value}
-                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
-                      form.role === r.value
-                        ? 'bg-neo-blue/15 border border-neo-blue/40'
-                        : 'glass hover:glass-strong'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={r.value}
-                      checked={form.role === r.value}
-                      onChange={() => set('role', r.value)}
-                      className="accent-neo-blue"
-                    />
-                    <div>
-                      <div className="text-sm font-medium text-white">{r.label}</div>
-                      <div className="text-[11px] text-white/35">{r.desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
             </div>
 
             {error && (
@@ -142,6 +100,11 @@ export default function RegisterPage() {
           <p className="text-center text-white/30 text-xs mt-6">
             Déjà un compte ?{' '}
             <Link href="/login" className="text-neo-blue hover:underline">Se connecter</Link>
+          </p>
+
+          <p className="text-center text-white/20 text-[11px] mt-4">
+            Compte commercial NeoTravel ?{' '}
+            <Link href="/login" className="text-white/30 hover:text-white/50">Contactez votre administrateur</Link>
           </p>
         </div>
 

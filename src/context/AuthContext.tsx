@@ -15,7 +15,6 @@ interface RegisterData {
   nom: string
   email: string
   password: string
-  role: 'commercial' | 'client'
   organisation?: string
 }
 

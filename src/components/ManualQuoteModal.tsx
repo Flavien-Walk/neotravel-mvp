@@ -77,21 +77,28 @@ function SectionTitle({ icon: Icon, title }: { icon: typeof User; title: string 
   )
 }
 
-export default function ManualQuoteModal({ onClose }: { onClose: () => void }) {
+interface ModalProps {
+  onClose: () => void
+  leadId?: string
+  defaultClient?: { nom?: string; email?: string; telephone?: string; societe?: string }
+  defaultTrajet?: { depart?: string; destination?: string; date_depart?: string; date_retour?: string; nb_passagers?: number; type_trajet?: string; urgence?: string }
+}
+
+export default function ManualQuoteModal({ onClose, leadId, defaultClient, defaultTrajet }: ModalProps) {
   /* Client */
-  const [nom,       setNom]       = useState('')
-  const [email,     setEmail]     = useState('')
-  const [telephone, setTel]       = useState('')
-  const [societe,   setSociete]   = useState('')
+  const [nom,       setNom]       = useState(defaultClient?.nom ?? '')
+  const [email,     setEmail]     = useState(defaultClient?.email ?? '')
+  const [telephone, setTel]       = useState(defaultClient?.telephone ?? '')
+  const [societe,   setSociete]   = useState(defaultClient?.societe ?? '')
 
   /* Trajet */
-  const [depart,       setDepart]       = useState('')
-  const [destination,  setDest]         = useState('')
-  const [dateDepart,   setDateDepart]   = useState('')
-  const [dateRetour,   setDateRetour]   = useState('')
-  const [passagers,    setPassagers]    = useState('1')
-  const [typeTrajet,   setTypeTrajet]   = useState('aller_simple')
-  const [urgence,      setUrgence]      = useState('normal')
+  const [depart,       setDepart]       = useState(defaultTrajet?.depart ?? '')
+  const [destination,  setDest]         = useState(defaultTrajet?.destination ?? '')
+  const [dateDepart,   setDateDepart]   = useState(defaultTrajet?.date_depart ?? '')
+  const [dateRetour,   setDateRetour]   = useState(defaultTrajet?.date_retour ?? '')
+  const [passagers,    setPassagers]    = useState(String(defaultTrajet?.nb_passagers ?? 1))
+  const [typeTrajet,   setTypeTrajet]   = useState(defaultTrajet?.type_trajet ?? 'aller_simple')
+  const [urgence,      setUrgence]      = useState(defaultTrajet?.urgence ?? 'normal')
 
   /* Lines */
   const [lines, setLines] = useState<QuoteLine[]>([
@@ -146,6 +153,7 @@ export default function ManualQuoteModal({ onClose }: { onClose: () => void }) {
         total_ht: finalHt,
         tva: finalTva,
         total_ttc: finalTtc,
+        leadId: leadId || undefined,
       })
       setSuccess(true)
       setTimeout(() => { setSuccess(false); onClose() }, 1800)
