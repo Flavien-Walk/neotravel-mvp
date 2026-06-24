@@ -162,7 +162,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null
 
   return (
-    <div className="min-h-screen text-white flex" style={{ background: '#030D20' }}>
+    <div className="min-h-screen text-white flex" style={{ background: '#060F22' }}>
       <Sidebar />
       <main className="flex-1 min-w-0 overflow-auto">
         {children}

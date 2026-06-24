@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import SmoothScrollProvider from '@/components/providers/SmoothScrollProvider'
 import { AuthProvider } from '@/context/AuthContext'
+import FloatingAIWidget from '@/components/FloatingAIWidget'
 
 export const metadata: Metadata = {
   title: 'NeoTravel — Transport de groupe, devis rapide et suivi commercial',
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <SmoothScrollProvider>
             {children}
+            <FloatingAIWidget />
           </SmoothScrollProvider>
         </AuthProvider>
       </body>

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, SkipForward, Check, Send, RotateCcw, ArrowLeft } from 'lucide-react'
 import { api } from '@/lib/api'
 import { ChatStep, LeadFormData } from '@/types'
+import CityCombobox from '@/components/CityCombobox'
+import { findCity } from '@/lib/cities'
 
 const STEPS: ChatStep[] = [
   { id: 'nom', question: 'Quel est votre nom complet ?', field: 'nom', type: 'text', placeholder: 'Jean Dupont', validate: (v) => v.trim().length < 2 ? 'Veuillez entrer votre nom complet.' : null },
@@ -205,6 +207,20 @@ export default function ChatBot() {
                   )
                 })}
               </div>
+            ) : (step.field === 'depart' || step.field === 'destination') ? (
+              <CityCombobox
+                value={currentValue}
+                onChange={(v, city) => {
+                  setCurrentValue(v)
+                  setError(null)
+                  // If city not recognized, mark for reprise humaine (will be surfaced at submit)
+                  if (v.length >= 2 && !city && !findCity(v)) {
+                    // Silently allow — will show warning at end
+                  }
+                }}
+                placeholder={step.placeholder}
+                autoFocus
+              />
             ) : (
               <input
                 type={step.type}
