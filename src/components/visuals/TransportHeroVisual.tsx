@@ -1,47 +1,62 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
-import { Inbox, CheckSquare, Zap, Euro, Mail, Bell } from 'lucide-react'
+import { Inbox, CheckSquare, Zap, Euro, Mail, Bell, MapPin, Clock, TrendingUp } from 'lucide-react'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json'
 
-// ── SVG coordinate system ──────────────────────────────────────────────────
-// ComposableMap: width=800 height=600
-// geoMercator: scale=2200 center=[2, 46.9] translate=[400, 300]
-// Positions pre-computed with the Mercator formula.
+// ── Coordinate system ──────────────────────────────────────────────────────────
+// ComposableMap: width=800 height=620
+// geoMercator: scale=2400 center=[2.5, 46.5] translate=[400, 310]
+// Formula: x = 400 + 2400*(lon-2.5)*π/180
+//          y = 310 - 2400*(ln(tan(π/4+lat*π/360)) - ln(tan(π/4+46.5*π/360)))
 const C = {
-  paris:      { x: 414, y: 168 },
-  lille:      { x: 441, y:  67 },
-  nantes:     { x: 264, y: 278 },
-  bordeaux:   { x: 301, y: 397 },
-  toulouse:   { x: 379, y: 465 },
-  lyon:       { x: 509, y: 346 },
-  marseille:  { x: 529, y: 483 },
-  nice:       { x: 602, y: 458 },
-  strasbourg: { x: 621, y: 188 },
+  paris:       { x: 399,  y: 185 },  // 48.85°N  2.35°E
+  lille:       { x: 420,  y:  85 },  // 50.63°N  3.07°E
+  rouen:       { x: 349,  y: 148 },  // 49.44°N  1.10°E
+  rennes:      { x: 258,  y: 192 },  // 48.11°N -1.68°E
+  nantes:      { x: 252,  y: 244 },  // 47.22°N -1.55°E
+  strasbourg:  { x: 570,  y: 168 },  // 48.57°N  7.75°E
+  bordeaux:    { x: 280,  y: 376 },  // 44.84°N -0.58°E
+  toulouse:    { x: 348,  y: 440 },  // 43.60°N  1.44°E
+  lyon:        { x: 488,  y: 326 },  // 45.75°N  4.83°E
+  grenoble:    { x: 516,  y: 364 },  // 45.19°N  5.72°E
+  clermont:    { x: 418,  y: 344 },  // 45.78°N  3.09°E
+  montpellier: { x: 432,  y: 448 },  // 43.61°N  3.88°E
+  marseille:   { x: 487,  y: 468 },  // 43.30°N  5.37°E
+  nice:        { x: 546,  y: 456 },  // 43.70°N  7.26°E — côte SE, pas Corse
 }
 
-const BG_CITIES = [
-  { id: 'lille',      label: 'Lille',      ...C.lille      },
-  { id: 'nantes',     label: 'Nantes',     ...C.nantes     },
-  { id: 'bordeaux',   label: 'Bordeaux',   ...C.bordeaux   },
-  { id: 'toulouse',   label: 'Toulouse',   ...C.toulouse   },
-  { id: 'marseille',  label: 'Marseille',  ...C.marseille  },
-  { id: 'strasbourg', label: 'Strasbourg', ...C.strasbourg },
+// ── City metadata ──────────────────────────────────────────────────────────────
+interface CityInfo {
+  id: string; label: string; zone: string
+  x: number;  y: number
+  hub?: boolean; isRoute?: boolean
+  hint?: string; price?: string
+}
+
+const CITIES: CityInfo[] = [
+  { id: 'paris',       label: 'Paris',           zone: 'Île-de-France', ...C.paris,       hub: true, isRoute: true, hint: 'Hub principal · Départs fréquents', price: 'Lyon dès 1 420 € HT' },
+  { id: 'lille',       label: 'Lille',            zone: 'Nord',          ...C.lille,       hint: 'A1 · Eurostar',              price: 'Paris dès 680 € HT'   },
+  { id: 'rouen',       label: 'Rouen',            zone: 'Nord',          ...C.rouen,       hint: 'Normandie · A13',            price: 'Paris dès 520 € HT'   },
+  { id: 'rennes',      label: 'Rennes',           zone: 'Ouest',         ...C.rennes,      hint: 'Bretagne · LGV',             price: 'Paris dès 890 € HT'   },
+  { id: 'nantes',      label: 'Nantes',           zone: 'Ouest',         ...C.nantes,      hint: 'Loire-Atlantique · A11',     price: 'Paris dès 1 050 € HT' },
+  { id: 'strasbourg',  label: 'Strasbourg',       zone: 'Grand Est',     ...C.strasbourg,  hint: 'Grand Est · Frontière DE',   price: 'Paris dès 1 380 € HT' },
+  { id: 'bordeaux',    label: 'Bordeaux',         zone: 'Sud-Ouest',     ...C.bordeaux,    hub: true, hint: 'A10 · A63 · Gironde', price: 'Paris dès 1 620 € HT' },
+  { id: 'toulouse',    label: 'Toulouse',         zone: 'Sud-Ouest',     ...C.toulouse,    hub: true, hint: 'Hub Sud-Ouest · A62',  price: 'Paris dès 1 850 € HT' },
+  { id: 'lyon',        label: 'Lyon',             zone: 'Centre-Est',    ...C.lyon,        hub: true, isRoute: true, hint: 'Hub Centre-Est · A6/A7', price: 'Paris dès 1 420 € HT' },
+  { id: 'grenoble',    label: 'Grenoble',         zone: 'Centre-Est',    ...C.grenoble,    hint: 'Isère · Alpes · A48',        price: 'Lyon dès 460 € HT'    },
+  { id: 'clermont',    label: 'Clermont-Fd',      zone: 'Centre-Est',    ...C.clermont,    hint: 'Auvergne · A71/A75',         price: 'Paris dès 1 100 € HT' },
+  { id: 'montpellier', label: 'Montpellier',      zone: 'Sud-Est',       ...C.montpellier, hint: 'Hérault · A9',               price: 'Paris dès 2 100 € HT' },
+  { id: 'marseille',   label: 'Marseille',        zone: 'Sud-Est',       ...C.marseille,   hub: true, hint: 'Hub PACA · A7 · Port', price: 'Paris dès 2 200 € HT' },
+  { id: 'nice',        label: 'Nice',             zone: 'Sud-Est',       ...C.nice,        isRoute: true, hint: 'Côte d\'Azur · A8', price: 'Paris dès 2 340 € HT' },
 ]
 
-const PHASES = [
-  { Icon: Inbox,       label: 'Demande reçue',   color: '#60A5FA', detail: 'Paris → Nice · 28 passagers · Aller-retour'           },
-  { Icon: CheckSquare, label: 'Trajet qualifié',  color: '#A78BFA', detail: 'Distance estimée : 932 km · Durée : 11h20'            },
-  { Icon: Zap,         label: 'Calcul du devis',  color: '#FCD34D', detail: 'Base kilométrique + options + péages'                  },
-  { Icon: Euro,        label: 'Devis généré',     color: '#4ADE80', detail: '2 340 € HT · Détail ligne par ligne'                  },
-  { Icon: Mail,        label: 'Devis envoyé',     color: '#38BDF8', detail: 'Email envoyé au client · Lien de suivi inclus'        },
-  { Icon: Bell,        label: 'Suivi en cours',   color: '#FB923C', detail: 'Relance automatique J+3 · Tracking temps réel'        },
-]
+// ── Route ─────────────────────────────────────────────────────────────────────
+const ROUTE_PATH = `M ${C.paris.x} ${C.paris.y} L ${C.lyon.x} ${C.lyon.y} L ${C.nice.x} ${C.nice.y}`
 
-// GPS pin SVG position per phase (progress along Paris → Lyon → Nice)
 const PIN_POS = [
   C.paris,
   C.paris,
@@ -51,139 +66,223 @@ const PIN_POS = [
   C.nice,
 ]
 
-// ── Animated GPS pin (uses SVG transform attribute via Framer Motion) ───────
-function GpsPin({ x, y, color }: { x: number; y: number; color: string }) {
+// ── Phases ────────────────────────────────────────────────────────────────────
+const PHASES = [
+  { Icon: Inbox,       label: 'Demande reçue',  color: '#60A5FA', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: null as string | null, basis: 'Trajet en cours de qualification' },
+  { Icon: CheckSquare, label: 'Trajet qualifié', color: '#A78BFA', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: null as string | null, basis: 'Distance + type de trajet + péages A6/A7/A8' },
+  { Icon: Zap,         label: 'Calcul du devis', color: '#FCD34D', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: null as string | null, basis: 'Moteur déterministe · base kilométrique certifiée' },
+  { Icon: Euro,        label: 'Devis généré',    color: '#4ADE80', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: '2 340 € HT',          basis: 'Distance, durée, 28 passagers, options, péages' },
+  { Icon: Mail,        label: 'Devis envoyé',    color: '#38BDF8', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: '2 340 € HT',          basis: 'Envoyé sous 2h ouvrées · lien de suivi inclus' },
+  { Icon: Bell,        label: 'Suivi en cours',  color: '#FB923C', zone: 'Île-de-France → Sud-Est', distance: '948 km', duration: '11h30', price: '2 340 € HT',          basis: 'Relance automatique J+3 · tracking temps réel' },
+]
+
+// ── Bus pin ────────────────────────────────────────────────────────────────────
+function BusPin({ x, y, color }: { x: number; y: number; color: string }) {
   const gRef = useRef<SVGGElement>(null)
   const mx = useMotionValue(C.paris.x)
   const my = useMotionValue(C.paris.y)
-  const sx = useSpring(mx, { stiffness: 55, damping: 16, mass: 0.7 })
-  const sy = useSpring(my, { stiffness: 55, damping: 16, mass: 0.7 })
+  const sx = useSpring(mx, { stiffness: 48, damping: 14, mass: 0.8 })
+  const sy = useSpring(my, { stiffness: 48, damping: 14, mass: 0.8 })
+
+  useEffect(() => { mx.set(x); my.set(y) }, [x, y, mx, my])
 
   useEffect(() => {
-    mx.set(x)
-    my.set(y)
-  }, [x, y, mx, my])
-
-  // Write the SVG transform attribute directly to avoid CSS-vs-SVG px ambiguity
-  useEffect(() => {
-    const unsubX = sx.on('change', () => {
-      if (gRef.current) {
-        gRef.current.setAttribute('transform', `translate(${sx.get()}, ${sy.get()})`)
-      }
-    })
-    const unsubY = sy.on('change', () => {
-      if (gRef.current) {
-        gRef.current.setAttribute('transform', `translate(${sx.get()}, ${sy.get()})`)
-      }
-    })
-    // Set initial
-    if (gRef.current) {
-      gRef.current.setAttribute('transform', `translate(${sx.get()}, ${sy.get()})`)
+    const sync = () => {
+      if (gRef.current) gRef.current.setAttribute('transform', `translate(${sx.get()}, ${sy.get()})`)
     }
-    return () => { unsubX(); unsubY() }
+    const u1 = sx.on('change', sync)
+    const u2 = sy.on('change', sync)
+    sync()
+    return () => { u1(); u2() }
   }, [sx, sy])
 
   return (
     <g ref={gRef} transform={`translate(${C.paris.x}, ${C.paris.y})`}>
-      <circle cx={0} cy={0} r="22" fill={`${color}0D`} />
-      <circle cx={0} cy={0} r="14" fill={`${color}1A`} />
-      <circle cx={0} cy={0} r="8"  fill={color} />
-      <circle cx={0} cy={0} r="3.5" fill="white" />
-      <circle cx={0} cy={0} r="12" fill="none" stroke={color} strokeWidth="1.5">
-        <animate attributeName="r"       values="12;26;12"   dur="2s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.65;0;0.65" dur="2s" repeatCount="indefinite" />
+      {/* Glow halos */}
+      <circle cx={0} cy={0} r="26" fill={`${color}07`} />
+      <circle cx={0} cy={0} r="17" fill={`${color}12`} />
+      {/* Pulse ring */}
+      <circle cx={0} cy={0} r="13" fill="none" stroke={color} strokeWidth="1" opacity="0.55">
+        <animate attributeName="r"       values="13;28;13"   dur="2.2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.55;0;0.55" dur="2.2s" repeatCount="indefinite" />
       </circle>
+      {/* Bus body */}
+      <rect x="-11" y="-7" width="22" height="13" rx="3.5" fill={color} opacity="0.96" />
+      {/* Windows */}
+      <rect x="-8"  y="-4.5" width="5" height="5" rx="1"   fill="rgba(0,8,20,0.5)" />
+      <rect x="-1"  y="-4.5" width="5" height="5" rx="1"   fill="rgba(0,8,20,0.5)" />
+      <rect x="6.5" y="-4.5" width="3" height="5" rx="0.8" fill="rgba(0,8,20,0.5)" />
+      {/* Wheels */}
+      <circle cx="-5.5" cy="7" r="2.5" fill={color} stroke="rgba(0,8,20,0.4)" strokeWidth="0.8" />
+      <circle cx="5.5"  cy="7" r="2.5" fill={color} stroke="rgba(0,8,20,0.4)" strokeWidth="0.8" />
+      {/* Center shine */}
+      <circle cx={0} cy="-1" r="1.8" fill="white" opacity="0.7" />
     </g>
   )
 }
 
-// ── Animated route segment (motion.path with pathLength) ────────────────────
-function RouteSegment({
-  x1, y1, x2, y2, color, visible,
-}: {
-  x1: number; y1: number; x2: number; y2: number
-  color: string; visible: boolean
+// ── Route segment ─────────────────────────────────────────────────────────────
+function RouteSegment({ x1, y1, x2, y2, color, visible }: {
+  x1: number; y1: number; x2: number; y2: number; color: string; visible: boolean
 }) {
   return (
     <motion.path
       d={`M ${x1} ${y1} L ${x2} ${y2}`}
-      fill="none"
-      strokeLinecap="round"
-      style={{ stroke: color, strokeWidth: 2.5 }}
+      fill="none" strokeLinecap="round"
+      style={{ stroke: color, strokeWidth: 3 }}
       initial={{ pathLength: 0, strokeOpacity: 0 }}
-      animate={{ pathLength: visible ? 1 : 0, strokeOpacity: visible ? 0.92 : 0 }}
-      transition={{ duration: 0.95, ease: 'easeOut' }}
+      animate={{ pathLength: visible ? 1 : 0, strokeOpacity: visible ? 0.88 : 0 }}
+      transition={{ duration: 1.1, ease: 'easeOut' }}
     />
   )
 }
 
-// ── Route city node ─────────────────────────────────────────────────────────
-function RouteCity({
-  x, y, label, active, color, labelAnchorRight = true,
-}: {
-  x: number; y: number; label: string
-  active: boolean; color: string
-  labelAnchorRight?: boolean
+// ── City node ─────────────────────────────────────────────────────────────────
+function CityNode({ city, active, color, onHover, hovered }: {
+  city: CityInfo; active: boolean; color: string
+  onHover: (id: string | null) => void; hovered: string | null
 }) {
+  const isHov = hovered === city.id
+  const r = city.hub ? 5.5 : 3.5
+  const labelRight = city.x < 555
+
   return (
-    <g style={{ opacity: active ? 1 : 0.35, transition: 'opacity 0.5s' }}>
-      <circle cx={x} cy={y} r="10"
-        fill="rgba(37,99,235,0.12)"
-        stroke={active ? color : 'rgba(37,99,235,0.28)'}
-        strokeWidth="1.5"
-      />
-      <circle cx={x} cy={y} r="5"
-        fill={active ? color : 'rgba(37,99,235,0.45)'}
-        style={{ transition: 'fill 0.5s' }}
+    <g style={{ cursor: 'pointer' }}
+      onMouseEnter={() => onHover(city.id)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {isHov && <circle cx={city.x} cy={city.y} r="18" fill={`${color}15`} stroke={`${color}35`} strokeWidth="1" />}
+      {(city.isRoute || city.hub) && (
+        <circle cx={city.x} cy={city.y} r={r + 5}
+          fill="rgba(37,99,235,0.08)"
+          stroke={active ? color : 'rgba(37,99,235,0.20)'}
+          strokeWidth={active ? 1.5 : 0.8}
+          opacity={active ? 1 : 0.4}
+          style={{ transition: 'stroke 0.4s, opacity 0.4s' }}
+        />
+      )}
+      <circle cx={city.x} cy={city.y} r={r}
+        fill={active ? color : city.hub ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}
+        stroke={active ? color : 'rgba(255,255,255,0.18)'}
+        strokeWidth={city.hub ? 1.1 : 0.7}
+        style={{ transition: 'fill 0.4s, stroke 0.4s' }}
       />
       <text
-        x={labelAnchorRight ? x + 13 : x - 13}
-        y={y + 4}
-        textAnchor={labelAnchorRight ? 'start' : 'end'}
-        fill={active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.22)'}
-        fontSize="10.5"
+        x={labelRight ? city.x + r + 7 : city.x - r - 7}
+        y={city.y + 4}
+        textAnchor={labelRight ? 'start' : 'end'}
+        fill={active ? 'rgba(255,255,255,0.94)' : city.hub ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.16)'}
+        fontSize={city.isRoute ? '10.5' : city.hub ? '9' : '8'}
         fontFamily="system-ui,-apple-system,sans-serif"
-        fontWeight={active ? '600' : '400'}
-        style={{ transition: 'fill 0.5s' }}
-      >{label}</text>
+        fontWeight={active ? '700' : city.hub ? '500' : '400'}
+        style={{ transition: 'fill 0.4s', pointerEvents: 'none' }}
+      >{city.label}</text>
     </g>
   )
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Hover tooltip ─────────────────────────────────────────────────────────────
+function CityTooltip({ city, color }: { city: CityInfo; color: string }) {
+  const right = city.x < 450
+  const bw = 158
+  const bx = right ? city.x + 16 : city.x - 16 - bw
+  const lines = [
+    city.label,
+    `Zone : ${city.zone}`,
+    ...(city.hint  ? [city.hint]          : []),
+    ...(city.price ? [`Ex : ${city.price}`] : []),
+  ]
+  const bh = 16 + lines.length * 14 + 4
+
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <rect x={bx - 6} y={city.y - 14} width={bw + 12} height={bh}
+        rx="6" fill="rgba(2,11,24,0.93)" stroke={`${color}3A`} strokeWidth="1"
+      />
+      {lines.map((line, i) => (
+        <text
+          key={i}
+          x={right ? bx : bx + bw}
+          y={city.y + i * 14 - 1}
+          textAnchor={right ? 'start' : 'end'}
+          fill={
+            i === 0          ? 'rgba(255,255,255,0.96)'
+            : i === lines.length - 1 && city.price ? color
+            : 'rgba(255,255,255,0.45)'
+          }
+          fontSize={i === 0 ? '10' : '9'}
+          fontWeight={i === 0 ? '700' : '400'}
+          fontFamily="system-ui,-apple-system,sans-serif"
+        >{line}</text>
+      ))}
+    </g>
+  )
+}
+
+// ── MetaRow ───────────────────────────────────────────────────────────────────
+function MetaRow({ icon: Icon, label, value, color, highlight }: {
+  icon: React.ElementType; label: string; value: string; color: string; highlight?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <Icon className="w-3 h-3 flex-shrink-0" style={{ color: highlight ? color : 'rgba(255,255,255,0.22)' }} />
+      <span className="text-[9px] text-white/28 flex-shrink-0 tracking-wide uppercase">{label}</span>
+      <span className="text-[10px] truncate font-mono"
+        style={{ color: highlight ? color : 'rgba(255,255,255,0.60)', fontWeight: highlight ? '700' : '400' }}
+      >{value}</span>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function TransportHeroVisual() {
-  const [phase, setPhase] = useState(0)
+  const [phase,   setPhase]   = useState(0)
+  const [paused,  setPaused]  = useState(false)
+  const [hovered, setHovered] = useState<string | null>(null)
 
   useEffect(() => {
-    const id = setInterval(() => setPhase(p => (p + 1) % PHASES.length), 2800)
+    if (paused || hovered) return
+    const id = setInterval(() => setPhase(p => (p + 1) % PHASES.length), 3000)
     return () => clearInterval(id)
-  }, [])
+  }, [paused, hovered])
 
   const cur   = PHASES[phase]
   const pin   = PIN_POS[phase]
   const showA = phase >= 2
   const showB = phase >= 4
 
+  const handleHover = useCallback((id: string | null) => setHovered(id), [])
+  const hovCity = hovered ? CITIES.find(c => c.id === hovered) : null
+
+  // Render order: bg cities → route cities → tooltip → bus
+  const bgCities    = CITIES.filter(c => !c.isRoute)
+  const routeCities = CITIES.filter(c =>  c.isRoute)
+
   return (
     <div
       className="relative h-full w-full select-none overflow-hidden rounded-2xl"
-      style={{ background: 'linear-gradient(135deg, #030D20 0%, #04101E 60%, #050D1C 100%)' }}
+      style={{ background: 'linear-gradient(145deg, #020B18 0%, #030D1E 55%, #041020 100%)' }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => { setPaused(false); setHovered(null) }}
     >
-      {/* Subtle vignette overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none z-[1]"
-        style={{ background: 'radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(3,13,32,0.55) 100%)' }}
-      />
+      {/* Subtle grid */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(37,99,235,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,0.035) 1px, transparent 1px)',
+        backgroundSize: '40px 40px',
+      }} />
+      {/* Vignette */}
+      <div className="absolute inset-0 pointer-events-none z-[1]" style={{
+        background: 'radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(2,11,24,0.72) 100%)',
+      }} />
 
-      {/* ── France Map ───────────────────────────────────────── */}
-      <div className="absolute inset-0">
+      {/* ── Map ─────────────────────────────────────────────── */}
+      <div className="absolute inset-0 z-[2]">
         <ComposableMap
           width={800}
-          height={600}
-          projectionConfig={{ scale: 2200, center: [2.0, 46.9] as [number, number] }}
+          height={620}
+          projectionConfig={{ scale: 2400, center: [2.5, 46.5] as [number, number] }}
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
-          {/* France country shape */}
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
               geographies
@@ -192,12 +291,12 @@ export default function TransportHeroVisual() {
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    fill="rgba(37,99,235,0.055)"
-                    stroke="rgba(37,99,235,0.22)"
-                    strokeWidth={1}
+                    fill="rgba(37,99,235,0.042)"
+                    stroke="rgba(37,99,235,0.28)"
+                    strokeWidth={1.2}
                     style={{
                       default: { outline: 'none' },
-                      hover:   { outline: 'none', fill: 'rgba(37,99,235,0.055)' },
+                      hover:   { outline: 'none', fill: 'rgba(37,99,235,0.042)' },
                       pressed: { outline: 'none' },
                     }}
                   />
@@ -205,158 +304,145 @@ export default function TransportHeroVisual() {
             }
           </Geographies>
 
-          {/* Route ghost trail */}
+          {/* Ghost trail */}
           <path
-            d={`M ${C.paris.x} ${C.paris.y} L ${C.lyon.x} ${C.lyon.y} L ${C.nice.x} ${C.nice.y}`}
+            d={ROUTE_PATH}
             fill="none"
-            stroke="rgba(255,255,255,0.07)"
-            strokeWidth="2"
-            strokeDasharray="5 6"
+            stroke="rgba(255,255,255,0.055)"
+            strokeWidth="2.5"
+            strokeDasharray="6 7"
+            strokeLinecap="round"
           />
 
-          {/* Route segment A: Paris → Lyon */}
-          <RouteSegment
-            x1={C.paris.x} y1={C.paris.y}
-            x2={C.lyon.x}  y2={C.lyon.y}
-            color={cur.color} visible={showA}
-          />
+          {/* Active segments */}
+          <RouteSegment x1={C.paris.x} y1={C.paris.y} x2={C.lyon.x}  y2={C.lyon.y}  color={cur.color} visible={showA} />
+          <RouteSegment x1={C.lyon.x}  y1={C.lyon.y}  x2={C.nice.x}  y2={C.nice.y}  color={cur.color} visible={showB} />
 
-          {/* Route segment B: Lyon → Nice */}
-          <RouteSegment
-            x1={C.lyon.x} y1={C.lyon.y}
-            x2={C.nice.x} y2={C.nice.y}
-            color={cur.color} visible={showB}
-          />
-
-          {/* Background (non-route) city dots */}
-          {BG_CITIES.map(({ id, label, x, y }) => (
-            <g key={id}>
-              <circle cx={x} cy={y} r="2.5"
-                fill="rgba(255,255,255,0.05)"
-                stroke="rgba(255,255,255,0.10)"
-                strokeWidth="0.8"
-              />
-              <text x={x + 5} y={y + 3}
-                fill="rgba(255,255,255,0.16)"
-                fontSize="8" fontFamily="system-ui,-apple-system,sans-serif"
-              >{label}</text>
-            </g>
+          {/* Background cities */}
+          {bgCities.map(city => (
+            <CityNode
+              key={city.id}
+              city={city}
+              active={false}
+              color={cur.color}
+              onHover={handleHover}
+              hovered={hovered}
+            />
           ))}
 
-          {/* Route city: Nice */}
-          <RouteCity
-            x={C.nice.x} y={C.nice.y}
-            label="Nice" active={phase >= 4} color={cur.color}
-            labelAnchorRight={false}
-          />
+          {/* Route cities (Nice, Lyon, Paris) — on top */}
+          <CityNode city={CITIES.find(c => c.id === 'nice')!}  active={phase >= 4} color={cur.color} onHover={handleHover} hovered={hovered} />
+          <CityNode city={CITIES.find(c => c.id === 'lyon')!}  active={phase >= 2} color={cur.color} onHover={handleHover} hovered={hovered} />
+          <CityNode city={CITIES.find(c => c.id === 'paris')!} active={true}       color={cur.color} onHover={handleHover} hovered={hovered} />
 
-          {/* Route city: Lyon */}
-          <RouteCity
-            x={C.lyon.x} y={C.lyon.y}
-            label="Lyon" active={phase >= 2} color={cur.color}
-          />
+          {/* Tooltip */}
+          {hovCity && <CityTooltip city={hovCity} color={cur.color} />}
 
-          {/* Paris origin — always active, pulse ring at phase 0 */}
-          {phase === 0 && (
-            <circle cx={C.paris.x} cy={C.paris.y} r="16" fill="none" stroke={cur.color} strokeWidth="0.8">
-              <animate attributeName="r"       values="16;30;16"    dur="1.6s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.45;0;0.45" dur="1.6s" repeatCount="indefinite" />
-            </circle>
-          )}
-          <circle cx={C.paris.x} cy={C.paris.y} r="12"
-            fill="rgba(37,99,235,0.18)" stroke={cur.color} strokeWidth="1.5"
-          />
-          <circle cx={C.paris.x} cy={C.paris.y} r="6" fill={cur.color} />
-          <text x={C.paris.x + 15} y={C.paris.y + 4}
-            fill="rgba(255,255,255,0.92)"
-            fontSize="11" fontFamily="system-ui,-apple-system,sans-serif" fontWeight="700"
-          >Paris</text>
-
-          {/* GPS pin — animated along the route */}
-          <GpsPin x={pin.x} y={pin.y} color={cur.color} />
+          {/* Bus pin */}
+          <BusPin x={pin.x} y={pin.y} color={cur.color} />
         </ComposableMap>
       </div>
 
-      {/* ── Route badge (top) ─────────────────────────────────── */}
+      {/* ── Route badge ─────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2.5 px-4 py-2 rounded-full whitespace-nowrap"
-        style={{ background: 'rgba(3,13,32,0.75)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(12px)' }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2.5 px-4 py-1.5 rounded-full whitespace-nowrap"
+        style={{
+          background: 'rgba(2,11,24,0.84)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          backdropFilter: 'blur(14px)',
+        }}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
-        <span className="text-xs font-bold text-white/85">Paris → Nice</span>
-        <span className="w-px h-3 bg-white/12 flex-shrink-0" />
-        <span className="text-xs text-white/40">28 passagers</span>
-        <span className="w-px h-3 bg-white/12 flex-shrink-0" />
-        <span className="text-xs text-white/30">Aller-retour</span>
+        <span className="text-xs font-bold text-white/90 tracking-wide">Paris → Nice</span>
+        <span className="w-px h-3 bg-white/14 flex-shrink-0" />
+        <span className="text-xs text-white/42">28 passagers</span>
+        <span className="w-px h-3 bg-white/10 flex-shrink-0" />
+        <span className="text-xs text-white/28">Aller-retour</span>
       </motion.div>
 
-      {/* ── Phase info card (bottom) ──────────────────────────── */}
+      {/* ── Info panel ──────────────────────────────────────── */}
       <div className="absolute bottom-3 left-3 right-3 z-10">
         <div
-          className="rounded-2xl px-4 py-3.5"
+          className="rounded-2xl px-4 pt-3 pb-3"
           style={{
-            background:    'rgba(3,13,32,0.93)',
-            border:        '1px solid rgba(37,99,235,0.16)',
-            backdropFilter:'blur(16px)',
+            background:    'rgba(2,11,24,0.95)',
+            border:        '1px solid rgba(37,99,235,0.18)',
+            backdropFilter:'blur(20px)',
           }}
         >
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-1.5">
+          {/* Phase header */}
+          <div className="flex items-center justify-between mb-2">
             <AnimatePresence mode="wait">
               <motion.div
                 key={phase}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 8 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18 }}
                 className="flex items-center gap-2"
               >
-                <cur.Icon
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: cur.color }}
-                />
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${cur.color}1C` }}>
+                  <cur.Icon className="w-3.5 h-3.5" style={{ color: cur.color }} />
+                </div>
                 <span className="text-xs font-bold tracking-wide" style={{ color: cur.color }}>
                   {cur.label}
                 </span>
               </motion.div>
             </AnimatePresence>
-
-            <span className="text-[10px] text-white/22 tabular-nums font-mono">
+            <span className="text-[10px] text-white/20 tabular-nums font-mono">
               {phase + 1}&thinsp;/&thinsp;{PHASES.length}
             </span>
           </div>
 
-          {/* Detail line */}
+          {/* Meta grid */}
           <AnimatePresence mode="wait">
-            <motion.p
-              key={`d${phase}`}
+            <motion.div
+              key={`m${phase}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="text-[11px] text-white/42 leading-relaxed mb-2.5"
+              transition={{ duration: 0.14 }}
+              className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2"
             >
-              {cur.detail}
+              <MetaRow icon={MapPin}    label="Zone"     value={cur.zone}     color={cur.color} />
+              <MetaRow icon={TrendingUp} label="Distance" value={cur.distance} color={cur.color} />
+              <MetaRow icon={Clock}     label="Durée"    value={cur.duration} color={cur.color} />
+              <MetaRow icon={Euro}      label={cur.price ? 'Estimation' : 'Calcul'} value={cur.price ?? 'En cours…'} color={cur.color} highlight={!!cur.price} />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Basis */}
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={`b${phase}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.14 }}
+              className="text-[9.5px] text-white/20 mb-2.5 leading-relaxed"
+            >
+              {cur.basis}
             </motion.p>
           </AnimatePresence>
 
-          {/* Progress pills */}
+          {/* Progress pills — clickable */}
           <div className="flex gap-1.5">
             {PHASES.map((p, i) => (
-              <div
+              <button
                 key={i}
+                onClick={() => setPhase(i)}
                 className="h-[3px] rounded-full"
                 style={{
                   flex:       i === phase ? 3 : 1,
-                  background: i < phase
-                    ? `${p.color}50`
-                    : i === phase
-                    ? cur.color
-                    : 'rgba(255,255,255,0.09)',
+                  background: i < phase  ? `${p.color}50`
+                            : i === phase ? cur.color
+                            : 'rgba(255,255,255,0.08)',
                   transition: 'flex 0.4s ease, background 0.4s ease',
+                  cursor: 'pointer',
                 }}
               />
             ))}
