@@ -1,41 +1,36 @@
-import { Hourglass, PenLine, BellOff, Eye, TrendingDown } from 'lucide-react'
+import { Inbox, Clock, Eye, BellOff, MessageSquareOff } from 'lucide-react'
 import AnimatedSection from '@/components/ui/AnimatedSection'
 
 const PROBLEMS = [
   {
-    icon: Hourglass,
-    stat: '60',
-    unit: 'leads / jour',
-    title: 'Trop de volume pour une seule personne',
-    desc: 'Un commercial reçoit 60 demandes par jour. Chaque devis prend 20 à 40 minutes à constituer manuellement. Le calcul est vite dépassé.',
+    icon: Inbox,
+    title: 'Des demandes dispersées par email',
+    desc: 'Chaque demande arrive par email, WhatsApp ou téléphone. Sans structure, impossible de savoir ce qui a été traité, ce qui attend, ce qui est perdu.',
+    who: 'client',
   },
   {
-    icon: PenLine,
-    stat: '20–40',
-    unit: 'min par devis',
-    title: 'Devis faits à la main, sans traçabilité',
-    desc: 'Calcul sous Excel, prix recopié dans un email, aucun historique. Si le client rappelle, impossible de retrouver la version envoyée.',
-  },
-  {
-    icon: BellOff,
-    stat: '~30 %',
-    unit: 'de relances oubliées',
-    title: 'Relances non systématiques',
-    desc: 'Un devis sans réponse sous 48 h doit être relancé. Sans système, une relance sur trois ne part jamais.',
+    icon: Clock,
+    title: 'Des devis longs à constituer',
+    desc: 'Distance, durée, passagers, options, péages, coefficients — un devis de transport de groupe prend 20 à 40 minutes à calculer manuellement. Et il n\'est pas traçable.',
+    who: 'commercial',
   },
   {
     icon: Eye,
-    stat: '0',
-    unit: 'visibilité',
-    title: 'Aucune vue sur le pipeline',
-    desc: 'Impossible de savoir combien de devis sont en attente, combien ont été acceptés, ni quels leads n\'ont jamais été contactés.',
+    title: 'Impossible de suivre l\'avancement',
+    desc: '"Mon devis est prêt ?" — sans outil, le client attend un email qui n\'arrive pas. Le commercial a perdu la trace de la demande dans sa boîte mail.',
+    who: 'client',
   },
   {
-    icon: TrendingDown,
-    stat: '15 %',
-    unit: 'de leads perdus',
-    title: 'Leads payants non recontactés',
-    desc: 'Des entreprises prêtes à signer attendent trop longtemps et choisissent un concurrent. La perte est directe et chiffrable.',
+    icon: BellOff,
+    title: 'Des relances oubliées',
+    desc: 'Un devis sans réponse sous 48 h doit être relancé. Sans système, une relance sur trois ne part jamais. Le lead disparaît, la vente aussi.',
+    who: 'commercial',
+  },
+  {
+    icon: MessageSquareOff,
+    title: 'Aucune communication claire',
+    desc: 'Le client ne sait pas pourquoi son devis coûte ce prix. Sans explication ligne par ligne, la confiance ne s\'établit pas et la signature tarde.',
+    who: 'client',
   },
 ]
 
@@ -52,28 +47,31 @@ export default function ProblemSection() {
           <div className="text-center mb-14">
             <span className="label-tag mb-4">Le problème</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-white mt-4 mb-4">
-              60 leads par jour, un commercial,{' '}
-              <span className="text-white/40">aucun outil.</span>
+              Un devis de transport de groupe,{' '}
+              <span className="text-white/40">c&apos;est rarement simple.</span>
             </h2>
             <p className="text-white/45 text-lg max-w-2xl mx-auto">
-              Ce n&apos;est pas un problème de volonté. C&apos;est un problème de volume et d&apos;outillage.
-              Voici ce qui se passe concrètement, chaque jour, sans NeoTravel.
+              Date, passagers, options, urgence, contraintes — chaque demande est différente.
+              Sans outil dédié, chaque étape prend du temps et crée des frictions des deux côtés.
             </p>
           </div>
         </AnimatedSection>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {PROBLEMS.map(({ icon: Icon, stat, unit, title, desc }, i) => (
+          {PROBLEMS.map(({ icon: Icon, title, desc, who }, i) => (
             <AnimatedSection key={title} delay={i * 0.07}>
               <div className="card-neo h-full flex flex-col">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-neo-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Icon className="w-5 h-5 text-neo-blue" />
                   </div>
-                  <div>
-                    <span className="text-2xl font-bold text-white">{stat}</span>
-                    <span className="text-white/35 text-sm ml-1.5">{unit}</span>
-                  </div>
+                  <span className={`mt-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md ${
+                    who === 'client'
+                      ? 'bg-blue-500/15 text-blue-300'
+                      : 'bg-violet-500/15 text-violet-300'
+                  }`}>
+                    {who === 'client' ? 'Côté client' : 'Côté commercial'}
+                  </span>
                 </div>
                 <h3 className="font-semibold text-white text-base mb-2">{title}</h3>
                 <p className="text-white/40 text-sm leading-relaxed flex-1">{desc}</p>
@@ -90,12 +88,12 @@ export default function ProblemSection() {
               }}
             >
               <p className="text-white/55 text-sm leading-relaxed mb-5">
-                La somme de ces frictions représente des milliers d&apos;euros
-                de chiffre d&apos;affaires non réalisé — chaque mois.
+                Ces frictions représentent des demandes abandonnées, des devis jamais envoyés
+                et des clients qui choisissent un concurrent — chaque semaine.
               </p>
               <div>
                 <div className="text-3xl font-bold text-neo-blue mb-1">NeoTravel</div>
-                <div className="text-white/40 text-sm">automatise chaque étape.</div>
+                <div className="text-white/40 text-sm">structure et suit chaque demande.</div>
               </div>
             </div>
           </AnimatedSection>

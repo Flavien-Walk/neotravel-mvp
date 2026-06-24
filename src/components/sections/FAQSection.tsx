@@ -5,36 +5,36 @@ import { ChevronDown } from 'lucide-react'
 
 const FAQ = [
   {
-    q: 'NeoTravel possède-t-il ses propres véhicules ?',
-    a: 'Non. NeoTravel est une plateforme d\'intermédiation : nous qualifions les demandes, générons des devis fiables et mobilisons des autocaristes partenaires. Nous ne possédons pas de flotte en propre.',
+    q: 'Le devis est-il gratuit et sans engagement ?',
+    a: 'Oui, entièrement. Faire une demande de devis sur NeoTravel ne vous engage à aucun achat. Vous pouvez recevoir le devis, comparer, refuser ou ne pas répondre — sans aucune conséquence.',
   },
   {
-    q: 'Comment le devis est-il calculé ?',
-    a: 'Le devis est calculé par une fonction déterministe (calculer_devis()) qui prend en compte la distance du trajet, le nombre de passagers, le type de trajet (aller simple, aller-retour, circuit), l\'urgence et les options choisies. Chaque ligne de calcul est explicitée dans le devis.',
+    q: 'Sous combien de temps vais-je recevoir mon devis ?',
+    a: 'Pour les trajets standards en France métropolitaine (moins de 85 passagers, itinéraire dans notre base), le devis est calculé automatiquement et envoyé par email sous 2 heures ouvrées. Pour les demandes plus complexes, un conseiller NeoTravel intervient personnellement.',
   },
   {
-    q: 'Pourquoi l\'IA ne calcule-t-elle pas le prix ?',
-    a: '"L\'agent collecte et orchestre, le code calcule." L\'IA générative est utilisée uniquement pour guider la conversation et extraire les informations nécessaires. Elle ne génère, n\'estime et ne prédit jamais un prix. Le calcul est fait par un algorithme auditable et reproductible.',
+    q: 'Comment puis-je suivre l\'avancement de ma demande ?',
+    a: 'Dès que vous soumettez votre demande, vous recevez un email de confirmation contenant un lien de suivi. Ce lien vous permet de voir le statut de votre dossier en temps réel, sans créer de compte. Vous pouvez aussi créer un compte client pour retrouver toutes vos demandes en un endroit.',
+  },
+  {
+    q: 'Pourquoi le devis est-il fiable ?',
+    a: 'Le prix est calculé par un moteur métier déterministe — pas par une IA. Il prend en compte la distance, la durée, le nombre de passagers, le type de trajet, les options et les coefficients tarifaires. Le même trajet dans les mêmes conditions donnera toujours le même prix. Vous pouvez demander à n\'importe quel conseiller NeoTravel de vous expliquer chaque ligne.',
+  },
+  {
+    q: 'NeoTravel possède-t-il ses propres autocars ?',
+    a: 'Non. NeoTravel est un outil de gestion des demandes et de production de devis. Nous qualifions votre demande, calculons le devis et coordonnons des autocaristes partenaires. Nous ne possédons pas de flotte en propre.',
   },
   {
     q: 'Que se passe-t-il si ma demande est complexe ?',
-    a: 'Pour les groupes de plus de 85 personnes, les circuits multi-étapes, les villes hors de notre table de distances ou les demandes avec des besoins spéciaux, un commercial NeoTravel est automatiquement notifié et reprend la demande humainement dans les plus brefs délais.',
+    a: 'Pour les groupes de plus de 85 personnes, les circuits multi-étapes, ou les demandes avec des contraintes particulières, un conseiller NeoTravel est automatiquement alerté. Il reprend votre dossier personnellement et vous contacte directement pour affiner le devis.',
   },
   {
-    q: 'Sous combien de temps le client reçoit-il une réponse ?',
-    a: 'Pour les demandes standard (itinéraires France métropolitaine, moins de 85 pax, trajet dans notre base), un devis est calculé automatiquement et envoyé sous 15 secondes. Pour les cas complexes, un conseiller intervient sous 2 heures ouvrées.',
+    q: 'Puis-je faire une demande sans créer de compte ?',
+    a: 'Oui. Le formulaire de demande est accessible sans compte. Un lien de suivi vous est envoyé par email. Si vous souhaitez retrouver toutes vos demandes facilement, vous pouvez créer un compte client gratuitement.',
   },
   {
-    q: 'Les emails sont-ils réellement envoyés ?',
-    a: 'Oui. Les emails transactionnels sont envoyés via Brevo (confirmation de demande, devis, relances, reset de mot de passe). En mode développement ou sans clé API configurée, les emails sont loggés en console pour ne pas bloquer le système.',
-  },
-  {
-    q: 'Le devis est-il gratuit et sans engagement ?',
-    a: 'Oui, entièrement. Faire une demande de devis sur NeoTravel ne vous engage à aucun achat. Vous pouvez comparer, refuser ou ignorer le devis sans aucune conséquence.',
-  },
-  {
-    q: 'Comment accéder au dashboard commercial ?',
-    a: 'Les commerciaux NeoTravel créent un compte avec le rôle "commercial". Une fois connectés, ils accèdent à /dashboard pour consulter le pipeline, calculer des devis, envoyer des emails et suivre les relances. Le dashboard est protégé : inaccessible sans authentification.',
+    q: 'Comment un conseiller NeoTravel accède-t-il à ma demande ?',
+    a: 'Dès que vous soumettez votre formulaire, votre demande apparaît dans le tableau de bord de nos conseillers avec toutes les informations nécessaires. Ils peuvent calculer le devis, vous l\'envoyer par email et suivre votre réponse — le tout depuis leur espace NeoTravel.',
   },
 ]
 
@@ -50,7 +50,7 @@ export default function FAQSection() {
             Questions fréquentes
           </h2>
           <p className="mt-4 text-white/45 text-base max-w-xl mx-auto">
-            Tout ce que vous devez savoir sur NeoTravel, le calcul des devis et le fonctionnement de la plateforme.
+            Tout ce que vous devez savoir avant de faire une demande de devis transport de groupe.
           </p>
         </div>
 

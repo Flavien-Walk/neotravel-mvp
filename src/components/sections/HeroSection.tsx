@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight, Users, Clock, CheckCircle } from 'lucide-react'
+import { ArrowRight, Shield, Clock, FileText } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
@@ -15,16 +15,16 @@ const item = {
   visible:  { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.21, 0.47, 0.32, 0.98] as const } },
 }
 
-const METRICS = [
-  { icon: Users,        value: '60+',   label: 'leads entrants / jour' },
-  { icon: Clock,        value: '< 2h',  label: 'délai de réponse cible' },
-  { icon: CheckCircle,  value: '100 %', label: 'calcul déterministe' },
+const REASSURANCES = [
+  { icon: FileText, value: 'Devis gratuit',   label: 'sans engagement' },
+  { icon: Clock,    value: 'Réponse 2h',       label: 'en heures ouvrées' },
+  { icon: Shield,   value: 'Prix traçable',    label: 'ligne par ligne' },
 ]
 
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-16 bg-gradient-hero">
-      {/* Background photo de bus (bas-gauche) */}
+      {/* Background photo de bus bas-gauche */}
       <div className="absolute bottom-0 left-0 w-[480px] h-[280px] pointer-events-none hidden lg:block">
         <Image
           src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=70"
@@ -33,7 +33,6 @@ export default function HeroSection() {
           className="object-cover object-right-top"
           priority={false}
         />
-        {/* Dégradé pour fondre dans le fond */}
         <div
           className="absolute inset-0"
           style={{
@@ -63,7 +62,7 @@ export default function HeroSection() {
             <motion.div variants={item}>
               <span className="label-tag mb-7">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                Transport de groupe · Disponible maintenant
+                Transport de groupe · Devis gratuit et suivi
               </span>
             </motion.div>
 
@@ -71,18 +70,18 @@ export default function HeroSection() {
               variants={item}
               className="text-4xl sm:text-5xl xl:text-[3.35rem] font-bold leading-[1.1] tracking-tight text-white mb-5"
             >
-              Le devis de transport<br />
+              Votre devis de transport<br />
               de groupe,{' '}
-              <span className="text-gradient-blue">enfin rapide et suivi.</span>
+              <span className="text-gradient-blue">clair, rapide et suivi.</span>
             </motion.h1>
 
             <motion.p
               variants={item}
               className="text-lg text-white/55 leading-relaxed max-w-lg mb-8"
             >
-              NeoTravel centralise les demandes, qualifie les trajets et génère des devis fiables —
-              pour les entreprises, collectivités, associations et groupes privés.
-              Chaque lead est suivi. Chaque devis est tracé. Chaque relance est planifiée.
+              NeoTravel centralise votre demande, qualifie votre trajet et prépare un devis
+              explicable — pour les entreprises, écoles, associations, collectivités et événements privés.
+              Chaque demande est suivie. Chaque devis est tracé.
             </motion.p>
 
             <motion.div variants={item} className="flex flex-wrap gap-3 mb-10">
@@ -90,15 +89,15 @@ export default function HeroSection() {
                 Demander un devis
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link href="/register" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
-                Créer un compte
+              <Link href="/client" className="btn-ghost gap-2 !px-5 !py-3.5 !text-base">
+                Suivre ma demande
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </motion.div>
 
-            {/* Metric chips */}
+            {/* Réassurances */}
             <motion.div variants={item} className="flex flex-wrap gap-3">
-              {METRICS.map(({ icon: Icon, value, label }) => (
+              {REASSURANCES.map(({ icon: Icon, value, label }) => (
                 <div
                   key={label}
                   className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl glass"
@@ -109,6 +108,12 @@ export default function HeroSection() {
                 </div>
               ))}
             </motion.div>
+
+            <motion.div variants={item} className="mt-5">
+              <Link href="/login" className="text-xs text-white/25 hover:text-white/50 transition-colors">
+                Connexion espace NeoTravel →
+              </Link>
+            </motion.div>
           </motion.div>
 
           {/* ─── Right — transport route map ─────────── */}
@@ -118,7 +123,6 @@ export default function HeroSection() {
             transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98] as const, delay: 0.3 }}
             className="relative h-[380px] lg:h-[540px]"
           >
-            {/* Radial glow */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{ background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 65%)' }}

@@ -38,14 +38,15 @@ export default function DashboardPreview() {
       <div className="container-neo relative z-10">
         <AnimatedSection>
           <div className="text-center mb-12">
-            <span className="label-tag-dark mb-4">Dashboard commercial</span>
+            <span className="label-tag-dark mb-4">Côté NeoTravel</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mt-4 mb-4">
-              Tout le pipeline commercial,{' '}
-              <span className="text-neo-blue">dans un seul écran.</span>
+              Votre demande est suivie en temps réel{' '}
+              <span className="text-neo-blue">par notre équipe.</span>
             </h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-              Les commerciaux voient les nouveaux leads, les devis en attente, les relances à envoyer
-              et les cas complexes — en temps réel.
+              Dès que vous soumettez votre demande, elle apparaît dans le tableau de bord de nos
+              conseillers — avec son statut, son trajet, et les actions à effectuer pour vous
+              envoyer un devis au plus vite.
             </p>
           </div>
         </AnimatedSection>
@@ -111,13 +112,13 @@ export default function DashboardPreview() {
 
         <AnimatedSection delay={0.3}>
           <div className="text-center mt-8">
-            <Link href="/register" className="btn-solid gap-2 inline-flex">
-              Créer un compte commercial
+            <Link href="/devis" className="btn-solid gap-2 inline-flex">
+              Faire une demande de devis
               <ArrowRight className="w-4 h-4" />
             </Link>
             <p className="text-slate-400 text-sm mt-3">
-              Accès dashboard réservé aux comptes commerciaux —{' '}
-              <Link href="/login" className="text-neo-blue hover:underline">Se connecter</Link>
+              Vous êtes conseiller NeoTravel ?{' '}
+              <Link href="/login" className="text-neo-blue hover:underline">Accéder au dashboard</Link>
             </p>
           </div>
         </AnimatedSection>

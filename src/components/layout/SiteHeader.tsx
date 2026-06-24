@@ -12,15 +12,15 @@ import UserMenu from '@/components/layout/UserMenu'
 
 const NAV_PUBLIC = [
   { href: '/#pour-qui',  label: 'Pour qui ?' },
-  { href: '/#parcours',  label: 'Parcours' },
+  { href: '/#comment-ca-marche', label: 'Parcours' },
   { href: '/#fiabilite', label: 'Fiabilité' },
   { href: '/#faq',       label: 'FAQ' },
 ]
 
 const NAV_AUTH = [
-  { href: '/#pour-qui', label: 'Pour qui ?' },
-  { href: '/#parcours', label: 'Parcours' },
-  { href: '/#faq',      label: 'FAQ' },
+  { href: '/#pour-qui',          label: 'Pour qui ?' },
+  { href: '/#comment-ca-marche', label: 'Parcours' },
+  { href: '/#faq',               label: 'FAQ' },
 ]
 
 export default function SiteHeader() {
@@ -78,9 +78,9 @@ export default function SiteHeader() {
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href={user?.role === 'client' ? '/client' : '/dashboard'}
                   className="flex items-center p-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all"
-                  title="Dashboard"
+                  title={user?.role === 'client' ? 'Mon espace' : 'Dashboard'}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                 </Link>
@@ -138,14 +138,15 @@ export default function SiteHeader() {
               {user ? (
                 <>
                   <Link
-                    href="/dashboard"
+                    href={user?.role === 'client' ? '/client' : '/dashboard'}
                     onClick={() => setOpen(false)}
                     className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
                   >
-                    <LayoutDashboard className="w-4 h-4" /> Mon dashboard
+                    <LayoutDashboard className="w-4 h-4" />
+                    {user?.role === 'client' ? 'Mon espace' : 'Mon dashboard'}
                   </Link>
                   <Link
-                    href="/dashboard/settings"
+                    href={user?.role === 'client' ? '/client/settings' : '/dashboard/settings'}
                     onClick={() => setOpen(false)}
                     className="px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/5 transition-all flex items-center gap-2"
                   >
