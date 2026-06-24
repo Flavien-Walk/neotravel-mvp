@@ -280,8 +280,11 @@ export default function ProductDemoSplit() {
           initial={{ opacity: 0, y: 32 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.2, duration: 0.65 }}
-          className="rounded-3xl overflow-hidden shadow-2xl"
-          style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+          className="rounded-3xl overflow-hidden"
+          style={{
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 40px 100px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(37,99,235,0.08)',
+          }}
         >
           {/* Browser chrome */}
           <div

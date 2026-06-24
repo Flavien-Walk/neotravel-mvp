@@ -3,7 +3,7 @@ import AuthRedirect from '@/components/ui/AuthRedirect'
 import SiteFooter from '@/components/layout/SiteFooter'
 import HeroSection from '@/components/sections/HeroSection'
 import BusPhotoStrip from '@/components/sections/BusPhotoStrip'
-import BeforeAfterPipeline from '@/components/sections/BeforeAfterPipeline'
+import ChaosToPipeline from '@/components/sections/ChaosToPipeline'
 import PourQuiSection from '@/components/sections/PourQuiSection'
 import ScrollTimeline from '@/components/sections/ScrollTimeline'
 import TraceableQuoteSection from '@/components/sections/TraceableQuoteSection'
@@ -20,7 +20,7 @@ export default function HomePage() {
       <main className="flex-1">
         <HeroSection />
         <BusPhotoStrip />
-        <BeforeAfterPipeline />
+        <ChaosToPipeline />
         <PourQuiSection />
         <ScrollTimeline />
         <TraceableQuoteSection />
