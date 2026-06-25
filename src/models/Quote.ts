@@ -32,6 +32,8 @@ export interface IQuote extends Document {
   sources_calcul: ICalculationSource[]
   explication_calcul?: string
   statut_devis: string
+  validite_jours: number
+  email_sent_at?: Date
   // Ajustement humain
   ajustement_manuel_ht: number
   raison_ajustement?: string
@@ -76,6 +78,8 @@ const quoteSchema = new Schema<IQuote>(
     sources_calcul:   { type: [sourceSchema], default: [] },
     explication_calcul: { type: String },
     statut_devis:     { type: String, default: 'genere' },
+    validite_jours:   { type: Number, default: 30 },
+    email_sent_at:    { type: Date },
     // Ajustement humain
     ajustement_manuel_ht: { type: Number, default: 0 },
     raison_ajustement:    { type: String },

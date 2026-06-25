@@ -5,7 +5,13 @@ import { Quote } from '../models/Quote'
 import { Log } from '../models/Log'
 import { User } from '../models/User'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
-import { sendLeadReceivedEmail, sendNewLeadInternalEmail } from '../services/email/emailService'
+import { calculer_devis, DevisInput } from '../services/calculer_devis'
+import {
+  sendQuoteEmail,
+  sendLeadReceivedEmail,
+  sendNewLeadInternalEmail,
+  sendComplexCaseEmail,
+} from '../services/email/emailService'
 
 const router = Router()
 
@@ -22,21 +28,22 @@ router.get('/track/:token', async (req: Request, res: Response) => {
     }
 
     const quote = await Quote.findOne({ leadId: lead._id })
-      .select('prix_ttc prix_final_ttc statut_devis createdAt explication_calcul warnings besoin_reprise_humaine')
+      .select('prix_ttc prix_final_ttc statut_devis createdAt explication_calcul warnings besoin_reprise_humaine email_sent_at validite_jours')
       .lean()
 
     const STATUS_LABELS: Record<string, string> = {
-      nouveau:      'Demande reçue',
-      incomplet:    'En attente d\'informations complémentaires',
-      qualifie:     'Dossier qualifié',
-      devis_genere: 'Devis en préparation',
-      devis_envoye: 'Devis envoyé',
-      relance_1:    'Relance envoyée',
-      relance_2:    'Deuxième relance envoyée',
-      accepte:      'Devis accepté',
-      refuse:       'Devis refusé',
-      cas_complexe: 'Reprise par un conseiller',
-      cloture:      'Dossier clôturé',
+      nouveau:          'Demande reçue',
+      incomplet:        'En attente d\'informations complémentaires',
+      qualifie:         'Dossier qualifié',
+      devis_genere:     'Devis en préparation',
+      devis_envoye:     'Devis envoyé',
+      relance_1:        'Relance envoyée',
+      relance_2:        'Deuxième relance envoyée',
+      accepte:          'Devis accepté',
+      refuse:           'Devis refusé',
+      cas_complexe:     'Reprise par un conseiller',
+      reprise_humaine:  'Validation conseiller en cours',
+      cloture:          'Dossier clôturé',
     }
 
     res.json({
@@ -55,6 +62,8 @@ router.get('/track/:token', async (req: Request, res: Response) => {
         prix_ttc: quote.prix_final_ttc || quote.prix_ttc,
         warnings: quote.warnings,
         besoin_reprise_humaine: quote.besoin_reprise_humaine,
+        email_sent_at: quote.email_sent_at ?? null,
+        validite_jours: quote.validite_jours ?? 30,
         createdAt: quote.createdAt,
       } : null,
     })
@@ -102,6 +111,9 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // POST /api/leads — public (client crée une demande)
+// Après création : calculer_devis() automatiquement.
+// Si calcul fiable → créer Quote + envoyer email devis au client.
+// Si calcul impossible / reprise humaine → email confirmation générique + notification interne.
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const body = { ...req.body }
@@ -128,8 +140,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       payload: { email: lead.email, depart: lead.depart, destination: lead.destination, userId: body.userId ?? null },
     })
 
-    sendLeadReceivedEmail(lead).catch(() => {})
+    // Toujours notifier l'équipe NeoTravel de la nouvelle demande
     sendNewLeadInternalEmail(lead).catch(() => {})
+
+    // Auto-quote asynchrone — ne bloque pas la réponse HTTP
+    void autoQuote(lead)
 
     res.status(201).json(lead)
   } catch (err: unknown) {
@@ -137,6 +152,99 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(400).json({ message })
   }
 })
+
+// Calcul automatique du devis après création du lead.
+// Si calcul fiable : crée le Quote, envoie l'email devis, met à jour le statut.
+// Si calcul non fiable ou impossible : email confirmation générique + notification interne.
+async function autoQuote(lead: Awaited<ReturnType<typeof Lead.prototype.save>> | InstanceType<typeof Lead>): Promise<void> {
+  const input: DevisInput = {
+    depart:       lead.depart,
+    destination:  lead.destination,
+    date_depart:  lead.date_depart,
+    date_retour:  lead.date_retour,
+    nb_passagers: lead.nb_passagers,
+    type_trajet:  lead.type_trajet,
+    options:      lead.options ?? [],
+    urgence:      lead.urgence ?? 'normal',
+  }
+
+  try {
+    const result = calculer_devis(input)
+
+    if (!result.success || result.besoin_reprise_humaine) {
+      // Cas complexe ou distance inconnue
+      const raison = result.success
+        ? (result.raison_reprise_humaine ?? 'Reprise humaine requise')
+        : result.error
+
+      await Lead.findByIdAndUpdate(lead._id, { statut: 'cas_complexe' })
+
+      await Log.create({
+        action:  'AUTO_QUOTE_COMPLEX',
+        leadId:  lead._id,
+        status:  'warning',
+        message: `Devis auto impossible — cas complexe : ${raison}`,
+        payload: { input, raison },
+      })
+
+      // Email client — confirmation de réception sans devis
+      sendLeadReceivedEmail(lead).catch(() => {})
+      // Notification interne — commercial doit reprendre
+      sendComplexCaseEmail(lead, raison).catch(() => {})
+      return
+    }
+
+    // Calcul réussi, pas de reprise humaine requise
+    const quote = await Quote.create({
+      leadId:   lead._id,
+      source:   'auto',
+      prix_ht:  result.prix_ht,
+      tva:      result.tva,
+      prix_ttc: result.prix_ttc,
+      lignes_calcul:      result.lignes_calcul,
+      coefficients:       result.coefficients,
+      warnings:           result.warnings,
+      besoin_reprise_humaine: false,
+      sources_calcul:     result.sources_calcul,
+      explication_calcul: result.explication_calcul,
+      statut_devis:       'genere',
+      validite_jours:     30,
+    })
+
+    await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_genere' })
+
+    // Envoi email devis — si erreur, on loggue mais on ne crash pas
+    try {
+      await sendQuoteEmail(lead, quote)
+      await Quote.findByIdAndUpdate(quote._id, { email_sent_at: new Date() })
+      await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_envoye' })
+
+      await Log.create({
+        action:  'AUTO_QUOTE_SENT',
+        leadId:  lead._id,
+        status:  'success',
+        message: `Devis auto calculé et envoyé à ${lead.email} — ${result.prix_ttc.toFixed(2)} € TTC`,
+        payload: { prix_ttc: result.prix_ttc, warnings: result.warnings },
+      })
+    } catch (emailErr) {
+      await Log.create({
+        action:  'AUTO_QUOTE_EMAIL_FAILED',
+        leadId:  lead._id,
+        status:  'error',
+        message: `Devis calculé mais email non envoyé : ${String(emailErr)}`,
+        payload: { prix_ttc: result.prix_ttc },
+      })
+      // Devis existe en base même si l'email a échoué — commercial peut envoyer manuellement
+    }
+  } catch (err) {
+    await Log.create({
+      action:  'AUTO_QUOTE_ERROR',
+      leadId:  lead._id,
+      status:  'error',
+      message: `Erreur inattendue calcul auto devis : ${String(err)}`,
+    }).catch(() => {})
+  }
+}
 
 // POST /api/leads/claim-by-email — rattacher les leads anonymes au compte connecté
 router.post('/claim-by-email', requireAuth, async (req: AuthRequest, res: Response) => {

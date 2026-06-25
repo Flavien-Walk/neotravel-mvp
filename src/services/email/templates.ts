@@ -162,41 +162,98 @@ export function tplNewLeadInternal(lead: ILead): { subject: string; html: string
 
 export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: string; text: string } {
   const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-  const rows = (quote.lignes_calcul ?? []).map((l: { label: string; montant: number; detail?: string }) => `
-    <tr>
-      <td style="padding:8px 0;color:#334155;font-size:14px;">
-        ${l.label}
-        ${l.detail ? `<br><span style="color:#94a3b8;font-size:12px;">${l.detail}</span>` : ''}
+  const prixTtc = quote.prix_final_ttc || quote.prix_ttc
+  const prixHt  = quote.prix_final_ht  || quote.prix_ht
+  const validite = quote.validite_jours ?? 30
+  const dateDepart = lead.date_depart
+    ? new Date(lead.date_depart).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+  const validiteDate = new Date(Date.now() + validite * 86400000)
+    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const rows = (quote.lignes_calcul ?? []).map((l: { label: string; montant: number; justification?: string; detail?: string; source_type?: string }) => {
+    const sourceTag = l.source_type === 'regle_documentee'
+      ? '<span style="font-size:10px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:6px;">règle</span>'
+      : l.source_type === 'mock_mvp' || l.source_type === 'hypothese_mvp'
+      ? '<span style="font-size:10px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:6px;">estimation</span>'
+      : ''
+    return `
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:10px 0;color:#334155;font-size:14px;">
+        ${l.label}${sourceTag}
+        ${l.justification ? `<br><span style="color:#94a3b8;font-size:11px;">${l.justification}</span>` : ''}
       </td>
-      <td style="padding:8px 0;text-align:right;font-weight:600;color:#1e3a8a;white-space:nowrap;font-size:14px;">${fmt(l.montant)}</td>
-    </tr>
-  `).join('')
+      <td style="padding:10px 0;text-align:right;font-weight:600;color:#1e3a8a;white-space:nowrap;font-size:14px;">${fmt(l.montant)}</td>
+    </tr>`
+  }).join('')
 
   const body = `
     ${h1('Votre devis NeoTravel est prêt')}
     ${p(`Bonjour ${lead.nom},`)}
-    ${p(`Voici votre devis pour le trajet <strong>${lead.depart} → ${lead.destination}</strong> (${lead.nb_passagers} passagers) :`)}
+    ${p(`Voici votre devis pour le transport de groupe <strong>${lead.depart} → ${lead.destination}</strong>${dateDepart ? ` le <strong>${dateDepart}</strong>` : ''} (${lead.nb_passagers} passagers) :`)}
 
-    <div style="background:#f0f5ff;border-radius:12px;padding:20px 24px;margin:16px 0;">
-      <div style="font-size:32px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_final_ttc || quote.prix_ttc)}</div>
-      <div style="color:#64748b;font-size:13px;">TTC · dont ${fmt(quote.prix_final_ht || quote.prix_ht)} HT + ${fmt(quote.tva)} TVA (10%)</div>
-      ${quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0 ? `<div style="color:#92400e;font-size:12px;margin-top:6px;">Dont ajustement commercial : ${fmt(quote.ajustement_manuel_ht)} HT${quote.raison_ajustement ? ` (${quote.raison_ajustement})` : ''}</div>` : ''}
+    <div style="background:#f0f5ff;border-radius:12px;padding:24px 28px;margin:20px 0;border:1px solid #dbeafe;">
+      <div style="font-size:36px;font-weight:800;color:#1e3a8a;letter-spacing:-1px;">${fmt(prixTtc)}</div>
+      <div style="color:#64748b;font-size:13px;margin-top:4px;">
+        TTC · dont <strong>${fmt(prixHt)} HT</strong> + ${fmt(quote.tva)} TVA (10 %)
+      </div>
+      ${quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0
+        ? `<div style="color:#92400e;font-size:12px;margin-top:8px;padding-top:8px;border-top:1px solid #fde68a;">
+             Ajustement commercial inclus : ${fmt(quote.ajustement_manuel_ht)}${quote.raison_ajustement ? ` (${quote.raison_ajustement})` : ''}
+           </div>`
+        : ''}
+      <div style="color:#94a3b8;font-size:11px;margin-top:10px;">
+        Devis valable jusqu'au <strong>${validiteDate}</strong> (${validite} jours)
+      </div>
     </div>
 
-    <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0;">
+    <p style="font-size:13px;font-weight:700;color:#0f172a;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.06em;">Détail du calcul</p>
+    <table style="width:100%;border-collapse:collapse;border-top:2px solid #e2e8f0;">
       ${rows}
+      <tr style="border-top:2px solid #dbeafe;">
+        <td style="padding:10px 0;font-weight:700;color:#0f172a;font-size:14px;">Total HT</td>
+        <td style="padding:10px 0;text-align:right;font-weight:700;color:#0f172a;font-size:14px;">${fmt(prixHt)}</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#64748b;font-size:13px;">TVA 10 %</td>
+        <td style="padding:4px 0;text-align:right;color:#64748b;font-size:13px;">${fmt(quote.tva)}</td>
+      </tr>
+      <tr style="border-top:1px solid #e2e8f0;">
+        <td style="padding:10px 0;font-weight:800;color:#1e3a8a;font-size:15px;">Total TTC</td>
+        <td style="padding:10px 0;text-align:right;font-weight:800;color:#1e3a8a;font-size:15px;">${fmt(prixTtc)}</td>
+      </tr>
     </table>
 
     ${divider()}
-    ${p('<strong>Note de calcul :</strong> Ce devis est calculé par un moteur déterministe basé sur des règles métier explicites, et non par une IA. Il est vérifiable et traçable.', '#64748b')}
-    ${p('Ce devis est <strong>gratuit et sans engagement</strong>. Pour l\'accepter ou demander des précisions, répondez directement à cet email.')}
+
+    <div style="background:#f8fafc;border-radius:8px;padding:14px 18px;margin:16px 0;border-left:3px solid #2563eb;">
+      <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">
+        <strong>Moteur de calcul déterministe NeoTravel</strong> — Ce devis est calculé par un algorithme à règles explicites, non par une IA. Chaque ligne est traçable, avec sa source et son hypothèse documentée. Les lignes marquées <em>estimation</em> sont des hypothèses MVP à valider avec NeoTravel.
+      </p>
+    </div>
+
+    ${p('Ce devis est <strong>gratuit et sans engagement</strong>. Pour l\'accepter, modifier ou poser une question, répondez directement à cet email ou utilisez le lien de suivi ci-dessous.')}
+
     ${lead.trackingToken ? btn('Suivre mon dossier en ligne', `${FRONTEND_URL}/suivi/${lead.trackingToken}`) : btn('Contacter un conseiller', 'mailto:commercial@neotravel.fr')}
-    ${p('Un conseiller NeoTravel prend en charge les demandes spéciales ou les groupes de grande taille.', '#64748b')}
+
+    ${divider()}
+    <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.6;">
+      <strong style="color:#64748b;">NeoTravel</strong> · Plateforme transport de groupe<br>
+      Pour toute demande : <a href="mailto:commercial@neotravel.fr" style="color:#2563eb;">commercial@neotravel.fr</a><br>
+      Ce devis est confidentiel et émis uniquement pour ${lead.nom}${lead.societe ? ` (${lead.societe})` : ''}.
+    </p>
   `
   return {
-    subject: `Votre devis NeoTravel — ${lead.depart} → ${lead.destination} — ${fmt(quote.prix_final_ttc || quote.prix_ttc)} TTC`,
-    html: layout('Votre devis', body),
-    text: `Votre devis NeoTravel pour ${lead.depart} → ${lead.destination} : ${fmt(quote.prix_final_ttc || quote.prix_ttc)} TTC. Gratuit et sans engagement.${lead.trackingToken ? ` Suivez votre dossier : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : ''}`,
+    subject: `Votre devis NeoTravel — ${lead.depart} → ${lead.destination} — ${fmt(prixTtc)} TTC`,
+    html: layout('Votre devis NeoTravel', body),
+    text: [
+      `Votre devis NeoTravel`,
+      `${lead.depart} → ${lead.destination}${dateDepart ? `, le ${dateDepart}` : ''}, ${lead.nb_passagers} passagers`,
+      `Prix TTC : ${fmt(prixTtc)} (dont ${fmt(prixHt)} HT + ${fmt(quote.tva)} TVA 10%)`,
+      `Valable ${validite} jours.`,
+      `Gratuit et sans engagement.`,
+      lead.trackingToken ? `Suivez votre dossier : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : `Contact : commercial@neotravel.fr`,
+    ].join('\n'),
   }
 }
 
