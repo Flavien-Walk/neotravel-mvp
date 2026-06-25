@@ -50,20 +50,14 @@ export default function ChaosToPipeline() {
       const total = section!.offsetHeight - window.innerHeight
       const p     = Math.max(0, Math.min(1, -rect.top / total))
 
-      // Chaos fades out: 0.12 → 0.38
       const chaosOp = lerp(1, 0, p, 0.12, 0.38)
-      // Arrow: fades in 0.28→0.46, holds, fades 0.62→0.72
       const arrowOp = p < 0.28 ? 0
         : p < 0.46 ? lerp(0, 1, p, 0.28, 0.46)
         : p < 0.62 ? 1
         : lerp(1, 0, p, 0.62, 0.72)
-      // Pipeline: fades in 0.44 → 0.68
       const pipeOp  = lerp(0, 1, p, 0.44, 0.68)
-      // Stats: fades in 0.76 → 0.91
       const statsOp = lerp(0, 1, p, 0.76, 0.91)
-      // Hint fades out fast
       const hintOp  = lerp(1, 0, p, 0, 0.05)
-      // Phase labels
       const avantOp = lerp(1, 0, p, 0.22, 0.38)
       const apresOp = lerp(0, 1, p, 0.50, 0.65)
 
@@ -79,7 +73,6 @@ export default function ChaosToPipeline() {
       if (avantRef.current)    avantRef.current.style.opacity    = String(avantOp)
       if (apresRef.current)    apresRef.current.style.opacity    = String(apresOp)
 
-      // Pipeline item stagger: each item comes in 0.022 after the prev
       pipeItems.current.forEach((el, i) => {
         if (!el) return
         const start = 0.44 + i * 0.022
@@ -90,7 +83,6 @@ export default function ChaosToPipeline() {
         el.style.transform = `translateX(${x}px)`
       })
 
-      // Phase indicator bar
       if (phaseBarRef.current) {
         phaseBarRef.current.style.transform = `scaleX(${p})`
       }
@@ -112,14 +104,14 @@ export default function ChaosToPipeline() {
       >
         <div
           className="sticky top-0 h-screen overflow-hidden flex flex-col"
-          style={{ background: '#F8FAFC' }}
+          style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 50%, #030D20 100%)' }}
         >
           {/* Bg decorations */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-grid-dark opacity-20 pointer-events-none" />
           <div className="absolute top-0 inset-x-0 h-px pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.5), transparent)' }} />
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 55%, rgba(37,99,235,0.04) 0%, transparent 70%)' }} />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 55%, rgba(37,99,235,0.06) 0%, transparent 70%)' }} />
 
-          {/* Progress bar at bottom */}
+          {/* Progress bar */}
           <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'rgba(255,255,255,0.04)' }}>
             <div
               ref={phaseBarRef}
@@ -133,11 +125,11 @@ export default function ChaosToPipeline() {
             {/* Header */}
             <div className="text-center mb-6">
               <span className="label-tag mb-3">Avant / Après</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-4 mb-3 leading-tight" style={{ color: '#0F172A' }}>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-3 leading-tight">
                 Du chaos au pipeline.<br />
                 <span className="text-gradient-blue">En un seul outil.</span>
               </h2>
-              <p className="text-base max-w-md mx-auto" style={{ color: '#64748B' }}>
+              <p className="text-white/45 text-base max-w-md mx-auto">
                 Faites défiler — regardez vos demandes éparpillées se transformer en pipeline structuré.
               </p>
             </div>
@@ -154,7 +146,7 @@ export default function ChaosToPipeline() {
               <span
                 ref={apresRef}
                 className="absolute text-[11px] font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full"
-                style={{ background: 'rgba(37,99,235,0.1)', color: '#93C5FD', border: '1px solid rgba(37,99,235,0.22)', opacity: 0 }}
+                style={{ background: 'rgba(37,99,235,0.12)', color: '#93C5FD', border: '1px solid rgba(37,99,235,0.28)', opacity: 0 }}
               >
                 Avec NeoTravel ✓
               </span>
@@ -165,7 +157,6 @@ export default function ChaosToPipeline() {
               className="relative flex items-center justify-center mx-auto"
               style={{ height: 308, width: '100%', maxWidth: 560 }}
             >
-
               {/* ── CHAOS ── */}
               <div
                 ref={chaosRef}
@@ -185,8 +176,8 @@ export default function ChaosToPipeline() {
                       top:            `calc(50% + ${y}px)`,
                       translate:      '-50% -50%',
                       rotate:         `${rot}deg`,
-                      background:     'rgba(239,68,68,0.07)',
-                      border:         '1px solid rgba(239,68,68,0.18)',
+                      background:     'rgba(239,68,68,0.08)',
+                      border:         '1px solid rgba(239,68,68,0.2)',
                       backdropFilter: 'blur(10px)',
                       animation:      `chaos-float-${i} ${3.5 + i * 0.7}s ease-in-out infinite`,
                     }}
@@ -195,10 +186,10 @@ export default function ChaosToPipeline() {
                       <Icon className="w-3.5 h-3.5" style={{ color: '#FCA5A5' }} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white/75 whitespace-nowrap">{text}</p>
-                      <p className="text-[10px] whitespace-nowrap" style={{ color: 'rgba(252,165,165,0.45)' }}>{sub}</p>
+                      <p className="text-sm font-medium text-white/80 whitespace-nowrap">{text}</p>
+                      <p className="text-[10px] whitespace-nowrap" style={{ color: 'rgba(252,165,165,0.5)' }}>{sub}</p>
                     </div>
-                    <span className="ml-1 text-[10px] flex-shrink-0" style={{ color: 'rgba(252,165,165,0.3)' }}>✕</span>
+                    <span className="ml-1 text-[10px] flex-shrink-0" style={{ color: 'rgba(252,165,165,0.35)' }}>✕</span>
                   </div>
                 ))}
               </div>
@@ -230,7 +221,6 @@ export default function ChaosToPipeline() {
               >
                 <div className="absolute rounded-full pointer-events-none" style={{ inset: '5%', background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 70%)' }} />
                 <div className="relative flex flex-col gap-2.5" style={{ width: 330 }}>
-                  {/* Connector line */}
                   <div
                     className="absolute z-0 pointer-events-none"
                     style={{ left: 26, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
@@ -242,19 +232,20 @@ export default function ChaosToPipeline() {
                       className="relative z-10 flex items-center gap-3 px-4 py-2.5 rounded-2xl"
                       style={{
                         opacity:    0,
-                        background: 'rgba(255,255,255,0.035)',
-                        border:     `1px solid ${color}22`,
+                        background: 'rgba(255,255,255,0.05)',
+                        border:     `1px solid ${color}28`,
                         willChange: 'opacity, transform',
+                        backdropFilter: 'blur(8px)',
                       }}
                     >
                       <div
                         className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color}15`, border: `1px solid ${color}28` }}
+                        style={{ background: `${color}18`, border: `1px solid ${color}30` }}
                       >
                         <Icon className="w-4 h-4" style={{ color }} />
                       </div>
-                      <span className="text-sm font-medium text-white/82">{label}</span>
-                      <CheckCircle2 className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}70` }} />
+                      <span className="text-sm font-medium text-white/85">{label}</span>
+                      <CheckCircle2 className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
                     </div>
                   ))}
                 </div>
@@ -274,7 +265,7 @@ export default function ChaosToPipeline() {
               ].map(({ val, label }) => (
                 <div key={label} className="text-center">
                   <div className="text-2xl sm:text-3xl font-bold text-gradient-blue">{val}</div>
-                  <div className="text-xs text-white/28 mt-1 leading-tight">{label}</div>
+                  <div className="text-xs text-white/30 mt-1 leading-tight">{label}</div>
                 </div>
               ))}
             </div>
@@ -298,7 +289,7 @@ export default function ChaosToPipeline() {
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
             style={{ willChange: 'opacity' }}
           >
-            <span className="text-[9px] uppercase tracking-widest" style={{ color: 'rgba(15,23,42,0.25)' }}>Faites défiler</span>
+            <span className="text-[9px] uppercase tracking-widest text-white/20">Faites défiler</span>
             <div
               className="w-px h-6"
               style={{
@@ -314,11 +305,11 @@ export default function ChaosToPipeline() {
       <section
         id="avant-apres"
         className="md:hidden py-20 px-5"
-        style={{ background: '#F8FAFC' }}
+        style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 60%, #030D20 100%)' }}
       >
         <div className="text-center mb-10">
           <span className="label-tag mb-3">Avant / Après</span>
-          <h2 className="text-2xl font-bold mt-4 mb-2 leading-tight" style={{ color: '#0F172A' }}>
+          <h2 className="text-2xl font-bold text-white mt-4 mb-2 leading-tight">
             Du chaos au pipeline.<br />
             <span className="text-gradient-blue">En un seul outil.</span>
           </h2>
@@ -326,19 +317,19 @@ export default function ChaosToPipeline() {
 
         <div className="space-y-4 max-w-sm mx-auto">
           {/* AVANT */}
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)' }}>
             <div className="text-[10px] font-bold uppercase tracking-widest mb-3 text-center" style={{ color: '#FCA5A5' }}>
               Avant NeoTravel
             </div>
             <div className="space-y-2">
               {CHAOS.map(({ Icon, text, sub }) => (
                 <div key={text} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)' }}>
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(239,68,68,0.12)' }}>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(239,68,68,0.14)' }}>
                     <Icon className="w-3 h-3" style={{ color: '#FCA5A5' }} />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-white/70">{text}</p>
-                    <p className="text-[10px]" style={{ color: 'rgba(252,165,165,0.45)' }}>{sub}</p>
+                    <p className="text-xs font-medium text-white/75">{text}</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(252,165,165,0.5)' }}>{sub}</p>
                   </div>
                   <span className="ml-auto text-[10px]" style={{ color: 'rgba(252,165,165,0.35)' }}>✕</span>
                 </div>
@@ -354,17 +345,17 @@ export default function ChaosToPipeline() {
           </div>
 
           {/* APRÈS */}
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.18)' }}>
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)' }}>
             <div className="text-[10px] font-bold uppercase tracking-widest mb-3 text-center" style={{ color: '#93C5FD' }}>
               Avec NeoTravel ✓
             </div>
             <div className="space-y-2">
               {PIPELINE.map(({ Icon, label, color }) => (
-                <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${color}20` }}>
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}12` }}>
+                <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
+                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}18` }}>
                     <Icon className="w-3 h-3" style={{ color }} />
                   </div>
-                  <span className="text-xs font-medium" style={{ color: '#334155' }}>{label}</span>
+                  <span className="text-xs font-medium text-white/80">{label}</span>
                   <CheckCircle2 className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}70` }} />
                 </div>
               ))}

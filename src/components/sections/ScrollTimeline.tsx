@@ -12,8 +12,8 @@ const STEPS = [
     title: 'Demande reçue',
     desc: 'Vous remplissez le formulaire NeoTravel : trajet, date, passagers, options. Votre demande est enregistrée immédiatement — sans email, sans téléphone.',
     color: '#60A5FA',
-    bg: 'rgba(96,165,250,0.1)',
-    border: 'rgba(96,165,250,0.25)',
+    bg: 'rgba(96,165,250,0.08)',
+    border: 'rgba(96,165,250,0.22)',
     who: 'Client',
   },
   {
@@ -22,8 +22,8 @@ const STEPS = [
     title: 'Trajet qualifié',
     desc: 'L\'agent vérifie les informations, identifie les données manquantes et classe la demande selon sa complexité. Rien n\'est laissé sans statut.',
     color: '#A78BFA',
-    bg: 'rgba(167,139,250,0.1)',
-    border: 'rgba(167,139,250,0.25)',
+    bg: 'rgba(167,139,250,0.08)',
+    border: 'rgba(167,139,250,0.22)',
     who: 'NeoTravel',
   },
   {
@@ -32,8 +32,8 @@ const STEPS = [
     title: 'Prix calculé',
     desc: 'Le moteur <code>calculer_devis()</code> applique les règles tarifaires — distance, durée, passagers, péages, options, TVA. Déterministe. Auditable. Reproductible.',
     color: '#FCD34D',
-    bg: 'rgba(252,211,77,0.1)',
-    border: 'rgba(252,211,77,0.25)',
+    bg: 'rgba(252,211,77,0.08)',
+    border: 'rgba(252,211,77,0.22)',
     who: 'NeoTravel',
     badge: 'Jamais par IA',
   },
@@ -43,8 +43,8 @@ const STEPS = [
     title: 'Devis envoyé',
     desc: 'Le devis formaté est envoyé par email avec le détail ligne par ligne : distance, options, TVA. Le client comprend chaque centime.',
     color: '#4ADE80',
-    bg: 'rgba(74,222,128,0.1)',
-    border: 'rgba(74,222,128,0.25)',
+    bg: 'rgba(74,222,128,0.08)',
+    border: 'rgba(74,222,128,0.22)',
     who: 'Client',
   },
   {
@@ -53,8 +53,8 @@ const STEPS = [
     title: 'Suivi activé',
     desc: 'Un lien de tracking est inclus dans chaque email. Le client suit l\'avancement en temps réel — sans créer de compte.',
     color: '#38BDF8',
-    bg: 'rgba(56,189,248,0.1)',
-    border: 'rgba(56,189,248,0.25)',
+    bg: 'rgba(56,189,248,0.08)',
+    border: 'rgba(56,189,248,0.22)',
     who: 'Client',
   },
   {
@@ -63,8 +63,8 @@ const STEPS = [
     title: 'Reprise humaine si nécessaire',
     desc: 'Circuit multi-étapes, groupe > 85 pax, ville hors base — le système flagge et transmet à un conseiller NeoTravel. Aucun cas n\'est laissé sans réponse.',
     color: '#FB923C',
-    bg: 'rgba(251,146,60,0.1)',
-    border: 'rgba(251,146,60,0.25)',
+    bg: 'rgba(251,146,60,0.08)',
+    border: 'rgba(251,146,60,0.22)',
     who: 'NeoTravel',
   },
 ]
@@ -75,15 +75,13 @@ export default function ScrollTimeline() {
   const stepRefs = useRef<(HTMLDivElement | null)[]>([])
 
   useEffect(() => {
-    let gsap: typeof import('gsap').default
-    let ScrollTrigger: typeof import('gsap/ScrollTrigger').ScrollTrigger
     let triggers: (() => void)[] = []
 
     async function init() {
       const gsapMod = await import('gsap')
       const stMod = await import('gsap/ScrollTrigger')
-      gsap = gsapMod.default
-      ScrollTrigger = stMod.ScrollTrigger
+      const gsap = gsapMod.default
+      const ScrollTrigger = stMod.ScrollTrigger
       gsap.registerPlugin(ScrollTrigger)
 
       if (typeof window === 'undefined' || !sectionRef.current) return
@@ -130,12 +128,17 @@ export default function ScrollTimeline() {
       ref={sectionRef}
       id="comment-ca-marche"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
-      style={{ background: '#F8FAFC' }}
+      style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 50%, #030D20 100%)' }}
     >
-      <div className="absolute inset-0 bg-grid-dark opacity-25 pointer-events-none" />
+      <div className="absolute inset-0 bg-grid-dark opacity-15 pointer-events-none" />
       <div
         className="absolute top-0 inset-x-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.25), transparent)' }}
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }}
+      />
+      {/* Center glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at top, rgba(37,99,235,0.08) 0%, transparent 70%)' }}
       />
 
       <div className="container-neo relative z-10">
@@ -148,11 +151,11 @@ export default function ScrollTimeline() {
             className="text-center mb-20"
           >
             <span className="label-tag mb-5">Comment ça marche</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-5 mb-5 leading-tight" style={{ color: '#0F172A' }}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-5 mb-5 leading-tight">
               De la demande au devis,{' '}
               <span className="text-gradient-blue">6 étapes.</span>
             </h2>
-            <p className="text-lg max-w-xl mx-auto" style={{ color: '#64748B' }}>
+            <p className="text-white/45 text-lg max-w-xl mx-auto">
               Vous décrivez votre besoin. NeoTravel qualifie, calcule et envoie.
               Chaque étape est suivie — de la réception à la signature.
             </p>
@@ -160,17 +163,17 @@ export default function ScrollTimeline() {
         </div>
 
         {/* Timeline layout */}
-        <div className="grid lg:grid-cols-[280px_1fr] gap-12 lg:gap-16 items-start">
+        <div className="grid lg:grid-cols-[260px_1fr] gap-12 lg:gap-16 items-start">
 
-          {/* Left: sticky progress (desktop) */}
+          {/* Left: sticky progress nav (desktop) */}
           <div className="hidden lg:block">
-            <div className="sticky top-32 space-y-2">
+            <div className="sticky top-32 space-y-1">
               {STEPS.map(({ num, title, color }, i) => (
                 <div
                   key={num}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300"
                   style={{
-                    background: activeStep === i ? `${color}10` : 'rgba(255,255,255,0)',
+                    background: activeStep === i ? `${color}12` : 'transparent',
                     border: activeStep === i ? `1px solid ${color}30` : '1px solid transparent',
                   }}
                   onClick={() => stepRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -178,15 +181,15 @@ export default function ScrollTimeline() {
                   <span
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all duration-300"
                     style={{
-                      background: activeStep === i ? `${color}15` : '#F1F5F9',
-                      color: activeStep === i ? color : 'rgba(255,255,255,0.3)',
+                      background: activeStep === i ? `${color}20` : 'rgba(255,255,255,0.06)',
+                      color: activeStep === i ? color : 'rgba(255,255,255,0.28)',
                     }}
                   >
                     {num}
                   </span>
                   <span
                     className="text-sm font-medium transition-all duration-300 truncate"
-                    style={{ color: activeStep === i ? color : 'rgba(255,255,255,0.3)' }}
+                    style={{ color: activeStep === i ? color : 'rgba(255,255,255,0.28)' }}
                   >
                     {title}
                   </span>
@@ -195,7 +198,7 @@ export default function ScrollTimeline() {
 
               {/* Progress line */}
               <div className="pt-6 px-4">
-                <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{
@@ -204,13 +207,13 @@ export default function ScrollTimeline() {
                     }}
                   />
                 </div>
-                <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Étape {activeStep + 1} sur {STEPS.length}</p>
+                <p className="text-xs text-white/28 mt-2">Étape {activeStep + 1} sur {STEPS.length}</p>
               </div>
             </div>
           </div>
 
           {/* Right: step cards */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             {STEPS.map(({ num, Icon, title, desc, color, bg, border, who, badge }, i) => (
               <div
                 key={num}
@@ -220,12 +223,13 @@ export default function ScrollTimeline() {
                   background: bg,
                   border: `1px solid ${border}`,
                   opacity: 0,
+                  backdropFilter: 'blur(8px)',
                 }}
               >
                 {/* Number watermark */}
                 <span
                   className="absolute top-4 right-6 text-7xl font-black select-none pointer-events-none"
-                  style={{ color: `${color}08` }}
+                  style={{ color: `${color}06` }}
                 >
                   {num}
                 </span>
@@ -233,7 +237,7 @@ export default function ScrollTimeline() {
                 <div className="flex items-start gap-4 mb-4 relative z-10">
                   <div
                     className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${color}20`, border: `1px solid ${color}35` }}
+                    style={{ background: `${color}18`, border: `1px solid ${color}32` }}
                   >
                     <Icon className="w-6 h-6" style={{ color }} />
                   </div>
@@ -261,18 +265,18 @@ export default function ScrollTimeline() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold" style={{ color: '#0F172A' }}>{title}</h3>
+                    <h3 className="text-xl font-bold text-white">{title}</h3>
                   </div>
                 </div>
 
                 <p
-                  className="leading-relaxed relative z-10" style={{ color: '#475569' }}
-                  dangerouslySetInnerHTML={{ __html: desc.replace(/<code>(.*?)<\/code>/g, '<code class="font-mono text-xs px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,0.08);color:#93C5FD">$1</code>') }}
+                  className="text-white/55 leading-relaxed relative z-10"
+                  dangerouslySetInnerHTML={{ __html: desc.replace(/<code>(.*?)<\/code>/g, '<code class="font-mono text-xs px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,0.1);color:#93C5FD">$1</code>') }}
                 />
               </div>
             ))}
 
-            {/* CTA after last step */}
+            {/* CTA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -284,7 +288,7 @@ export default function ScrollTimeline() {
                 Démarrer maintenant
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>
+              <p className="text-sm text-white/30">
                 Gratuit · Réponse sous 2h ouvrées · Sans engagement
               </p>
             </motion.div>
