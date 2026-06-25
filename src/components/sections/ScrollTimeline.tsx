@@ -128,9 +128,9 @@ export default function ScrollTimeline() {
       ref={sectionRef}
       id="comment-ca-marche"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
-      style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 50%, #030D20 100%)' }}
+      style={{ background: 'linear-gradient(160deg, #071B3E 0%, #0B2456 50%, #071B3E 100%)' }}
     >
-      <div className="absolute inset-0 bg-grid-dark opacity-15 pointer-events-none" />
+      <div className="absolute inset-0 bg-grid-dark opacity-25 pointer-events-none" />
       <div
         className="absolute top-0 inset-x-0 h-px pointer-events-none"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }}

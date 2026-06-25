@@ -112,10 +112,10 @@ export default function ChaosToPipeline() {
       >
         <div
           className="sticky top-0 h-screen overflow-hidden flex flex-col"
-          style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 50%, #030D20 100%)' }}
+          style={{ background: 'linear-gradient(160deg, #071B3E 0%, #0B2456 50%, #071B3E 100%)' }}
         >
           {/* Bg decorations */}
-          <div className="absolute inset-0 bg-grid-dark opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-grid-dark opacity-30 pointer-events-none" />
           <div className="absolute top-0 inset-x-0 h-px pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.5), transparent)' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 55%, rgba(37,99,235,0.06) 0%, transparent 70%)' }} />
 

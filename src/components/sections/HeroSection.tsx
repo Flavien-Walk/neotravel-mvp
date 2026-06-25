@@ -40,7 +40,7 @@ export default function HeroSection() {
       {/* ── Overlays successifs — identité navy NeoTravel ── */}
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(168deg, rgba(1,12,30,0.96) 0%, rgba(3,13,32,0.90) 38%, rgba(6,20,53,0.85) 68%, rgba(2,10,22,0.93) 100%)' }}
+        style={{ background: 'linear-gradient(168deg, rgba(1,12,30,0.88) 0%, rgba(3,13,32,0.80) 38%, rgba(6,20,53,0.75) 68%, rgba(2,10,22,0.85) 100%)' }}
       />
       <div
         className="absolute inset-0 pointer-events-none"
@@ -198,7 +198,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98] as const, delay: 0.3 }}
-            className="relative h-[440px] lg:h-[620px]"
+            className="relative h-[500px] lg:h-[700px]"
           >
             <div
               className="absolute inset-0 pointer-events-none"

@@ -52,9 +52,9 @@ export default function TraceableQuoteSection() {
     <section
       id="fiabilite"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
-      style={{ background: 'linear-gradient(160deg, #061435 0%, #030D20 50%, #061435 100%)' }}
+      style={{ background: 'linear-gradient(160deg, #0B2456 0%, #071B3E 50%, #0B2456 100%)' }}
     >
-      <div className="absolute inset-0 bg-grid-dark opacity-20 pointer-events-none" />
+      <div className="absolute inset-0 bg-grid-dark opacity-30 pointer-events-none" />
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at top, rgba(37,99,235,0.12) 0%, transparent 70%)' }}

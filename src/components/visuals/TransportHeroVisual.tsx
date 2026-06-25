@@ -319,7 +319,7 @@ export default function TransportHeroVisual() {
       </div>
 
       {/* ── MAP ── */}
-      <div className="absolute inset-0 z-[2]" style={{ bottom: '148px' }}>
+      <div className="absolute inset-0 z-[2]" style={{ bottom: '128px' }}>
         <ComposableMap
           projection="geoMercator"
           width={W} height={H}
