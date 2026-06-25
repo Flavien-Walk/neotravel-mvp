@@ -150,8 +150,8 @@ function RouteSegment({ p1, p2, color, visible }: {
 }
 
 // City tooltip — rich SVG card
-function CityTooltip({ city, color, onSelect }: {
-  city: typeof CITIES_XY[0]; color: string; onSelect: (id: string) => void
+function CityTooltip({ city, color, isActive }: {
+  city: typeof CITIES_XY[0]; color: string; isActive: boolean
 }) {
   const [cx, cy] = city.xy
   const right = cx < 420
@@ -160,12 +160,12 @@ function CityTooltip({ city, color, onSelect }: {
   const by = Math.max(cy - H2 / 2, 10)
 
   return (
-    <g>
+    <g style={{ pointerEvents: 'none' }}>
       {/* Drop shadow */}
       <rect x={bx - 4} y={by - 4} width={W2 + 8} height={H2 + 8} rx="10" fill="rgba(0,0,0,0.55)" />
       {/* Card */}
       <rect x={bx} y={by} width={W2} height={H2} rx="9" fill="rgba(2,10,22,0.97)" stroke={`${color}50`} strokeWidth="1.2" />
-      {/* Connector dot */}
+      {/* Connector */}
       <circle cx={right ? bx : bx + W2} cy={by + H2 / 2} r="4" fill={color} />
       <line x1={right ? bx : bx + W2} y1={by + H2 / 2} x2={cx} y2={cy} stroke={`${color}40`} strokeWidth="1" strokeDasharray="4 3" />
 
@@ -175,11 +175,16 @@ function CityTooltip({ city, color, onSelect }: {
       {city.id !== 'paris' && (
         <>
           <text x={bx + 12} y={by + 34} fill="rgba(255,255,255,0.38)" fontSize="9.5" fontFamily="system-ui,-apple-system,sans-serif">{city.hint}</text>
-          {/* Price row */}
           <rect x={bx + 10} y={by + 42} width={W2 - 20} height={22} rx="5" fill={`${color}14`} stroke={`${color}28`} strokeWidth="0.8" />
-          <text x={bx + 20} y={by + 57} fill={color} fontSize="9.5" fontWeight="600" fontFamily="system-ui,-apple-system,sans-serif">Paris → {city.label} · dès {city.price.toLocaleString('fr-FR')} € HT</text>
-          {/* Simulate button hint */}
-          <text x={bx + W2 - 14} y={by + 57} fill={`${color}70`} fontSize="9" fontFamily="system-ui,-apple-system,sans-serif" textAnchor="end">cliquez ↗</text>
+          <text x={bx + 20} y={by + 57} fill={color} fontSize="9.5" fontWeight="600" fontFamily="system-ui,-apple-system,sans-serif">
+            Paris → {city.label} · dès {city.price.toLocaleString('fr-FR')} € HT
+          </text>
+          {!isActive && (
+            <text x={bx + W2 - 14} y={by + 57} fill={`${color}70`} fontSize="9" fontFamily="system-ui,-apple-system,sans-serif" textAnchor="end">cliquer ↗</text>
+          )}
+          {isActive && (
+            <text x={bx + W2 - 14} y={by + 57} fill={`${color}80`} fontSize="9" fontFamily="system-ui,-apple-system,sans-serif" textAnchor="end">✓ sélectionné</text>
+          )}
         </>
       )}
     </g>
@@ -468,9 +473,9 @@ export default function TransportHeroVisual() {
             )
           })}
 
-          {/* Tooltip */}
-          {hovCity && !routeIds.includes(hovCity.id) && (
-            <CityTooltip city={hovCity} color={phaseColor} onSelect={selectDest} />
+          {/* Tooltip — toutes les villes sauf Paris */}
+          {hovCity && hovCity.id !== 'paris' && (
+            <CityTooltip city={hovCity} color={phaseColor} isActive={routeIds.includes(hovCity.id)} />
           )}
 
           {/* Bus */}
