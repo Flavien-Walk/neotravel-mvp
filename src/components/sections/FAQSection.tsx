@@ -43,179 +43,91 @@ export default function FAQSection() {
   const [open, setOpen] = useState<number | null>(0)
 
   return (
-    <section
-      id="faq"
-      className="relative overflow-hidden"
-      style={{ background: 'linear-gradient(160deg, #EBF3FF 0%, #F4F7FF 40%, #EEF2FF 100%)' }}
-    >
-      {/* Dot matrix subtil */}
+    <section id="faq" className="relative overflow-hidden py-24 sm:py-32 px-4 sm:px-6">
+
+      {/* Photo plein fond */}
+      <div className="absolute inset-0">
+        <Image
+          src="/images/neotravel/bus-road.jpg"
+          alt="Autocar sur route — NeoTravel transport de groupe"
+          fill
+          className="object-cover object-center"
+          sizes="100vw"
+        />
+      </div>
+
+      {/* Overlay navy profond */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(37,99,235,0.07) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
-      {/* Glow top-right */}
-      <div
-        className="absolute top-0 right-0 w-[500px] h-[300px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at top right, rgba(37,99,235,0.08) 0%, transparent 70%)' }}
-      />
-      {/* Top divider */}
-      <div
-        className="absolute top-0 inset-x-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.2), transparent)' }}
-      />
-      {/* Bottom divider */}
-      <div
-        className="absolute bottom-0 inset-x-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.15), transparent)' }}
+        className="absolute inset-0"
+        style={{ background: 'linear-gradient(160deg, rgba(3,13,32,0.92) 0%, rgba(6,20,53,0.88) 50%, rgba(3,13,32,0.93) 100%)' }}
       />
 
-      <div className="container-neo px-4 sm:px-6 py-20 sm:py-28 relative z-10">
+      {/* Glow bleu centré */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(37,99,235,0.12) 0%, transparent 70%)' }}
+      />
+
+      {/* Top / bottom dividers */}
+      <div className="absolute top-0 inset-x-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }} />
+      <div className="absolute bottom-0 inset-x-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.25), transparent)' }} />
+
+      <div className="container-neo relative z-10">
+
         {/* Header */}
-        <div className="text-center mb-12 sm:mb-16">
+        <div className="text-center mb-14">
           <span
-            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-4"
-            style={{ background: 'rgba(37,99,235,0.1)', color: '#2563EB', border: '1px solid rgba(37,99,235,0.2)' }}
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-5"
+            style={{ background: 'rgba(37,99,235,0.2)', color: '#93C5FD', border: '1px solid rgba(37,99,235,0.35)' }}
           >
             FAQ
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold mt-3 mb-4" style={{ color: '#0F172A' }}>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mt-3 mb-4">
             Questions fréquentes
           </h2>
-          <p className="text-base max-w-xl mx-auto" style={{ color: '#475569' }}>
+          <p className="text-white/50 text-base max-w-xl mx-auto">
             Tout ce que vous devez savoir avant de faire une demande de devis transport de groupe.
           </p>
         </div>
 
-        {/* 2-column layout */}
-        <div className="grid lg:grid-cols-5 gap-10 lg:gap-14 items-start max-w-5xl mx-auto">
-
-          {/* Image — left column */}
-          <div className="hidden lg:block lg:col-span-2">
-            <div className="sticky top-24">
-              <div
-                className="relative rounded-2xl overflow-hidden"
-                style={{
-                  height: 460,
-                  boxShadow: '0 20px 60px rgba(37,99,235,0.15), 0 4px 20px rgba(0,0,0,0.1)',
-                }}
+        {/* Accordion centré */}
+        <div className="max-w-3xl mx-auto space-y-2.5">
+          {FAQ.map((item, i) => (
+            <div
+              key={i}
+              className="rounded-xl overflow-hidden transition-all duration-200"
+              style={{
+                background: open === i ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                border: open === i ? '1px solid rgba(37,99,235,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: open === i ? '0 4px 24px rgba(37,99,235,0.15)' : 'none',
+              }}
+            >
+              <button
+                onClick={() => setOpen(open === i ? null : i)}
+                className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left"
               >
-                <Image
-                  src="/images/neotravel/bus-road.jpg"
-                  alt="Autocar sur route — transport de groupe NeoTravel"
-                  fill
-                  className="object-cover object-center"
-                  sizes="33vw"
-                />
-                {/* Overlay dégradé bas */}
-                <div
-                  className="absolute inset-0"
-                  style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.65) 0%, rgba(15,23,42,0.1) 50%, rgba(15,23,42,0.0) 100%)' }}
-                />
-                {/* Badge bas */}
-                <div className="absolute bottom-5 left-5 right-5">
-                  <div
-                    className="rounded-xl px-4 py-3"
-                    style={{
-                      background: 'rgba(255,255,255,0.95)',
-                      backdropFilter: 'blur(16px)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <p className="text-xs font-semibold" style={{ color: '#0F172A' }}>
-                        Transport de groupe
-                      </p>
-                    </div>
-                    <p className="text-xs" style={{ color: '#64748B' }}>
-                      8 à 500 passagers · Devis gratuit sous 2h
-                    </p>
-                  </div>
-                </div>
-                {/* Badge top */}
-                <div className="absolute top-5 left-5">
-                  <div
-                    className="rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{
-                      background: 'rgba(37,99,235,0.85)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#fff',
-                    }}
-                  >
-                    NeoTravel
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats sous l'image */}
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                {[
-                  { val: '< 2h', label: 'Délai devis' },
-                  { val: '100%', label: 'Tracé' },
-                  { val: 'Gratuit', label: 'Sans engagement' },
-                ].map(({ val, label }) => (
-                  <div
-                    key={label}
-                    className="rounded-xl px-3 py-3 text-center"
-                    style={{
-                      background: 'rgba(255,255,255,0.7)',
-                      border: '1px solid rgba(37,99,235,0.12)',
-                      backdropFilter: 'blur(8px)',
-                    }}
-                  >
-                    <div className="text-sm font-bold" style={{ color: '#1D4ED8' }}>{val}</div>
-                    <div className="text-[10px] mt-0.5" style={{ color: '#64748B' }}>{label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Accordion — right column */}
-          <div className="lg:col-span-3 space-y-2.5">
-            {FAQ.map((item, i) => (
-              <div
-                key={i}
-                className="rounded-xl overflow-hidden transition-all duration-200"
-                style={{
-                  background: open === i ? '#FFFFFF' : 'rgba(255,255,255,0.65)',
-                  border: open === i ? '1px solid rgba(37,99,235,0.25)' : '1px solid rgba(37,99,235,0.1)',
-                  boxShadow: open === i
-                    ? '0 4px 20px rgba(37,99,235,0.10), 0 1px 4px rgba(0,0,0,0.04)'
-                    : '0 1px 3px rgba(0,0,0,0.04)',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                <button
-                  onClick={() => setOpen(open === i ? null : i)}
-                  className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left transition-all"
-                  style={{ background: open === i ? 'rgba(239,246,255,0.6)' : 'transparent' }}
+                <span
+                  className="font-semibold text-sm leading-relaxed"
+                  style={{ color: open === i ? '#93C5FD' : 'rgba(255,255,255,0.85)' }}
                 >
-                  <span
-                    className="font-semibold text-sm leading-relaxed"
-                    style={{ color: open === i ? '#1D4ED8' : '#1E293B' }}
-                  >
-                    {item.q}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 flex-shrink-0 mt-0.5 transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`}
-                    style={{ color: open === i ? '#2563EB' : '#94A3B8' }}
-                  />
-                </button>
-                {open === i && (
-                  <div
-                    className="px-5 pb-4 text-sm leading-relaxed"
-                    style={{ borderTop: '1px solid rgba(37,99,235,0.1)', color: '#475569' }}
-                  >
-                    <div className="pt-3">{item.a}</div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  {item.q}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 flex-shrink-0 mt-0.5 transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`}
+                  style={{ color: open === i ? '#60A5FA' : 'rgba(255,255,255,0.3)' }}
+                />
+              </button>
+              {open === i && (
+                <div
+                  className="px-5 pb-4 text-sm leading-relaxed"
+                  style={{ borderTop: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)' }}
+                >
+                  <div className="pt-3">{item.a}</div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </section>
