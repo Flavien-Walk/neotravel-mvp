@@ -130,12 +130,12 @@ export default function ScrollTimeline() {
       ref={sectionRef}
       id="comment-ca-marche"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
-      style={{ background: '#030D20' }}
+      style={{ background: '#F8FAFC' }}
     >
       <div className="absolute inset-0 bg-grid-dark opacity-25 pointer-events-none" />
       <div
         className="absolute top-0 inset-x-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.4), transparent)' }}
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.25), transparent)' }}
       />
 
       <div className="container-neo relative z-10">
@@ -148,11 +148,11 @@ export default function ScrollTimeline() {
             className="text-center mb-20"
           >
             <span className="label-tag mb-5">Comment ça marche</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-5 mb-5 leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-5 mb-5 leading-tight" style={{ color: '#0F172A' }}>
               De la demande au devis,{' '}
               <span className="text-gradient-blue">6 étapes.</span>
             </h2>
-            <p className="text-white/45 text-lg max-w-xl mx-auto">
+            <p className="text-lg max-w-xl mx-auto" style={{ color: '#64748B' }}>
               Vous décrivez votre besoin. NeoTravel qualifie, calcule et envoie.
               Chaque étape est suivie — de la réception à la signature.
             </p>
@@ -170,7 +170,7 @@ export default function ScrollTimeline() {
                   key={num}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300"
                   style={{
-                    background: activeStep === i ? `${color}10` : 'transparent',
+                    background: activeStep === i ? `${color}10` : 'rgba(255,255,255,0)',
                     border: activeStep === i ? `1px solid ${color}30` : '1px solid transparent',
                   }}
                   onClick={() => stepRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -178,7 +178,7 @@ export default function ScrollTimeline() {
                   <span
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all duration-300"
                     style={{
-                      background: activeStep === i ? `${color}20` : 'rgba(255,255,255,0.04)',
+                      background: activeStep === i ? `${color}15` : '#F1F5F9',
                       color: activeStep === i ? color : 'rgba(255,255,255,0.3)',
                     }}
                   >
@@ -204,7 +204,7 @@ export default function ScrollTimeline() {
                     }}
                   />
                 </div>
-                <p className="text-xs text-white/25 mt-2">Étape {activeStep + 1} sur {STEPS.length}</p>
+                <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Étape {activeStep + 1} sur {STEPS.length}</p>
               </div>
             </div>
           </div>
@@ -261,12 +261,12 @@ export default function ScrollTimeline() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-xl font-bold text-white">{title}</h3>
+                    <h3 className="text-xl font-bold" style={{ color: '#0F172A' }}>{title}</h3>
                   </div>
                 </div>
 
                 <p
-                  className="text-white/55 leading-relaxed relative z-10"
+                  className="leading-relaxed relative z-10" style={{ color: '#475569' }}
                   dangerouslySetInnerHTML={{ __html: desc.replace(/<code>(.*?)<\/code>/g, '<code class="font-mono text-xs px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,0.08);color:#93C5FD">$1</code>') }}
                 />
               </div>
@@ -284,7 +284,7 @@ export default function ScrollTimeline() {
                 Démarrer maintenant
                 <ArrowRight className="w-4 h-4" />
               </Link>
-              <p className="text-white/30 text-sm">
+              <p className="text-sm" style={{ color: '#94A3B8' }}>
                 Gratuit · Réponse sous 2h ouvrées · Sans engagement
               </p>
             </motion.div>

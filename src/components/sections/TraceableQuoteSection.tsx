@@ -49,7 +49,7 @@ export default function TraceableQuoteSection() {
     <section
       id="fiabilite"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
-      style={{ background: 'linear-gradient(160deg, #061435 0%, #030D20 50%, #061435 100%)' }}
+      style={{ background: '#FFFFFF' }}
     >
       {/* Grid */}
       <div className="absolute inset-0 bg-grid-dark opacity-30 pointer-events-none" />
@@ -57,7 +57,7 @@ export default function TraceableQuoteSection() {
       {/* Top glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[200px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at top, rgba(37,99,235,0.15) 0%, transparent 70%)' }}
+        style={{ background: 'radial-gradient(ellipse at top, rgba(37,99,235,0.06) 0%, transparent 70%)' }}
       />
 
       <div ref={ref} className="container-neo relative z-10">
@@ -73,12 +73,12 @@ export default function TraceableQuoteSection() {
 
           {/* The iconic quote */}
           <blockquote className="mt-6 mb-6">
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight max-w-3xl mx-auto">
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight max-w-3xl mx-auto" style={{ color: '#0F172A' }}>
               &ldquo;L&apos;agent collecte et orchestre,{' '}
               <span className="text-gradient-blue">le code calcule.&rdquo;</span>
             </p>
           </blockquote>
-          <p className="text-white/40 text-base max-w-lg mx-auto">
+          <p className="text-base max-w-lg mx-auto" style={{ color: '#64748B' }}>
             L&apos;IA ne génère jamais un prix. La fonction{' '}
             <code className="font-mono text-sm px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.07)', color: '#93C5FD' }}>
               calculer_devis()
@@ -99,12 +99,12 @@ export default function TraceableQuoteSection() {
             {/* Mock calculation card */}
             <div
               className="rounded-3xl overflow-hidden"
-              style={{ border: '1px solid rgba(37,99,235,0.25)', background: 'rgba(6,20,53,0.7)' }}
+              style={{ border: '1px solid #BFDBFE', background: '#FFFFFF', boxShadow: '0 4px 24px rgba(37,99,235,0.08)' }}
             >
               {/* Card header */}
               <div
                 className="px-6 py-4 flex items-center gap-3"
-                style={{ borderBottom: '1px solid rgba(37,99,235,0.15)', background: 'rgba(37,99,235,0.08)' }}
+                style={{ borderBottom: '1px solid #DBEAFE', background: '#EFF6FF' }}
               >
                 <div className="flex gap-1.5">
                   <span className="w-3 h-3 rounded-full" style={{ background: 'rgba(239,68,68,0.5)' }} />
@@ -123,7 +123,7 @@ export default function TraceableQuoteSection() {
                       key={label}
                       variants={item}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
                     >
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -131,8 +131,8 @@ export default function TraceableQuoteSection() {
                       >
                         <Icon className="w-3.5 h-3.5" style={{ color }} />
                       </div>
-                      <span className="text-sm text-white/55 flex-1">{label}</span>
-                      <span className="text-sm font-mono font-semibold text-white/80">{value}</span>
+                      <span className="text-sm flex-1" style={{ color: '#475569' }}>{label}</span>
+                      <span className="text-sm font-mono font-semibold" style={{ color: '#1D4ED8' }}>{value}</span>
                     </motion.div>
                   ))}
                 </motion.div>
@@ -140,11 +140,11 @@ export default function TraceableQuoteSection() {
                 {/* Divider */}
                 <div
                   className="my-5 h-px"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.3), transparent)' }}
+                  style={{ background: 'linear-gradient(90deg, transparent, #BFDBFE, transparent)' }}
                 />
 
                 {/* Output */}
-                <p className="text-xs text-white/30 uppercase tracking-wider mb-3 font-semibold">Résultat calculé</p>
+                <p className="text-xs uppercase tracking-wider mb-3 font-semibold" style={{ color: '#64748B' }}>Résultat calculé</p>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={inView ? { opacity: 1, scale: 1 } : {}}

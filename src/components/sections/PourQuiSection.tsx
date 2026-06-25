@@ -10,7 +10,7 @@ const EASE = [0.21, 0.47, 0.32, 0.98] as [number, number, number, number]
 
 const CLIENTS = [
   {
-    img:    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
+    img:    '/images/neotravel/bus-commercial.jpg',
     tag:    'Entreprises',
     title:  'Séminaires & événements pro',
     desc:   'Séminaires, team buildings, conventions, transferts aéroport. Devis rapide, facturation propre.',
@@ -18,7 +18,7 @@ const CLIENTS = [
     accent: 'from-blue-700/60 to-neo-900/95',
   },
   {
-    img:    'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80',
+    img:    '/images/neotravel/bus-hero.jpg',
     tag:    'Collectivités',
     title:  'Mairies & institutions',
     desc:   'Événements municipaux, sorties institutionnelles, transports de seniors. On gère le dossier.',
@@ -26,7 +26,7 @@ const CLIENTS = [
     accent: 'from-violet-700/60 to-neo-900/95',
   },
   {
-    img:    'https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=600&q=80',
+    img:    '/images/neotravel/group-travel.jpg',
     tag:    'Établissements scolaires',
     title:  'Sorties & voyages scolaires',
     desc:   'Voyages fin d\'année, classes découverte, sorties culturelles. Transport sécurisé, devis conforme.',
@@ -34,7 +34,7 @@ const CLIENTS = [
     accent: 'from-emerald-700/60 to-neo-900/95',
   },
   {
-    img:    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80',
+    img:    '/images/neotravel/bus-group.jpg',
     tag:    'Associations & clubs',
     title:  'Sport & culture',
     desc:   'Compétitions, tournois, weekends culturels, pèlerinages. Vous vous concentrez sur l\'événement.',

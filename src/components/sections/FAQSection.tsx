@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { ChevronDown } from 'lucide-react'
 
 const FAQ = [
@@ -14,19 +15,19 @@ const FAQ = [
   },
   {
     q: 'Comment puis-je suivre l\'avancement de ma demande ?',
-    a: 'Dès que vous soumettez votre demande, vous recevez un email de confirmation contenant un lien de suivi. Ce lien vous permet de voir le statut de votre dossier en temps réel, sans créer de compte. Vous pouvez aussi créer un compte client pour retrouver toutes vos demandes en un endroit.',
+    a: 'Dès que vous soumettez votre demande, vous recevez un email contenant un lien de suivi. Ce lien vous permet de voir le statut de votre dossier en temps réel, sans créer de compte.',
   },
   {
     q: 'Pourquoi le devis est-il fiable ?',
-    a: 'Le prix est calculé par un moteur métier déterministe — pas par une IA. Il prend en compte la distance, la durée, le nombre de passagers, le type de trajet, les options et les coefficients tarifaires. Le même trajet dans les mêmes conditions donnera toujours le même prix. Vous pouvez demander à n\'importe quel conseiller NeoTravel de vous expliquer chaque ligne.',
+    a: 'Le prix est calculé par un moteur métier déterministe — pas par une IA. Il prend en compte la distance, le nombre de passagers, le type de trajet, les options et les coefficients tarifaires. Le même trajet donnera toujours le même prix.',
   },
   {
     q: 'NeoTravel possède-t-il ses propres autocars ?',
-    a: 'Non. NeoTravel est un outil de gestion des demandes et de production de devis. Nous qualifions votre demande, calculons le devis et coordonnons des autocaristes partenaires. Nous ne possédons pas de flotte en propre.',
+    a: 'Non. NeoTravel est un outil de gestion des demandes et de production de devis. Nous qualifions votre demande, calculons le devis et coordonnons des autocaristes partenaires.',
   },
   {
     q: 'Que se passe-t-il si ma demande est complexe ?',
-    a: 'Pour les groupes de plus de 85 personnes, les circuits multi-étapes, ou les demandes avec des contraintes particulières, un conseiller NeoTravel est automatiquement alerté. Il reprend votre dossier personnellement et vous contacte directement pour affiner le devis.',
+    a: 'Pour les groupes de plus de 85 personnes, les circuits multi-étapes ou les contraintes particulières, un conseiller NeoTravel est automatiquement alerté et reprend votre dossier personnellement.',
   },
   {
     q: 'Puis-je faire une demande sans créer de compte ?',
@@ -34,52 +35,106 @@ const FAQ = [
   },
   {
     q: 'Comment un conseiller NeoTravel accède-t-il à ma demande ?',
-    a: 'Dès que vous soumettez votre formulaire, votre demande apparaît dans le tableau de bord de nos conseillers avec toutes les informations nécessaires. Ils peuvent calculer le devis, vous l\'envoyer par email et suivre votre réponse — le tout depuis leur espace NeoTravel.',
+    a: 'Dès que vous soumettez votre formulaire, votre demande apparaît dans le tableau de bord de nos conseillers avec toutes les informations nécessaires. Ils peuvent calculer le devis, vous l\'envoyer par email et suivre votre réponse.',
   },
 ]
 
 export default function FAQSection() {
-  const [open, setOpen] = useState<number | null>(null)
+  const [open, setOpen] = useState<number | null>(0)
 
   return (
-    <section className="section-padding bg-neo-900" id="faq">
-      <div className="container-neo max-w-3xl">
-        <div className="text-center mb-12">
-          <span className="label-tag mb-4">FAQ</span>
-          <h2 className="mt-4 text-3xl sm:text-4xl font-bold text-white">
+    <section id="faq" style={{ background: '#F8FAFC' }}>
+      <div className="container-neo px-4 sm:px-6 py-20 sm:py-28">
+        {/* Header */}
+        <div className="text-center mb-12 sm:mb-16">
+          <span
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full mb-4"
+            style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}
+          >
+            FAQ
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold mt-3 mb-4" style={{ color: '#0F172A' }}>
             Questions fréquentes
           </h2>
-          <p className="mt-4 text-white/45 text-base max-w-xl mx-auto">
+          <p className="text-base max-w-xl mx-auto" style={{ color: '#475569' }}>
             Tout ce que vous devez savoir avant de faire une demande de devis transport de groupe.
           </p>
         </div>
 
-        <div className="space-y-2">
-          {FAQ.map((item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl overflow-hidden transition-all"
-              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-            >
-              <button
-                onClick={() => setOpen(open === i ? null : i)}
-                className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left transition-all hover:bg-white/3"
-              >
-                <span className="font-semibold text-white text-sm leading-relaxed">{item.q}</span>
-                <ChevronDown
-                  className={`w-4 h-4 flex-shrink-0 mt-0.5 text-white/40 transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`}
+        {/* 2-column layout on desktop */}
+        <div className="grid lg:grid-cols-5 gap-10 lg:gap-14 items-start max-w-5xl mx-auto">
+
+          {/* Image — left column */}
+          <div className="hidden lg:block lg:col-span-2">
+            <div className="sticky top-24">
+              <div className="relative rounded-2xl overflow-hidden" style={{ height: 440 }}>
+                <Image
+                  src="/images/neotravel/bus-faq.jpg"
+                  alt="Autocar de transport de groupe"
+                  fill
+                  className="object-cover object-center"
+                  sizes="33vw"
                 />
-              </button>
-              {open === i && (
                 <div
-                  className="px-5 pb-4 text-sm text-white/50 leading-relaxed"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <div className="pt-3">{item.a}</div>
+                  className="absolute inset-0"
+                  style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.5) 0%, rgba(15,23,42,0.05) 60%)' }}
+                />
+                <div className="absolute bottom-5 left-5 right-5">
+                  <div
+                    className="rounded-xl px-4 py-3"
+                    style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)' }}
+                  >
+                    <p className="text-xs font-semibold" style={{ color: '#0F172A' }}>
+                      Transport de groupe
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                      8 à 500 passagers · Devis gratuit
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
-          ))}
+          </div>
+
+          {/* Accordion — right column */}
+          <div className="lg:col-span-3 space-y-2">
+            {FAQ.map((item, i) => (
+              <div
+                key={i}
+                className="rounded-xl overflow-hidden transition-all"
+                style={{
+                  background: '#FFFFFF',
+                  border: open === i ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
+                  boxShadow: open === i ? '0 2px 12px rgba(37,99,235,0.08)' : 'none',
+                }}
+              >
+                <button
+                  onClick={() => setOpen(open === i ? null : i)}
+                  className="w-full flex items-start justify-between gap-4 px-5 py-4 text-left transition-all"
+                  style={{ background: open === i ? '#F8FBFF' : 'transparent' }}
+                >
+                  <span
+                    className="font-semibold text-sm leading-relaxed"
+                    style={{ color: open === i ? '#1D4ED8' : '#0F172A' }}
+                  >
+                    {item.q}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 flex-shrink-0 mt-0.5 transition-transform duration-200 ${open === i ? 'rotate-180' : ''}`}
+                    style={{ color: open === i ? '#2563EB' : '#94A3B8' }}
+                  />
+                </button>
+                {open === i && (
+                  <div
+                    className="px-5 pb-4 text-sm leading-relaxed"
+                    style={{ borderTop: '1px solid #E2E8F0', color: '#475569' }}
+                  >
+                    <div className="pt-3">{item.a}</div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

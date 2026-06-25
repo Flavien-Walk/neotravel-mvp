@@ -112,10 +112,10 @@ export default function ChaosToPipeline() {
       >
         <div
           className="sticky top-0 h-screen overflow-hidden flex flex-col"
-          style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 50%, #030D20 100%)' }}
+          style={{ background: '#F8FAFC' }}
         >
           {/* Bg decorations */}
-          <div className="absolute inset-0 bg-grid-dark opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 opacity-20 pointer-events-none" />
           <div className="absolute top-0 inset-x-0 h-px pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent, rgba(37,99,235,0.5), transparent)' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 55% at 50% 55%, rgba(37,99,235,0.04) 0%, transparent 70%)' }} />
 
@@ -133,11 +133,11 @@ export default function ChaosToPipeline() {
             {/* Header */}
             <div className="text-center mb-6">
               <span className="label-tag mb-3">Avant / Après</span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-3 leading-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-4 mb-3 leading-tight" style={{ color: '#0F172A' }}>
                 Du chaos au pipeline.<br />
                 <span className="text-gradient-blue">En un seul outil.</span>
               </h2>
-              <p className="text-white/38 text-base max-w-md mx-auto">
+              <p className="text-base max-w-md mx-auto" style={{ color: '#64748B' }}>
                 Faites défiler — regardez vos demandes éparpillées se transformer en pipeline structuré.
               </p>
             </div>
@@ -298,7 +298,7 @@ export default function ChaosToPipeline() {
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
             style={{ willChange: 'opacity' }}
           >
-            <span className="text-[9px] uppercase tracking-widest text-white/18">Faites défiler</span>
+            <span className="text-[9px] uppercase tracking-widest" style={{ color: 'rgba(15,23,42,0.25)' }}>Faites défiler</span>
             <div
               className="w-px h-6"
               style={{
@@ -314,11 +314,11 @@ export default function ChaosToPipeline() {
       <section
         id="avant-apres"
         className="md:hidden py-20 px-5"
-        style={{ background: 'linear-gradient(160deg, #030D20 0%, #061435 60%, #030D20 100%)' }}
+        style={{ background: '#F8FAFC' }}
       >
         <div className="text-center mb-10">
           <span className="label-tag mb-3">Avant / Après</span>
-          <h2 className="text-2xl font-bold text-white mt-4 mb-2 leading-tight">
+          <h2 className="text-2xl font-bold mt-4 mb-2 leading-tight" style={{ color: '#0F172A' }}>
             Du chaos au pipeline.<br />
             <span className="text-gradient-blue">En un seul outil.</span>
           </h2>
@@ -364,7 +364,7 @@ export default function ChaosToPipeline() {
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}12` }}>
                     <Icon className="w-3 h-3" style={{ color }} />
                   </div>
-                  <span className="text-xs font-medium text-white/80">{label}</span>
+                  <span className="text-xs font-medium" style={{ color: '#334155' }}>{label}</span>
                   <CheckCircle2 className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}70` }} />
                 </div>
               ))}

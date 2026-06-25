@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { ArrowRight, Shield, Clock, FileText } from 'lucide-react'
-import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
   hidden: {},
@@ -275,18 +275,53 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Right — transport route map */}
+          {/* Right — bus photo */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98] as const, delay: 0.3 }}
-            className="relative h-[380px] lg:h-[540px]"
+            initial={{ opacity: 0, x: 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98] as const, delay: 0.35 }}
+            className="relative h-[340px] lg:h-[520px] rounded-2xl overflow-hidden hidden md:block"
+            style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)' }}
           >
+            <Image
+              src="/images/neotravel/bus-hero.jpg"
+              alt="Autocar de transport de groupe sur route"
+              fill
+              className="object-cover object-center"
+              sizes="(max-width: 1024px) 90vw, 50vw"
+              priority
+            />
+            {/* Overlay gauche pour fondre dans le fond sombre */}
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, transparent 65%)' }}
+              style={{ background: 'linear-gradient(105deg, rgba(3,13,32,0.70) 0%, rgba(3,13,32,0.15) 38%, rgba(3,13,32,0.08) 100%)' }}
             />
-            <TransportHeroVisual />
+            {/* Badge flottant prix */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.1, duration: 0.7 }}
+              className="absolute bottom-5 left-5 right-5"
+            >
+              <div
+                className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{
+                  background: 'rgba(3,13,32,0.82)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-white text-xs font-semibold">Paris → Lyon · 50 passagers</div>
+                  <div className="text-white/40 text-[10px]">Devis calculé automatiquement</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-white font-bold text-sm">1 493 €</div>
+                  <div className="text-white/35 text-[10px]">TTC</div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
