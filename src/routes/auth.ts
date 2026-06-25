@@ -53,6 +53,66 @@ const resetSchema = z.object({
   password: z.string().min(8).max(100),
 })
 
+// ─── POST /api/auth/bootstrap — premier admin uniquement (auto-désactive) ────
+// Crée le premier compte admin si aucun admin n'existe en base.
+// Inaccessible dès qu'un admin existe — pas de risque de réutilisation.
+
+router.post('/bootstrap', async (req: Request, res: Response) => {
+  const schema = z.object({
+    nom:      z.string().min(2).max(80),
+    email:    z.string().email(),
+    password: z.string().min(8).max(100),
+    secret:   z.string(),
+  })
+
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() })
+    return
+  }
+
+  // Secret d'amorçage depuis env — si absent, endpoint bloqué
+  const bootstrapSecret = process.env.BOOTSTRAP_SECRET
+  if (!bootstrapSecret || parsed.data.secret !== bootstrapSecret) {
+    res.status(403).json({ message: 'Secret invalide.' })
+    return
+  }
+
+  try {
+    const adminExists = await User.findOne({ role: { $in: ['admin', 'commercial'] } })
+    if (adminExists) {
+      res.status(409).json({ message: 'Un compte staff existe déjà. Endpoint désactivé.' })
+      return
+    }
+
+    const { nom, email, password } = parsed.data
+    const passwordHash = await bcrypt.hash(password, 12)
+    const user = await User.create({
+      nom,
+      email: email.toLowerCase(),
+      passwordHash,
+      role: 'admin',
+      organisation: 'NeoTravel',
+      emailVerified: true,
+    })
+
+    await Log.create({
+      action: 'ADMIN_BOOTSTRAP',
+      status: 'success',
+      message: `Premier compte admin créé via bootstrap : ${nom} (${email})`,
+    })
+
+    const token = signToken(String(user._id), user.role)
+    res.status(201).json({
+      message: 'Compte admin créé. Retirez BOOTSTRAP_SECRET de vos variables d\'environnement.',
+      token,
+      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role },
+    })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur bootstrap', error: String(err) })
+  }
+})
+
 // ─── POST /api/auth/register — création compte client uniquement ─────────────
 
 router.post('/register', async (req: Request, res: Response) => {
