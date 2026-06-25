@@ -198,7 +198,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.1, ease: [0.21, 0.47, 0.32, 0.98] as const, delay: 0.3 }}
-            className="relative h-[380px] lg:h-[540px]"
+            className="relative h-[440px] lg:h-[620px]"
           >
             <div
               className="absolute inset-0 pointer-events-none"
