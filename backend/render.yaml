@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: neotravel-api
+    env: node
+    region: frankfurt
+    plan: free
+    branch: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
