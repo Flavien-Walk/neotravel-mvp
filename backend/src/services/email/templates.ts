@@ -1,7 +1,8 @@
 import { FRONTEND_URL } from './brevoClient'
-import type { IUser } from '../../models/User'
-import type { ILead } from '../../models/Lead'
-import type { IQuote } from '../../models/Quote'
+
+type TUser  = { nom: string; email: string; role?: string }
+type TLead  = Record<string, unknown> & { nom: string; email: string; depart: string; destination: string; nb_passagers: number; date_depart?: string; tracking_token?: string; trackingToken?: string; urgence?: string; type_trajet?: string; score_completude?: number; commentaire?: string; societe?: string; id?: string; _id?: string }
+type TQuote = Record<string, unknown>
 
 const BASE_STYLE = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -50,7 +51,7 @@ function divider(): string {
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
-export function tplWelcome(user: IUser): { subject: string; html: string; text: string } {
+export function tplWelcome(user: TUser): { subject: string; html: string; text: string } {
   const roleLabel = user.role === 'commercial' ? 'Commercial NeoTravel' : user.role === 'admin' ? 'Administrateur' : 'Client'
   const body = `
     ${h1(`Bienvenue sur NeoTravel, ${user.nom} !`)}
@@ -67,7 +68,7 @@ export function tplWelcome(user: IUser): { subject: string; html: string; text: 
   }
 }
 
-export function tplPasswordReset(user: IUser, token: string): { subject: string; html: string; text: string } {
+export function tplPasswordReset(user: TUser, token: string): { subject: string; html: string; text: string } {
   const url = `${FRONTEND_URL}/reset-password?token=${token}`
   const body = `
     ${h1('Réinitialisation de votre mot de passe')}
@@ -85,7 +86,7 @@ export function tplPasswordReset(user: IUser, token: string): { subject: string;
   }
 }
 
-export function tplPasswordChanged(user: IUser): { subject: string; html: string; text: string } {
+export function tplPasswordChanged(user: TUser): { subject: string; html: string; text: string } {
   const body = `
     ${h1('Votre mot de passe a été modifié')}
     ${p(`Bonjour ${user.nom},`)}
@@ -100,19 +101,19 @@ export function tplPasswordChanged(user: IUser): { subject: string; html: string
   }
 }
 
-export function tplLeadReceived(lead: ILead): { subject: string; html: string; text: string } {
+export function tplLeadReceived(lead: TLead): { subject: string; html: string; text: string } {
   const body = `
     ${h1('Votre demande de transport a bien été reçue')}
     ${p(`Bonjour ${lead.nom},`)}
     ${p(`Nous avons bien reçu votre demande de transport de groupe :`)}
     <div style="background:#f0f5ff;border-radius:8px;padding:16px 20px;margin:12px 0 20px;">
       <p style="margin:0 0 6px;font-size:14px;color:#1e3a8a;"><strong>Trajet :</strong> ${lead.depart} → ${lead.destination}</p>
-      <p style="margin:0 0 6px;font-size:14px;color:#1e3a8a;"><strong>Date :</strong> ${new Date(lead.date_depart).toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</p>
+      <p style="margin:0 0 6px;font-size:14px;color:#1e3a8a;"><strong>Date :</strong> ${lead.date_depart ? new Date(lead.date_depart).toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) : 'Non précisée'}</p>
       <p style="margin:0;font-size:14px;color:#1e3a8a;"><strong>Passagers :</strong> ${lead.nb_passagers} personnes</p>
     </div>
     ${p('Un conseiller NeoTravel va qualifier votre demande et vous enverra un devis dans les <strong>2 heures ouvrées</strong>.')}
     ${p('Ce devis est entièrement <strong>gratuit et sans engagement</strong>.')}
-    ${lead.trackingToken ? btn('Suivre ma demande en temps réel', `${FRONTEND_URL}/suivi/${lead.trackingToken}`) : ''}
+    ${(lead.tracking_token || lead.trackingToken) ? btn('Suivre ma demande en temps réel', `${FRONTEND_URL}/suivi/${lead.tracking_token ?? lead.trackingToken}`) : ''}
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin:16px 0;">
       <p style="margin:0;font-size:13px;color:#166534;">
         <strong>Suivi sans compte :</strong> vous pouvez consulter l'avancement de votre dossier à tout moment via le lien ci-dessus, sans créer de compte.
@@ -124,17 +125,17 @@ export function tplLeadReceived(lead: ILead): { subject: string; html: string; t
   return {
     subject: `Votre demande ${lead.depart} → ${lead.destination} a bien été reçue`,
     html: layout('Demande reçue', body),
-    text: `Votre demande NeoTravel (${lead.depart} → ${lead.destination}, ${lead.nb_passagers} pax) est bien enregistrée. Réponse sous 2h ouvrées.${lead.trackingToken ? ` Suivez votre demande : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : ''}`,
+    text: `Votre demande NeoTravel (${lead.depart} → ${lead.destination}, ${lead.nb_passagers} pax) est bien enregistrée. Réponse sous 2h ouvrées.${(lead.tracking_token || lead.trackingToken) ? ` Suivez votre demande : ${FRONTEND_URL}/suivi/${lead.tracking_token ?? lead.trackingToken}` : ''}`,
   }
 }
 
-export function tplNewLeadInternal(lead: ILead): { subject: string; html: string; text: string } {
+export function tplNewLeadInternal(lead: TLead): { subject: string; html: string; text: string } {
   const urgenceLabel: Record<string, string> = { normal: 'Normal', urgent: '⚠️ Urgent', tres_urgent: '🔴 Très urgent' }
-  const dashUrl = `${FRONTEND_URL}/dashboard/leads/${lead._id}`
+  const dashUrl = `${FRONTEND_URL}/dashboard/leads/${lead.id ?? lead._id}`
   const body = `
     ${h1('Nouveau lead à qualifier')}
     <div style="background:#fefce8;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:16px 20px;margin:16px 0;">
-      <p style="margin:0 0 4px;font-weight:700;color:#92400e;">Urgence : ${urgenceLabel[lead.urgence] ?? lead.urgence}</p>
+      <p style="margin:0 0 4px;font-weight:700;color:#92400e;">Urgence : ${urgenceLabel[lead.urgence ?? 'normal'] ?? lead.urgence}</p>
       <p style="margin:0;font-size:13px;color:#78350f;">Score de complétude : ${lead.score_completude}%</p>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 20px;">
@@ -142,7 +143,7 @@ export function tplNewLeadInternal(lead: ILead): { subject: string; html: string
         ['Nom', lead.nom], ['Email', lead.email], ['Téléphone', lead.telephone],
         ['Trajet', `${lead.depart} → ${lead.destination}`],
         ['Date', lead.date_depart], ['Passagers', `${lead.nb_passagers}`],
-        ['Type', lead.type_trajet.replace('_', ' ')],
+        ['Type', (lead.type_trajet ?? '').replace('_', ' ')],
         ...(lead.commentaire ? [['Commentaire', lead.commentaire]] : []),
       ].map(([k, v]) => `
         <tr>
@@ -160,18 +161,18 @@ export function tplNewLeadInternal(lead: ILead): { subject: string; html: string
   }
 }
 
-export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: string; text: string } {
+export function tplQuote(lead: TLead, quote: TQuote): { subject: string; html: string; text: string } {
   const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
-  const prixTtc = quote.prix_final_ttc || quote.prix_ttc
-  const prixHt  = quote.prix_final_ht  || quote.prix_ht
-  const validite = quote.validite_jours ?? 30
+  const prixTtc = (quote.prix_final_ttc as number) || (quote.prix_ttc as number)
+  const prixHt  = (quote.prix_final_ht  as number) || (quote.prix_ht  as number)
+  const validite = (quote.validite_jours as number) ?? 30
   const dateDepart = lead.date_depart
     ? new Date(lead.date_depart).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     : null
   const validiteDate = new Date(Date.now() + validite * 86400000)
     .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  const rows = (quote.lignes_calcul ?? []).map((l: { label: string; montant: number; justification?: string; detail?: string; source_type?: string }) => {
+  const rows = ((quote.lignes_calcul as Array<{ label: string; montant: number; justification?: string; detail?: string; source_type?: string }>) ?? []).map((l) => {
     const sourceTag = l.source_type === 'regle_documentee'
       ? '<span style="font-size:10px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:6px;">règle</span>'
       : l.source_type === 'mock_mvp' || l.source_type === 'hypothese_mvp'
@@ -195,11 +196,11 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
     <div style="background:#f0f5ff;border-radius:12px;padding:24px 28px;margin:20px 0;border:1px solid #dbeafe;">
       <div style="font-size:36px;font-weight:800;color:#1e3a8a;letter-spacing:-1px;">${fmt(prixTtc)}</div>
       <div style="color:#64748b;font-size:13px;margin-top:4px;">
-        TTC · dont <strong>${fmt(prixHt)} HT</strong> + ${fmt(quote.tva)} TVA (10 %)
+        TTC · dont <strong>${fmt(prixHt)} HT</strong> + ${fmt(quote.tva as number)} TVA (10 %)
       </div>
-      ${quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0
+      ${quote.ajustement_manuel_ht && (quote.ajustement_manuel_ht as number) !== 0
         ? `<div style="color:#92400e;font-size:12px;margin-top:8px;padding-top:8px;border-top:1px solid #fde68a;">
-             Ajustement commercial inclus : ${fmt(quote.ajustement_manuel_ht)}${quote.raison_ajustement ? ` (${quote.raison_ajustement})` : ''}
+             Ajustement commercial inclus : ${fmt(quote.ajustement_manuel_ht as number)}${quote.raison_ajustement ? ` (${quote.raison_ajustement})` : ''}
            </div>`
         : ''}
       <div style="color:#94a3b8;font-size:11px;margin-top:10px;">
@@ -216,7 +217,7 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
       </tr>
       <tr>
         <td style="padding:4px 0;color:#64748b;font-size:13px;">TVA 10 %</td>
-        <td style="padding:4px 0;text-align:right;color:#64748b;font-size:13px;">${fmt(quote.tva)}</td>
+        <td style="padding:4px 0;text-align:right;color:#64748b;font-size:13px;">${fmt(quote.tva as number)}</td>
       </tr>
       <tr style="border-top:1px solid #e2e8f0;">
         <td style="padding:10px 0;font-weight:800;color:#1e3a8a;font-size:15px;">Total TTC</td>
@@ -234,7 +235,7 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
 
     ${p('Ce devis est <strong>gratuit et sans engagement</strong>. Pour l\'accepter, modifier ou poser une question, répondez directement à cet email ou utilisez le lien de suivi ci-dessous.')}
 
-    ${lead.trackingToken ? btn('Suivre mon dossier en ligne', `${FRONTEND_URL}/suivi/${lead.trackingToken}`) : btn('Contacter un conseiller', 'mailto:commercial@neotravel.fr')}
+    ${(lead.tracking_token || lead.trackingToken) ? btn('Suivre mon dossier en ligne', `${FRONTEND_URL}/suivi/${lead.tracking_token ?? lead.trackingToken}`) : btn('Contacter un conseiller', 'mailto:commercial@neotravel.fr')}
 
     ${divider()}
     <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.6;">
@@ -249,15 +250,15 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
     text: [
       `Votre devis NeoTravel`,
       `${lead.depart} → ${lead.destination}${dateDepart ? `, le ${dateDepart}` : ''}, ${lead.nb_passagers} passagers`,
-      `Prix TTC : ${fmt(prixTtc)} (dont ${fmt(prixHt)} HT + ${fmt(quote.tva)} TVA 10%)`,
+      `Prix TTC : ${fmt(prixTtc)} (dont ${fmt(prixHt)} HT + ${fmt(quote.tva as number)} TVA 10%)`,
       `Valable ${validite} jours.`,
       `Gratuit et sans engagement.`,
-      lead.trackingToken ? `Suivez votre dossier : ${FRONTEND_URL}/suivi/${lead.trackingToken}` : `Contact : commercial@neotravel.fr`,
+      (lead.tracking_token || lead.trackingToken) ? `Suivez votre dossier : ${FRONTEND_URL}/suivi/${lead.tracking_token ?? lead.trackingToken}` : `Contact : commercial@neotravel.fr`,
     ].join('\n'),
   }
 }
 
-export function tplQuoteReminder(lead: ILead, quote: IQuote): { subject: string; html: string; text: string } {
+export function tplQuoteReminder(lead: TLead, quote: TQuote): { subject: string; html: string; text: string } {
   const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
   const body = `
     ${h1('Votre devis NeoTravel est toujours disponible')}
@@ -266,7 +267,7 @@ export function tplQuoteReminder(lead: ILead, quote: IQuote): { subject: string;
     <div style="background:#f0f5ff;border-radius:8px;padding:16px 20px;margin:12px 0 20px;">
       <p style="margin:0 0 4px;font-size:14px;color:#1e3a8a;"><strong>Trajet :</strong> ${lead.depart} → ${lead.destination}</p>
       <p style="margin:0 0 4px;font-size:14px;color:#1e3a8a;"><strong>Passagers :</strong> ${lead.nb_passagers}</p>
-      <p style="margin:0;font-size:22px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_ttc)} TTC</p>
+      <p style="margin:0;font-size:22px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_ttc as number)} TTC</p>
     </div>
     ${p('Si vous avez des questions ou souhaitez modifier certains aspects, un conseiller NeoTravel peut vous aider.')}
     ${btn('Contacter un conseiller', `mailto:commercial@neotravel.fr`)}
@@ -276,12 +277,12 @@ export function tplQuoteReminder(lead: ILead, quote: IQuote): { subject: string;
   return {
     subject: `Rappel : votre devis NeoTravel ${lead.depart} → ${lead.destination}`,
     html: layout('Rappel devis', body),
-    text: `Rappel NeoTravel : votre devis ${lead.depart} → ${lead.destination} (${fmt(quote.prix_ttc)} TTC) est toujours disponible. Contactez commercial@neotravel.fr`,
+    text: `Rappel NeoTravel : votre devis ${lead.depart} → ${lead.destination} (${fmt(quote.prix_ttc as number)} TTC) est toujours disponible. Contactez commercial@neotravel.fr`,
   }
 }
 
-export function tplComplexCase(lead: ILead, reason: string): { subject: string; html: string; text: string } {
-  const dashUrl = `${FRONTEND_URL}/dashboard/leads/${lead._id}`
+export function tplComplexCase(lead: TLead, reason: string): { subject: string; html: string; text: string } {
+  const dashUrl = `${FRONTEND_URL}/dashboard/leads/${lead.id ?? lead._id}`
   const body = `
     ${h1('Cas complexe — Reprise humaine nécessaire')}
     <div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:0 8px 8px 0;padding:16px 20px;margin:16px 0;">
