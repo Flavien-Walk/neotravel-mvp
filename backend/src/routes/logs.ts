@@ -1,31 +1,25 @@
 import { Router, Request, Response } from 'express'
-import { Log } from '../models/Log'
+import { supabase } from '../lib/supabase'
 import { requireAuth } from '../middleware/requireAuth'
 
 const router = Router()
 
 // GET /api/logs — protégé
 router.get('/', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const filter: Record<string, unknown> = {}
-    if (req.query.leadId) filter.leadId = req.query.leadId
-    if (req.query.status) filter.status = req.query.status
-    const logs = await Log.find(filter).sort({ timestamp: -1 }).limit(500).lean()
-    res.json(logs)
-  } catch (err) {
-    res.status(500).json({ message: 'Erreur récupération logs', error: String(err) })
-  }
+  let query = supabase.from('logs').select('*').order('timestamp', { ascending: false }).limit(500)
+  if (req.query.leadId) query = query.eq('lead_id', req.query.leadId as string)
+  if (req.query.status) query = query.eq('status', req.query.status as string)
+
+  const { data, error } = await query
+  if (error) { res.status(500).json({ message: error.message }); return }
+  res.json(data)
 })
 
 // POST /api/logs — protégé (actions dashboard)
 router.post('/', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const log = await Log.create(req.body)
-    res.status(201).json(log)
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur création log'
-    res.status(400).json({ message })
-  }
+  const { data, error } = await supabase.from('logs').insert(req.body).select().single()
+  if (error) { res.status(400).json({ message: error.message }); return }
+  res.status(201).json(data)
 })
 
 export default router

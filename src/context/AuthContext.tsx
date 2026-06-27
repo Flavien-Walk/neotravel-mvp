@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
 
 export interface AuthUser {
@@ -29,44 +30,63 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null)
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser]   = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Listen to Supabase auth state changes
   useEffect(() => {
-    try {
-      const storedUser  = localStorage.getItem('neo_user')
-      const storedToken = localStorage.getItem('neo_token')
-      if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser))
-        setToken(storedToken)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await hydrateUser(session.user.id, session.user.email ?? '', session.access_token)
+      } else {
+        setUser(null)
+        setToken(null)
       }
-    } catch {}
-    setLoading(false)
+      setLoading(false)
+    })
+
+    // Initial session check
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        await hydrateUser(session.user.id, session.user.email ?? '', session.access_token)
+      }
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  function persist(u: AuthUser, t: string) {
-    setUser(u)
-    setToken(t)
-    localStorage.setItem('neo_user', JSON.stringify(u))
-    localStorage.setItem('neo_token', t)
+  async function hydrateUser(id: string, email: string, accessToken: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nom, role, organisation')
+      .eq('id', id)
+      .single()
+
+    const authUser: AuthUser = {
+      id,
+      email,
+      nom:          profile?.nom ?? email,
+      role:         (profile?.role as AuthUser['role']) ?? 'client',
+      organisation: profile?.organisation ?? undefined,
+    }
+    setUser(authUser)
+    setToken(accessToken)
+    localStorage.setItem('neo_token', accessToken)
   }
 
   async function login(email: string, password: string): Promise<{ error?: string }> {
     try {
-      const res  = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok) return { error: data.message ?? 'Identifiants incorrects.' }
-      persist(data.user, data.token)
-      if (data.user.role === 'client') {
-        try { await api.leads.claimByEmail() } catch {}
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error || !data.user) return { error: error?.message ?? 'Identifiants incorrects.' }
+      if (data.session) {
+        await hydrateUser(data.user.id, data.user.email ?? '', data.session.access_token)
+        if (user?.role === 'client') {
+          try { await api.leads.claimByEmail() } catch {}
+        }
       }
       return {}
     } catch {
@@ -76,15 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function register(form: RegisterData): Promise<{ error?: string }> {
     try {
-      const res  = await fetch(`${API}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const { data, error } = await supabase.auth.signUp({
+        email:    form.email,
+        password: form.password,
+        options:  { data: { nom: form.nom, organisation: form.organisation ?? null, role: 'client' } },
       })
-      const data = await res.json()
-      if (!res.ok) return { error: data.message ?? 'Erreur lors de la création du compte.' }
-      persist(data.user, data.token)
-      if (data.user.role === 'client') {
+      if (error || !data.user) return { error: error?.message ?? 'Erreur lors de la création du compte.' }
+
+      // Upsert profile (trigger may handle this, but ensure it exists)
+      await supabase.from('profiles').upsert({
+        id:           data.user.id,
+        nom:          form.nom,
+        role:         'client',
+        organisation: form.organisation ?? null,
+      })
+
+      if (data.session) {
+        await hydrateUser(data.user.id, data.user.email ?? '', data.session.access_token)
         try { await api.leads.claimByEmail() } catch {}
       }
       return {}
@@ -97,13 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return
     const updated = { ...user, ...updates }
     setUser(updated)
-    localStorage.setItem('neo_user', JSON.stringify(updated))
   }
 
-  function logout() {
+  async function logout() {
+    await supabase.auth.signOut()
     setUser(null)
     setToken(null)
-    localStorage.removeItem('neo_user')
     localStorage.removeItem('neo_token')
   }
 

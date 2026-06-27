@@ -128,8 +128,10 @@ export interface CalculationSource {
 }
 
 export interface Quote {
-  _id: string
-  leadId: string
+  id: string
+  lead_id: string
+  /** @deprecated use lead_id */
+  leadId?: string
   prix_ht: number
   tva: number
   prix_ttc: number
@@ -145,14 +147,20 @@ export interface Quote {
   raison_ajustement?: string
   prix_final_ht: number
   prix_final_ttc: number
-  modifiedBy?: string
-  modifiedAt?: string
-  createdAt: string
+  modified_by?: string
+  modified_at?: string
+  created_at: string
+  updated_at?: string
+  /** @deprecated use created_at */
+  createdAt?: string
+  /** @deprecated use updated_at */
   updatedAt?: string
 }
 
 export interface Lead {
-  _id: string
+  id: string
+  /** @deprecated use id */
+  _id?: string
   nom: string
   societe?: string
   email: string
@@ -168,16 +176,26 @@ export interface Lead {
   commentaire?: string
   statut: LeadStatus
   score_completude: number
+  user_id?: string
+  /** @deprecated use user_id */
   userId?: string
+  tracking_token?: string
+  /** @deprecated use tracking_token */
   trackingToken?: string
   quote?: Quote
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
+  /** @deprecated use created_at */
+  createdAt?: string
+  /** @deprecated use updated_at */
+  updatedAt?: string
 }
 
 export interface Log {
-  _id: string
+  id: string
   action: string
+  lead_id?: string
+  /** @deprecated use lead_id */
   leadId?: string
   payload?: Record<string, unknown>
   status: 'success' | 'error' | 'info' | 'warning'
