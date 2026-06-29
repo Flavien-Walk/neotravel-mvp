@@ -136,7 +136,7 @@ export default function TraceableQuoteSection() {
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                     >
                       <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: '#060E24' }}>
-                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" />
+                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized />
                       </div>
                       <span className="text-sm text-white/55 flex-1">{label}</span>
                       <span className="text-sm font-mono font-semibold" style={{ color }}>{value}</span>
