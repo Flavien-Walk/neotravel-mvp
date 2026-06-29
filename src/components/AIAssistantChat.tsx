@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -166,16 +167,18 @@ export default function AIAssistantChat() {
       if (typerRef.current) clearInterval(typerRef.current)
       typerRef.current = setInterval(() => {
         idx = Math.min(idx + charsPerTick, text.length)
-        setMessages(prev => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: text.slice(0, idx) }
-          return updated
+        flushSync(() => {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: text.slice(0, idx) }
+            return updated
+          })
         })
         if (idx >= text.length) {
           clearInterval(typerRef.current!)
           typerRef.current = null
         }
-      }, 25)
+      }, 30)
 
       if (data.extractedFields) {
         setFields(prev => {
