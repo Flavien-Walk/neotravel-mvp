@@ -236,13 +236,13 @@ export default function TraceableQuoteSection() {
                 border: '1px solid rgba(252,211,77,0.22)',
               }}
             >
-              <p className="text-sm font-semibold text-yellow-300 mb-1.5">Jamais de prix estimé par IA</p>
+              <p className="text-sm font-semibold text-yellow-300 mb-1.5">Un devis clair, calculé selon vos règles métier</p>
               <p className="text-xs text-white/42 leading-relaxed">
-                L&apos;IA peut structurer une demande. Le prix est calculé par{' '}
+                Les informations sont collectées, le tarif est calculé par{' '}
                 <code className="font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.07)', color: '#93C5FD' }}>
                   calculer_devis()
                 </code>{' '}
-                — selon des règles tarifaires explicites, pas des probabilités.
+                — puis envoyé automatiquement. Votre équipe garde la main sur les cas complexes.
               </p>
             </motion.div>
           </div>

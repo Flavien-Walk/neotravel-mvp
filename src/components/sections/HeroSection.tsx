@@ -146,7 +146,7 @@ export default function HeroSection() {
             <motion.div variants={item}>
               <span className="label-tag mb-7">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                Transport de groupe · Devis gratuit et suivi
+                Plateforme B2B · Transport de groupe · Réponse &lt; 2h
               </span>
             </motion.div>
 
