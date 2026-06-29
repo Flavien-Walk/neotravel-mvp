@@ -150,7 +150,7 @@ export default function DashboardLeadDetailPage() {
     try {
       await api.quotes.approve(quote._id)
       await fetchAll()
-      flash('Devis approuvé — n8n va déclencher l\'envoi au client.', true)
+      flash('Devis approuvé. Cliquez sur "Envoyer le devis" pour l\'envoyer au client.', true)
     } catch (e: unknown) {
       flash((e as Error).message || 'Erreur approbation devis', false)
     }
@@ -248,9 +248,14 @@ export default function DashboardLeadDetailPage() {
 
   if (!lead) return null
 
-  const canApprove = quote && quote.statut_devis === 'pending_human_validation'
-  const canSend    = quote && quote.statut_devis === 'approved'
-  const canRemind  = quote && ['devis_envoye', 'relance_1'].includes(lead.statut)
+  const canApprove   = quote && quote.statut_devis === 'pending_human_validation'
+  const canSend      = quote && quote.statut_devis === 'approved'
+  const stopStatuts  = ['accepte', 'refuse', 'cloture', 'reprise_humaine', 'cas_complexe']
+  const canRemind    = quote && quote.statut_devis === 'sent'
+    && (quote.reminder_count ?? 0) < 2
+    && !stopStatuts.includes(lead.statut)
+  const reminderCount = quote?.reminder_count ?? 0
+  const nextRelanceLevel = reminderCount + 1
   const finalTtc   = quote ? (quote.prix_final_ttc || quote.prix_ttc) : 0
   const finalHt    = quote ? (quote.prix_final_ht  || quote.prix_ht)  : 0
   const hasAdj     = quote && quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0
@@ -464,7 +469,7 @@ export default function DashboardLeadDetailPage() {
                         style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
                       >
                         {reminding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                        {reminding ? 'Envoi…' : 'Relancer'}
+                        {reminding ? 'Envoi…' : `Relance ${nextRelanceLevel} manuelle`}
                       </button>
                     )}
                   </>
@@ -506,12 +511,90 @@ export default function DashboardLeadDetailPage() {
                   </div>
                 )}
 
-                {/* Bandeau devis approuvé — n8n en cours */}
+                {/* Bandeau devis approuvé */}
                 {quote.statut_devis === 'approved' && (
-                  <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
-                    <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-                    <span><strong>Devis approuvé.</strong> n8n va déclencher l&apos;envoi au client.</span>
+                  <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#15803D' }}>
+                      <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                      <span><strong>Devis approuvé.</strong> Cliquez sur &quot;Envoyer le devis&quot; pour l&apos;envoyer au client.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bandeau devis envoyé + suivi relances */}
+                {quote.statut_devis === 'sent' && (
+                  <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid #BAE6FD' }}>
+                    <div className="flex items-center gap-2 px-4 py-2.5 text-sm" style={{ background: '#E0F2FE', color: '#0369A1' }}>
+                      <Send className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>
+                        <strong>Devis envoyé</strong>
+                        {quote.email_sent_at && (
+                          <> le {new Date(quote.email_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</>
+                        )}
+                      </span>
+                    </div>
+                    <div className="px-4 py-3" style={{ background: '#F0F9FF' }}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#0369A1' }}>
+                        Relances automatiques (n8n)
+                      </div>
+                      <div className="space-y-1.5">
+                        {/* Relance 1 */}
+                        <div className="flex items-center gap-2 text-xs">
+                          {reminderCount >= 1
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
+                            : <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#0284C7' }} />}
+                          <span style={{ color: reminderCount >= 1 ? '#15803D' : '#0369A1' }}>
+                            {reminderCount >= 1
+                              ? <>Relance 1 envoyée{quote.lastReminderAt && reminderCount === 1
+                                  ? ` le ${new Date(quote.lastReminderAt).toLocaleDateString('fr-FR')}`
+                                  : ''}</>
+                              : <>Relance 1 : 48h après envoi
+                                  {quote.email_sent_at && (() => {
+                                    const due = new Date(new Date(quote.email_sent_at).getTime() + 48 * 3600000)
+                                    const now = new Date()
+                                    const diffH = Math.round((due.getTime() - now.getTime()) / 3600000)
+                                    return diffH > 0
+                                      ? ` (dans ~${diffH}h)`
+                                      : ' (dû — n8n va envoyer prochainement)'
+                                  })()}
+                                </>
+                            }
+                          </span>
+                        </div>
+                        {/* Relance 2 */}
+                        <div className="flex items-center gap-2 text-xs">
+                          {reminderCount >= 2
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
+                            : reminderCount === 1
+                            ? <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#EA580C' }} />
+                            : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border" style={{ borderColor: '#CBD5E1' }} />}
+                          <span style={{ color: reminderCount >= 2 ? '#15803D' : reminderCount === 1 ? '#C2410C' : '#94A3B8' }}>
+                            {reminderCount >= 2
+                              ? <>Relance 2 envoyée le {quote.lastReminderAt ? new Date(quote.lastReminderAt).toLocaleDateString('fr-FR') : '—'}</>
+                              : reminderCount === 1
+                              ? <>Relance 2 : 72h après relance 1
+                                  {quote.lastReminderAt && (() => {
+                                    const due = new Date(new Date(quote.lastReminderAt).getTime() + 72 * 3600000)
+                                    const now = new Date()
+                                    const diffH = Math.round((due.getTime() - now.getTime()) / 3600000)
+                                    return diffH > 0
+                                      ? ` (dans ~${diffH}h)`
+                                      : ' (dû — n8n va envoyer prochainement)'
+                                  })()}
+                                </>
+                              : 'Relance 2 : après relance 1 + 72h'}
+                          </span>
+                        </div>
+                        {/* Max atteint */}
+                        {reminderCount >= 2 && (
+                          <div className="flex items-center gap-2 text-xs mt-1" style={{ color: '#64748B' }}>
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                            Toutes les relances automatiques ont été envoyées. Traitement manuel requis.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -812,8 +895,13 @@ export default function DashboardLeadDetailPage() {
                   style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
                 >
                   <Mail className="w-4 h-4" />
-                  {reminding ? 'Envoi en cours…' : 'Email de relance'}
+                  {reminding ? 'Envoi en cours…' : `Relance ${nextRelanceLevel} manuelle`}
                 </button>
+              )}
+              {quote && quote.statut_devis === 'sent' && reminderCount >= 2 && (
+                <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid var(--dash-border)' }}>
+                  Relances automatiques terminées. Pour contacter le client, utilisez l&apos;email direct.
+                </div>
               )}
               {quote && (
                 <button
@@ -901,14 +989,30 @@ export default function DashboardLeadDetailPage() {
 
           {/* Meta */}
           <Card className="p-4">
-            <div className="text-xs space-y-1" style={{ color: 'var(--dash-text-muted)' }}>
-            <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
-            <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
-            {quote?.modifiedAt && (
-              <div style={{ color: '#92400E' }}>
-                Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
-              </div>
-            )}
+            <div className="text-xs space-y-1.5" style={{ color: 'var(--dash-text-muted)' }}>
+              <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
+              <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
+              {quote?.modifiedAt && (
+                <div style={{ color: '#92400E' }}>
+                  Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
+                </div>
+              )}
+              {quote?.email_sent_at && (
+                <div style={{ color: '#0369A1' }}>
+                  Envoyé le {new Date(quote.email_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
+              {quote?.lastReminderAt && (
+                <div style={{ color: '#C2410C' }}>
+                  Dernière relance le {new Date(quote.lastReminderAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {' '}({reminderCount}/{2})
+                </div>
+              )}
+              {quote?.statut_devis === 'sent' && reminderCount < 2 && (
+                <div style={{ color: '#64748B' }}>
+                  Relances n8n : {reminderCount}/2 envoyées
+                </div>
+              )}
             </div>
           </Card>
         </div>

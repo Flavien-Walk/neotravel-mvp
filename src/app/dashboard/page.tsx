@@ -7,35 +7,41 @@ import {
   Send, ArrowRight, AlertCircle, BarChart3,
   UserCheck, MapPin, ArrowUpRight, Activity,
   ChevronRight, AlertTriangle, Zap, FileText,
-  Mail, Bot, CircleDot,
+  Mail, Bot, CircleDot, ShieldCheck, Bell,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 
 const PIPELINE_STAGES: { label: string; statuts: LeadStatus[]; color: string; short: string }[] = [
-  { label: 'Nouveau',    statuts: ['nouveau'],                          color: '#7C3AED', short: 'N' },
-  { label: 'Qualifié',  statuts: ['qualifie', 'incomplet'],            color: '#2563EB', short: 'Q' },
-  { label: 'Devis prêt',statuts: ['devis_genere'],                     color: '#D97706', short: 'D' },
-  { label: 'Envoyé',    statuts: ['devis_envoye'],                      color: '#0284C7', short: 'E' },
-  { label: 'Relance',   statuts: ['relance_1', 'relance_2'],           color: '#EA580C', short: 'R' },
-  { label: 'Accepté',   statuts: ['accepte'],                          color: '#16A34A', short: 'A' },
-  { label: 'Reprise',   statuts: ['reprise_humaine', 'cas_complexe'],  color: '#DC2626', short: '!' },
+  { label: 'Nouveau',    statuts: ['nouveau'],                                        color: '#7C3AED', short: 'N' },
+  { label: 'Qualifié',  statuts: ['qualifie', 'incomplet'],                          color: '#2563EB', short: 'Q' },
+  { label: 'À valider', statuts: ['en_attente_validation', 'devis_valide'],           color: '#9333EA', short: 'V' },
+  { label: 'Envoyé',    statuts: ['devis_envoye'],                                    color: '#0284C7', short: 'E' },
+  { label: 'Relance',   statuts: ['relance_1', 'relance_2'],                         color: '#EA580C', short: 'R' },
+  { label: 'Accepté',   statuts: ['accepte'],                                        color: '#16A34A', short: 'A' },
+  { label: 'Reprise',   statuts: ['reprise_humaine', 'cas_complexe', 'erreur_envoi'], color: '#DC2626', short: '!' },
 ]
 
 const STATUS_DOT: Record<string, string> = {
   nouveau: '#7C3AED', incomplet: '#D97706', qualifie: '#2563EB',
-  devis_genere: '#D97706', devis_envoye: '#0284C7',
+  devis_genere: '#D97706',
+  en_attente_validation: '#9333EA', devis_valide: '#059669',
+  devis_envoye: '#0284C7',
   relance_1: '#EA580C', relance_2: '#DC2626',
   accepte: '#16A34A', refuse: '#94A3B8',
+  erreur_envoi: '#DC2626',
   cas_complexe: '#DB2777', reprise_humaine: '#DC2626', cloture: '#94A3B8',
 }
 
 const STATUS_LABEL: Record<string, string> = {
   nouveau: 'Nouveau', incomplet: 'Incomplet', qualifie: 'Qualifié',
-  devis_genere: 'Devis prêt', devis_envoye: 'Envoyé',
+  devis_genere: 'Devis prêt',
+  en_attente_validation: 'À valider', devis_valide: 'Validé',
+  devis_envoye: 'Envoyé',
   relance_1: 'Relance 1', relance_2: 'Relance 2',
   accepte: 'Accepté', refuse: 'Refusé',
+  erreur_envoi: 'Erreur envoi',
   cas_complexe: 'Cas complexe', reprise_humaine: 'Reprise humaine', cloture: 'Clôturé',
 }
 
@@ -193,11 +199,14 @@ export default function DashboardPage() {
   const acceptes     = leads.filter(l => l.statut === 'accepte').length
   const taux         = total > 0 ? Math.round((acceptes / total) * 100) : 0
 
+  const aValider       = leads.filter(l => ['en_attente_validation', 'devis_valide'].includes(l.statut)).length
   const aEnvoyer       = leads.filter(l => l.statut === 'devis_genere').length
   const aRelancer      = leads.filter(l => ['relance_1','relance_2'].includes(l.statut)).length
-  const repriseHumaine = leads.filter(l => ['reprise_humaine','cas_complexe'].includes(l.statut)).length
+  const repriseHumaine = leads.filter(l => ['reprise_humaine','cas_complexe','erreur_envoi'].includes(l.statut)).length
   const autoEnvoyes    = leads.filter(l => l.statut === 'devis_envoye').length
-  const devisCalcules  = leads.filter(l => ['devis_genere','devis_envoye','relance_1','relance_2','accepte'].includes(l.statut)).length
+  const enRelance1     = leads.filter(l => l.statut === 'relance_1').length
+  const enRelance2     = leads.filter(l => l.statut === 'relance_2').length
+  const devisCalcules  = leads.filter(l => ['en_attente_validation','devis_valide','devis_genere','devis_envoye','relance_1','relance_2','accepte'].includes(l.statut)).length
   const emailsEnvoyes  = leads.filter(l => ['devis_envoye','relance_1','relance_2','accepte'].includes(l.statut)).length
 
   const urgents = leads
@@ -214,7 +223,7 @@ export default function DashboardPage() {
   const greeting  = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bonne après-midi' : 'Bonsoir'
   const firstName = user?.nom?.split(' ')[0] ?? 'Commercial'
 
-  const totalActions = aEnvoyer + aRelancer + repriseHumaine
+  const totalActions = aValider + aEnvoyer + aRelancer + repriseHumaine
 
   return (
     <div className="p-6 lg:p-8 min-h-full" style={{ background: 'var(--dash-bg)' }}>
@@ -296,30 +305,30 @@ export default function DashboardPage() {
       {/* ── Action cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <ActionCard
-          label="Devis à envoyer"
-          count={aEnvoyer}
+          label="Devis à valider"
+          count={aValider}
           loading={loading}
-          desc="Calculés, en attente de transmission"
-          color="#D97706"
-          href="/dashboard/leads?statut=devis_genere"
-          cta="Traiter maintenant"
-          icon={FileText}
+          desc="Calculés — validation humaine requise avant envoi"
+          color="#9333EA"
+          href="/dashboard/leads?statut=en_attente_validation"
+          cta="Valider maintenant"
+          icon={ShieldCheck}
         />
         <ActionCard
-          label="Relances à faire"
+          label="En cours de relance"
           count={aRelancer}
           loading={loading}
-          desc="Clients sans réponse — 48h ou plus"
+          desc={`${enRelance1} relance 1 · ${enRelance2} relance 2 — auto par n8n`}
           color="#EA580C"
           href="/dashboard/leads?statut=relance_1"
           cta="Voir les leads"
-          icon={Send}
+          icon={Bell}
         />
         <ActionCard
           label="Reprise humaine"
           count={repriseHumaine}
           loading={loading}
-          desc="Cas complexes nécessitant votre attention"
+          desc="Cas complexes ou erreurs d'envoi"
           color="#DC2626"
           href="/dashboard/leads?statut=reprise_humaine"
           cta="Traiter les cas"
@@ -559,10 +568,11 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3">
               {[
-                { label: 'Dossiers actifs',      value: enCours,         icon: Activity,   color: '#2563EB',  total: total },
-                { label: 'Devis en attente',      value: devisEnv,        icon: Clock,      color: '#0284C7',  total: total },
-                { label: 'Taux de conversion',    value: `${taux}%`,      icon: TrendingUp, color: '#16A34A',  total: null },
-                { label: 'Reprise humaine',       value: repriseHumaine,  icon: UserCheck,  color: '#DC2626',  total: enCours || 1 },
+                { label: 'Dossiers actifs',      value: enCours,         icon: Activity,    color: '#2563EB',  total: total },
+                { label: 'À valider',             value: aValider,        icon: ShieldCheck, color: '#9333EA',  total: enCours || 1 },
+                { label: 'Relance 1',             value: enRelance1,      icon: Bell,        color: '#EA580C',  total: enCours || 1 },
+                { label: 'Relance 2',             value: enRelance2,      icon: AlertTriangle, color: '#DC2626', total: enCours || 1 },
+                { label: 'Taux de conversion',    value: `${taux}%`,      icon: TrendingUp,  color: '#16A34A',  total: null },
               ].map(({ label, value, icon: Icon, color, total: t }) => (
                 <div key={label} className="flex items-center gap-2.5">
                   <div

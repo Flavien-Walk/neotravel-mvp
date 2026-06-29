@@ -13,15 +13,20 @@ import StatusBadge from '@/components/StatusBadge'
 import UrgencyBadge from '@/components/UrgencyBadge'
 
 const STATUS_OPTIONS: LeadStatus[] = [
-  'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
-  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'cloture',
+  'nouveau', 'incomplet', 'qualifie',
+  'devis_genere', 'en_attente_validation', 'devis_valide',
+  'devis_envoye', 'relance_1', 'relance_2',
+  'accepte', 'refuse', 'cas_complexe', 'reprise_humaine', 'erreur_envoi', 'cloture',
 ]
 
 const STATUS_COLOR: Record<string, string> = {
   nouveau: '#7C3AED', incomplet: '#D97706', qualifie: '#2563EB',
-  devis_genere: '#D97706', devis_envoye: '#0284C7',
+  devis_genere: '#D97706',
+  en_attente_validation: '#9333EA', devis_valide: '#059669',
+  devis_envoye: '#0284C7',
   relance_1: '#EA580C', relance_2: '#DC2626',
   accepte: '#16A34A', refuse: '#94A3B8',
+  erreur_envoi: '#DC2626',
   cas_complexe: '#DB2777', reprise_humaine: '#DC2626', cloture: '#94A3B8',
 }
 
@@ -67,8 +72,12 @@ export default function DashboardLeadsPage() {
   async function handleRelance(id: string) {
     setRelancing(id)
     try {
-      await api.leads.updateStatus(id, 'relance_1')
-      await api.logs.create({ action: 'RELANCE_EMAIL', leadId: id, status: 'success', message: 'Relance envoyée depuis le pipeline' })
+      const leadData = await api.leads.get(id) as Lead & { quote?: { _id: string; reminder_count?: number } }
+      if (!leadData.quote?._id) {
+        window.location.href = `/dashboard/leads/${id}`
+        return
+      }
+      await api.quotes.remind(leadData.quote._id)
       await fetchLeads()
     } catch {}
     setRelancing(null)

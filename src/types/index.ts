@@ -167,6 +167,9 @@ export interface Quote {
   prix_final_ttc: number
   modifiedBy?: string
   modifiedAt?: string
+  email_sent_at?: string
+  lastReminderAt?: string
+  reminder_count?: number
   createdAt: string
   updatedAt?: string
 }
