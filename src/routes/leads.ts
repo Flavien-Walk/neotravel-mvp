@@ -7,7 +7,6 @@ import { User } from '../models/User'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { calculer_devis, DevisInput } from '../services/calculer_devis'
 import {
-  sendQuoteEmail,
   sendLeadReceivedEmail,
   sendNewLeadInternalEmail,
   sendComplexCaseEmail,
@@ -211,31 +210,17 @@ async function autoQuote(lead: Awaited<ReturnType<typeof Lead.prototype.save>> |
       validite_jours:     30,
     })
 
-    await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_genere' })
+    // Attente validation humaine — le commercial valide puis envoie manuellement depuis le dashboard
+    await Lead.findByIdAndUpdate(lead._id, { statut: 'en_attente_validation' })
+    await Quote.findByIdAndUpdate(quote._id, { statut_devis: 'pending_human_validation' })
 
-    // Envoi email devis — si erreur, on loggue mais on ne crash pas
-    try {
-      await sendQuoteEmail(lead, quote)
-      await Quote.findByIdAndUpdate(quote._id, { email_sent_at: new Date() })
-      await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_envoye' })
-
-      await Log.create({
-        action:  'AUTO_QUOTE_SENT',
-        leadId:  lead._id,
-        status:  'success',
-        message: `Devis auto calculé et envoyé à ${lead.email} — ${result.prix_ttc.toFixed(2)} € TTC`,
-        payload: { prix_ttc: result.prix_ttc, warnings: result.warnings },
-      })
-    } catch (emailErr) {
-      await Log.create({
-        action:  'AUTO_QUOTE_EMAIL_FAILED',
-        leadId:  lead._id,
-        status:  'error',
-        message: `Devis calculé mais email non envoyé : ${String(emailErr)}`,
-        payload: { prix_ttc: result.prix_ttc },
-      })
-      // Devis existe en base même si l'email a échoué — commercial peut envoyer manuellement
-    }
+    await Log.create({
+      action:  'AUTO_QUOTE_CALCULATED',
+      leadId:  lead._id,
+      status:  'success',
+      message: `Devis auto calculé — en attente validation humaine avant envoi — ${result.prix_ttc.toFixed(2)} € TTC`,
+      payload: { prix_ttc: result.prix_ttc, warnings: result.warnings },
+    })
   } catch (err) {
     await Log.create({
       action:  'AUTO_QUOTE_ERROR',
