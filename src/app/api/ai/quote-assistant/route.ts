@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { streamText } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
 import { QuoteAssistantSchema, validateCity, type AICallLog } from '@/lib/quoteAssistant'
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
 
   const validMessages = messages.filter(
     m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
-  ) as Anthropic.Messages.MessageParam[]
+  )
 
   if (validMessages.length === 0)
     return new Response('data: {"error":"Aucun message valide"}\n\n', { headers: sseHeaders() })
@@ -168,9 +169,8 @@ export async function POST(req: NextRequest) {
   )
 
   const t0 = Date.now()
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  // ── Streaming SSE ──
+  // ── Streaming SSE via Vercel AI SDK ──
   const stream = new ReadableStream({
     async start(controller) {
       let fullText = ''
@@ -179,67 +179,66 @@ export async function POST(req: NextRequest) {
       let parseError: string | undefined
       let zodError: string | undefined
 
-      // State machine : extrait le contenu du champ "message" en temps réel
-      // Claude répond toujours {"message": "...", ...} — on streame seulement le texte du message
+      // State machine : extrait le champ "message" du JSON en temps réel
       let extractState: 'scanning' | 'in_message' | 'done_scanning' = 'scanning'
       let scanBuf = ''
       const MARKER = '"message": "'
       let escaped = false
-      let skipUnicode = 0  // pour sauter les 4 hex chars après \u
+      let skipUnicode = 0
 
       try {
-        const anthropicStream = client.messages.stream({
-          model: MODEL,
-          max_tokens: 1200,
+        // ── Vercel AI SDK : streamText + provider @ai-sdk/anthropic ──
+        const result = streamText({
+          model: anthropic(MODEL),
           system: SYSTEM_PROMPT,
           messages: augmented,
+          maxTokens: 1200,
         })
 
-        for await (const event of anthropicStream) {
-          if (event.type === 'message_start') {
-            inputTokens = event.message.usage.input_tokens
-          } else if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            const chunk = event.delta.text
-            fullText += chunk
+        for await (const chunk of result.textStream) {
+          fullText += chunk
 
-            // Extrait uniquement les chars de la valeur "message" et les streame
-            if (extractState !== 'done_scanning') {
-              let visible = ''
-              for (const ch of chunk) {
-                if (extractState === 'scanning') {
-                  scanBuf += ch
-                  if (scanBuf.endsWith(MARKER)) extractState = 'in_message'
-                } else {
-                  if (skipUnicode > 0) {
-                    skipUnicode--
-                  } else if (escaped) {
-                    escaped = false
-                    switch (ch) {
-                      case 'n':  visible += '\n'; break
-                      case 't':  visible += '\t'; break
-                      case '"':  visible += '"';  break
-                      case '\\': visible += '\\'; break
-                      case '/':  visible += '/';  break
-                      case 'r':  break  // ignore \r
-                      case 'u':  skipUnicode = 4; break  // \uXXXX — sera correct dans le message final
-                      default:   visible += ch;  break
-                    }
-                  } else if (ch === '\\') {
-                    escaped = true
-                  } else if (ch === '"') {
-                    extractState = 'done_scanning'
-                    break
-                  } else {
-                    visible += ch
+          // Extrait uniquement les chars visibles du champ "message"
+          if (extractState !== 'done_scanning') {
+            let visible = ''
+            for (const ch of chunk) {
+              if (extractState === 'scanning') {
+                scanBuf += ch
+                if (scanBuf.endsWith(MARKER)) extractState = 'in_message'
+              } else {
+                if (skipUnicode > 0) {
+                  skipUnicode--
+                } else if (escaped) {
+                  escaped = false
+                  switch (ch) {
+                    case 'n':  visible += '\n'; break
+                    case 't':  visible += '\t'; break
+                    case '"':  visible += '"';  break
+                    case '\\': visible += '\\'; break
+                    case '/':  visible += '/';  break
+                    case 'r':  break
+                    case 'u':  skipUnicode = 4; break
+                    default:   visible += ch;   break
                   }
+                } else if (ch === '\\') {
+                  escaped = true
+                } else if (ch === '"') {
+                  extractState = 'done_scanning'
+                  break
+                } else {
+                  visible += ch
                 }
               }
-              if (visible) emit(controller, { t: visible })
             }
-          } else if (event.type === 'message_delta' && event.usage) {
-            outputTokens = event.usage.output_tokens
+            if (visible) emit(controller, { t: visible })
           }
         }
+
+        // Tokens — Vercel AI SDK usage
+        const usage = await result.usage
+        inputTokens  = usage.promptTokens     ?? 0
+        outputTokens = usage.completionTokens ?? 0
+
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erreur serveur'
         logAICall({
