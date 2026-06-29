@@ -6,7 +6,7 @@ import { Lead, ILead } from '../models/Lead'
 import { Log } from '../models/Log'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { sendQuoteEmail, sendComplexCaseEmail, sendQuoteReminderEmail } from '../services/email/emailService'
-import { notifyQuoteReadyForReview, notifyQuoteApprovedForSend } from '../services/n8nService'
+import { notifyQuoteReadyForReview } from '../services/n8nService'
 
 const router = Router()
 
@@ -320,20 +320,8 @@ router.post('/:id/approve', requireAuth, async (req: AuthRequest, res: Response)
       payload: { quoteId: String(quote._id), approvedBy: req.userId, prix_final_ttc: prixFinal },
     })
 
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://neotravel-mvp.vercel.app'
-    const API_URL      = process.env.API_URL || 'https://neotravel-mvp.onrender.com'
-    notifyQuoteApprovedForSend({
-      leadId:  String(lead._id),
-      quoteId: String(quote._id),
-      client:  { nom: lead.nom, email: lead.email },
-      quote:   { prix_final_ht: quote.prix_final_ht, prix_final_ttc: prixFinal },
-      approvedBy:  req.userId ?? 'commercial',
-      approvedAt:  new Date().toISOString(),
-      sendUrl: `${API_URL}/api/quotes/${quote._id}/send`,
-    })
-
     res.json({
-      message:     'Devis approuvé. n8n va déclencher l\'envoi au client.',
+      message:     'Devis approuvé. Envoyez le devis depuis le dashboard.',
       statut_devis: 'approved',
       quoteId:     String(quote._id),
       prix_final_ttc: prixFinal,
