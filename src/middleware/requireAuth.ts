@@ -17,6 +17,15 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     return
   }
 
+  // Jeton interne n8n — permet à n8n d'appeler les routes protégées
+  const N8N_INTERNAL_TOKEN = process.env.N8N_INTERNAL_TOKEN
+  if (N8N_INTERNAL_TOKEN && token === N8N_INTERNAL_TOKEN) {
+    req.userId   = 'n8n-service'
+    req.userRole = 'commercial'
+    next()
+    return
+  }
+
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; role?: string }
     req.userId   = payload.sub

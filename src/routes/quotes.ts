@@ -2,10 +2,11 @@ import { Router, Response } from 'express'
 import PDFDocument from 'pdfkit'
 import { calculer_devis, DevisInput } from '../services/calculer_devis'
 import { Quote } from '../models/Quote'
-import { Lead } from '../models/Lead'
+import { Lead, ILead } from '../models/Lead'
 import { Log } from '../models/Log'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { sendQuoteEmail, sendComplexCaseEmail, sendQuoteReminderEmail } from '../services/email/emailService'
+import { notifyQuoteReadyForReview, notifyQuoteApprovedForSend } from '../services/n8nService'
 
 const router = Router()
 
@@ -109,6 +110,7 @@ router.post('/manual', requireAuth, async (req: AuthRequest, res: Response) => {
 })
 
 // POST /api/quotes/calculate — protégé (commercial/admin)
+// Calcule le devis et le place en attente de validation humaine. Ne jamais envoyer au client ici.
 router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) => {
   if (req.userRole === 'client') {
     res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
@@ -117,15 +119,14 @@ router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) =
 
   const { leadId } = req.body
 
-  // Toujours récupérer les données depuis la DB pour garantir la cohérence.
-  // Cela évite l'erreur "ville manquante" quand le frontend n'envoie pas tous les champs.
+  const lead = leadId ? await Lead.findById(leadId).lean() : null
+  if (leadId && !lead) {
+    res.status(404).json({ message: 'Lead introuvable.' })
+    return
+  }
+
   let input: DevisInput
-  if (leadId) {
-    const lead = await Lead.findById(leadId).lean()
-    if (!lead) {
-      res.status(404).json({ message: 'Lead introuvable.' })
-      return
-    }
+  if (lead) {
     input = {
       depart:       lead.depart,
       destination:  lead.destination,
@@ -137,15 +138,16 @@ router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) =
       urgence:      lead.urgence ?? 'normal',
     }
   } else {
-    // Calcul direct sans leadId (usage interne/test)
     const { leadId: _skip, ...rest } = req.body
     input = rest as DevisInput
   }
 
   const result = calculer_devis(input)
 
+  // Cas erreur de calcul (ville manquante, données invalides, etc.)
   if (!result.success) {
     if (leadId) {
+      await Lead.findByIdAndUpdate(leadId, { statut: 'cas_complexe' }).catch(() => null)
       await Log.create({
         action: 'QUOTE_FAILED',
         leadId,
@@ -153,11 +155,7 @@ router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) =
         message: result.error,
         payload: { input, besoin_reprise: result.besoin_reprise_humaine, hint: result.hint },
       }).catch(() => null)
-
-      if (result.besoin_reprise_humaine) {
-        const lead = await Lead.findByIdAndUpdate(leadId, { statut: 'cas_complexe' }, { new: true }).catch(() => null)
-        if (lead) sendComplexCaseEmail(lead, result.raison_reprise_humaine ?? result.error).catch(() => {})
-      }
+      if (lead) sendComplexCaseEmail(lead as unknown as ILead, result.raison_reprise_humaine ?? result.error).catch(() => {})
     }
     res.status(422).json({
       message: result.error,
@@ -168,53 +166,180 @@ router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) =
     return
   }
 
+  // Cas reprise humaine obligatoire (succès mais nécessite intervention)
+  if (result.besoin_reprise_humaine) {
+    if (leadId) {
+      await Lead.findByIdAndUpdate(leadId, { statut: 'reprise_humaine' }).catch(() => null)
+      await Log.create({
+        action: 'QUOTE_NEEDS_HUMAN',
+        leadId,
+        status: 'warning',
+        message: `Reprise humaine requise : ${result.raison_reprise_humaine}`,
+        payload: { input, raison: result.raison_reprise_humaine },
+      }).catch(() => null)
+      if (lead) sendComplexCaseEmail(lead as unknown as ILead, result.raison_reprise_humaine ?? 'Reprise humaine').catch(() => {})
+    }
+    res.status(422).json({
+      message: result.raison_reprise_humaine ?? 'Reprise humaine requise.',
+      besoin_reprise_humaine: true,
+      raison_reprise_humaine: result.raison_reprise_humaine,
+    })
+    return
+  }
+
   try {
     if (leadId) await Quote.deleteMany({ leadId })
 
     const quote = await Quote.create({
       leadId:       leadId || null,
+      source:       'auto',
       prix_ht:      result.prix_ht,
       tva:          result.tva,
       prix_ttc:     result.prix_ttc,
       lignes_calcul: result.lignes_calcul,
       coefficients:  result.coefficients,
       warnings:      result.warnings,
-      besoin_reprise_humaine: result.besoin_reprise_humaine,
-      raison_reprise_humaine: result.raison_reprise_humaine ?? undefined,
+      besoin_reprise_humaine: false,
       sources_calcul: result.sources_calcul,
       explication_calcul: result.explication_calcul,
-      statut_devis:  'genere',
+      statut_devis:  'pending_human_validation',
       ajustement_manuel_ht: 0,
     })
 
-    if (leadId) {
-      await Lead.findByIdAndUpdate(leadId, { statut: 'devis_genere' })
+    if (leadId && lead) {
+      await Lead.findByIdAndUpdate(leadId, { statut: 'en_attente_validation' })
 
-      const msgs = [`Devis calculé : ${result.prix_ttc.toFixed(2)} € TTC`]
+      const msgs = [`Devis calculé : ${result.prix_ttc.toFixed(2)} € TTC — EN ATTENTE VALIDATION HUMAINE`]
       if (result.warnings.length) msgs.push(`Warnings : ${result.warnings.join(' | ')}`)
-      if (result.besoin_reprise_humaine) msgs.push(`⚠ Reprise humaine : ${result.raison_reprise_humaine}`)
 
       await Log.create({
-        action: 'QUOTE_CALCULATED',
+        action: 'QUOTE_CALCULATED_PENDING_VALIDATION',
         leadId,
-        status: result.besoin_reprise_humaine ? 'warning' : 'success',
+        status: 'success',
         message: msgs.join(' — '),
-        payload: { prix_ttc: result.prix_ttc, warnings: result.warnings },
+        payload: {
+          quoteId:    String(quote._id),
+          prix_ttc:   result.prix_ttc,
+          warnings:   result.warnings,
+          statut_devis: 'pending_human_validation',
+        },
+      })
+
+      const FRONTEND_URL = process.env.FRONTEND_URL || 'https://neotravel-mvp.vercel.app'
+      notifyQuoteReadyForReview({
+        leadId:  String(leadId),
+        quoteId: String(quote._id),
+        client: {
+          nom:       lead.nom,
+          email:     lead.email,
+          telephone: lead.telephone,
+          societe:   lead.societe,
+        },
+        trajet: {
+          depart:       lead.depart,
+          destination:  lead.destination,
+          date_depart:  lead.date_depart,
+          date_retour:  lead.date_retour,
+          nb_passagers: lead.nb_passagers,
+          type_trajet:  lead.type_trajet,
+          urgence:      lead.urgence,
+        },
+        quote: {
+          prix_ht:               result.prix_ht,
+          tva:                   result.tva,
+          prix_ttc:              result.prix_ttc,
+          warnings:              result.warnings,
+          besoin_reprise_humaine: false,
+          explication_calcul:    result.explication_calcul,
+        },
+        reviewUrl: `${FRONTEND_URL}/dashboard/leads/${leadId}`,
       })
     }
 
     res.status(201).json({
       ...quote.toObject(),
-      distance_km:            result.distance_km,
-      duree_estimee:          result.duree_estimee,
-      warnings:               result.warnings,
-      besoin_reprise_humaine: result.besoin_reprise_humaine,
-      raison_reprise_humaine: result.raison_reprise_humaine,
-      sources_calcul:         result.sources_calcul,
-      explication_calcul:     result.explication_calcul,
+      distance_km:       result.distance_km,
+      duree_estimee:     result.duree_estimee,
+      warnings:          result.warnings,
+      sources_calcul:    result.sources_calcul,
+      explication_calcul: result.explication_calcul,
+      statut_devis:      'pending_human_validation',
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur sauvegarde devis', error: String(err) })
+  }
+})
+
+// POST /api/quotes/:id/approve — validation humaine obligatoire avant envoi
+router.post('/:id/approve', requireAuth, async (req: AuthRequest, res: Response) => {
+  if (req.userRole === 'client') {
+    res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
+    return
+  }
+
+  try {
+    const quote = await Quote.findById(req.params.id)
+    if (!quote) { res.status(404).json({ message: 'Devis introuvable.' }); return }
+
+    if (!['pending_human_validation', 'needs_revision'].includes(quote.statut_devis)) {
+      res.status(409).json({
+        message: `Ce devis ne peut pas être approuvé (statut actuel : ${quote.statut_devis}).`,
+        statut_devis: quote.statut_devis,
+      })
+      return
+    }
+
+    const lead = await Lead.findById(quote.leadId)
+    if (!lead) { res.status(404).json({ message: 'Lead introuvable.' }); return }
+
+    if (['reprise_humaine', 'cas_complexe'].includes(lead.statut)) {
+      res.status(409).json({
+        message: `Ce lead nécessite une reprise humaine manuelle (statut : ${lead.statut}). Résolvez le cas avant d'approuver.`,
+      })
+      return
+    }
+
+    const prixFinal = quote.prix_final_ttc || quote.prix_ttc
+    if (!prixFinal || prixFinal <= 0) {
+      res.status(422).json({ message: 'Prix invalide ou nul, impossible d\'approuver.' })
+      return
+    }
+
+    quote.statut_devis = 'approved'
+    quote.modifiedBy   = req.userId
+    quote.modifiedAt   = new Date()
+    await quote.save()
+
+    await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_valide' })
+
+    await Log.create({
+      action:  'QUOTE_APPROVED_BY_HUMAN',
+      leadId:  lead._id,
+      status:  'success',
+      message: `Devis approuvé par ${req.userId} — TTC : ${prixFinal.toFixed(2)} € — prêt pour envoi client`,
+      payload: { quoteId: String(quote._id), approvedBy: req.userId, prix_final_ttc: prixFinal },
+    })
+
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://neotravel-mvp.vercel.app'
+    const API_URL      = process.env.API_URL || 'https://neotravel-mvp.onrender.com'
+    notifyQuoteApprovedForSend({
+      leadId:  String(lead._id),
+      quoteId: String(quote._id),
+      client:  { nom: lead.nom, email: lead.email },
+      quote:   { prix_final_ht: quote.prix_final_ht, prix_final_ttc: prixFinal },
+      approvedBy:  req.userId ?? 'commercial',
+      approvedAt:  new Date().toISOString(),
+      sendUrl: `${API_URL}/api/quotes/${quote._id}/send`,
+    })
+
+    res.json({
+      message:     'Devis approuvé. n8n va déclencher l\'envoi au client.',
+      statut_devis: 'approved',
+      quoteId:     String(quote._id),
+      prix_final_ttc: prixFinal,
+    })
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur approbation devis', error: String(err) })
   }
 })
 
@@ -264,7 +389,9 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
-// POST /api/quotes/:id/send — envoyer le devis par email
+// POST /api/quotes/:id/send — envoi client UNIQUEMENT après validation humaine
+// Appelé par n8n (via N8N_INTERNAL_TOKEN) ou par le commercial depuis le dashboard.
+// Le backend reste le garde-fou : vérifie statut_devis === 'approved' avant d'envoyer.
 router.post('/:id/send', requireAuth, async (req: AuthRequest, res: Response) => {
   if (req.userRole === 'client') {
     res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
@@ -273,27 +400,67 @@ router.post('/:id/send', requireAuth, async (req: AuthRequest, res: Response) =>
 
   try {
     const quote = await Quote.findById(req.params.id)
-    if (!quote) { res.status(404).json({ message: 'Devis introuvable' }); return }
+    if (!quote) { res.status(404).json({ message: 'Devis introuvable.' }); return }
+
+    // Garde-fou 1 — le devis doit être approuvé par un humain
+    if (quote.statut_devis !== 'approved') {
+      res.status(409).json({
+        message: `Envoi refusé : le devis doit être approuvé avant d'être envoyé au client (statut actuel : ${quote.statut_devis}).`,
+        statut_devis: quote.statut_devis,
+      })
+      return
+    }
 
     const lead = await Lead.findById(quote.leadId)
-    if (!lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
+    if (!lead) { res.status(404).json({ message: 'Lead introuvable.' }); return }
 
-    await sendQuoteEmail(lead, quote)
+    // Garde-fou 2 — pas d'envoi si cas complexe ou reprise humaine
+    if (['reprise_humaine', 'cas_complexe'].includes(lead.statut)) {
+      res.status(409).json({
+        message: `Envoi refusé : ce lead est en statut "${lead.statut}" et nécessite une intervention manuelle.`,
+      })
+      return
+    }
+
+    // Garde-fou 3 — prix valide
+    const prixFinal = quote.prix_final_ttc || quote.prix_ttc
+    if (!prixFinal || prixFinal <= 0) {
+      res.status(422).json({ message: 'Envoi refusé : prix invalide ou nul.' })
+      return
+    }
+
+    try {
+      await sendQuoteEmail(lead, quote)
+    } catch (emailErr) {
+      quote.statut_devis = 'email_error'
+      await quote.save()
+      await Lead.findByIdAndUpdate(lead._id, { statut: 'erreur_envoi' })
+      await Log.create({
+        action:  'EMAIL_FAILED',
+        leadId:  lead._id,
+        status:  'error',
+        message: `Échec envoi devis à ${lead.email} : ${String(emailErr)}`,
+        payload: { quoteId: String(quote._id) },
+      }).catch(() => {})
+      res.status(500).json({ message: 'Erreur envoi email devis', error: String(emailErr) })
+      return
+    }
+
+    quote.statut_devis  = 'sent'
+    quote.email_sent_at = new Date()
+    await quote.save()
     await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_envoye' })
+
     await Log.create({
-      action: 'QUOTE_SENT',
-      leadId: lead._id,
-      status: 'success',
-      message: `Devis envoyé par email à ${lead.email} — TTC : ${quote.prix_final_ttc || quote.prix_ttc} €`,
+      action:  'QUOTE_EMAIL_SENT',
+      leadId:  lead._id,
+      status:  'success',
+      message: `Devis envoyé à ${lead.email} — TTC : ${prixFinal.toFixed(2)} € — déclenché par : ${req.userId}`,
+      payload: { quoteId: String(quote._id), prix_final_ttc: prixFinal, sentBy: req.userId },
     })
 
-    res.json({ message: 'Devis envoyé avec succès.', statut: 'devis_envoye' })
+    res.json({ message: 'Devis envoyé avec succès.', statut: 'devis_envoye', statut_devis: 'sent' })
   } catch (err) {
-    await Log.create({
-      action: 'EMAIL_FAILED',
-      status: 'error',
-      message: `Échec envoi devis : ${String(err)}`,
-    }).catch(() => {})
     res.status(500).json({ message: 'Erreur envoi devis', error: String(err) })
   }
 })

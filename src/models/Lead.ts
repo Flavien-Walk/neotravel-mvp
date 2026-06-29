@@ -2,8 +2,16 @@ import crypto from 'crypto'
 import { Schema, model, Document, Types } from 'mongoose'
 
 export type LeadStatus =
-  | 'nouveau' | 'incomplet' | 'qualifie' | 'devis_genere' | 'devis_envoye'
-  | 'relance_1' | 'relance_2' | 'accepte' | 'refuse' | 'cas_complexe' | 'cloture'
+  | 'nouveau' | 'incomplet' | 'qualifie'
+  | 'devis_genere'           // legacy / devis manuel commercial
+  | 'en_attente_validation'  // calcul auto effectué, attente validation humaine
+  | 'devis_valide'           // validé par commercial, prêt pour envoi
+  | 'devis_envoye'
+  | 'relance_1' | 'relance_2'
+  | 'accepte' | 'refuse'
+  | 'cas_complexe' | 'reprise_humaine'
+  | 'erreur_envoi'
+  | 'cloture'
 
 export interface ILead extends Document {
   nom: string
