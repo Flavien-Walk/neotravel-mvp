@@ -100,6 +100,8 @@ export default function AIAssistantChat() {
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
+  const typerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: GREETING },
   ])
@@ -120,6 +122,10 @@ export default function AIAssistantChat() {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
   }, [messages])
+
+  useEffect(() => {
+    return () => { if (typerRef.current) clearInterval(typerRef.current) }
+  }, [])
 
   const filledCount = REQUIRED_FIELDS.filter(k => {
     const v = fields[k]
@@ -152,8 +158,24 @@ export default function AIAssistantChat() {
 
       if (data.unavailable) setUnavailable(true)
 
-      const assistantMsg: Message = { role: 'assistant', content: data.message }
-      setMessages(prev => [...prev, assistantMsg])
+      // Typewriter effect — reveals the message progressively
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+      const text = data.message
+      const charsPerTick = Math.max(1, Math.ceil(text.length / 40))
+      let idx = 0
+      if (typerRef.current) clearInterval(typerRef.current)
+      typerRef.current = setInterval(() => {
+        idx = Math.min(idx + charsPerTick, text.length)
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: text.slice(0, idx) }
+          return updated
+        })
+        if (idx >= text.length) {
+          clearInterval(typerRef.current!)
+          typerRef.current = null
+        }
+      }, 25)
 
       if (data.extractedFields) {
         setFields(prev => {
@@ -218,6 +240,7 @@ export default function AIAssistantChat() {
   }
 
   function reset() {
+    if (typerRef.current) { clearInterval(typerRef.current); typerRef.current = null }
     setMessages([{ role: 'assistant', content: GREETING }])
     setInput('')
     setFields({})
