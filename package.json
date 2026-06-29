@@ -27,7 +27,8 @@
     "react-dom": "^18",
     "react-simple-maps": "^3.0.0",
     "tailwind-merge": "^3.5.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",

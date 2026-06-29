@@ -35,13 +35,19 @@ interface AIResponse {
   message: string
   extractedFields: ExtractedFields
   missingFields: string[]
+  confidence: number
   isComplete: boolean
   besoin_reprise_humaine: boolean
   raison_reprise: string | null
   villes?: {
     depart_status?: string
     destination_status?: string
+    depart_canonical?: string | null
+    destination_canonical?: string | null
+    depart_zone?: string | null
+    destination_zone?: string | null
   }
+  nextAction?: string
   unavailable?: boolean
 }
 
@@ -104,6 +110,7 @@ export default function AIAssistantChat() {
   const [isComplete, setIsComplete] = useState(false)
   const [hitl, setHitl] = useState<{ needed: boolean; raison: string | null }>({ needed: false, raison: null })
   const [villeWarning, setVilleWarning] = useState<string | null>(null)
+  const [confidence, setConfidence] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
@@ -161,6 +168,7 @@ export default function AIAssistantChat() {
       }
 
       setMissingFields(data.missingFields ?? [])
+      setConfidence(data.confidence ?? 0)
       setIsComplete(data.isComplete ?? false)
       setHitl({ needed: data.besoin_reprise_humaine ?? false, raison: data.raison_reprise ?? null })
 
@@ -210,6 +218,7 @@ export default function AIAssistantChat() {
     setInput('')
     setFields({})
     setMissingFields([])
+    setConfidence(0)
     setIsComplete(false)
     setHitl({ needed: false, raison: null })
     setVilleWarning(null)
@@ -438,8 +447,8 @@ export default function AIAssistantChat() {
             Dossier — {filledCount}/{REQUIRED_FIELDS.length}
           </div>
 
-          {/* Progress bar */}
-          <div className="h-0.5 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.07)' }}>
+          {/* Champs collectés */}
+          <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -450,6 +459,27 @@ export default function AIAssistantChat() {
               }}
             />
           </div>
+
+          {/* Confiance IA */}
+          {confidence > 0 && (
+            <div className="mb-1">
+              <div className="flex justify-between items-center mb-0.5">
+                <span className="text-[9px] uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.2)' }}>Confiance IA</span>
+                <span className="text-[9px] font-mono" style={{ color: confidence >= 0.8 ? '#4ADE80' : confidence >= 0.5 ? '#FCD34D' : '#F87171' }}>
+                  {Math.round(confidence * 100)}%
+                </span>
+              </div>
+              <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${confidence * 100}%`,
+                    background: confidence >= 0.8 ? '#4ADE80' : confidence >= 0.5 ? '#FCD34D' : '#F87171',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {Object.entries(FIELD_LABELS).map(([key, { label, icon: Icon }]) => {
             const val = (fields as Record<string, unknown>)[key]
