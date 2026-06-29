@@ -139,7 +139,7 @@ export function tplNewLeadInternal(lead: ILead): { subject: string; html: string
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:12px 0 20px;">
       ${[
-        ['Nom', lead.nom], ['Email', lead.email], ['Téléphone', lead.telephone],
+        ['Nom', lead.nom], ['Email', lead.email], ['Téléphone', lead.telephone || '—'],
         ['Trajet', `${lead.depart} → ${lead.destination}`],
         ['Date', lead.date_depart], ['Passagers', `${lead.nb_passagers}`],
         ['Type', lead.type_trajet.replace('_', ' ')],

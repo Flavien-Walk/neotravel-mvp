@@ -592,7 +592,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
     if (lead.societe) doc.fontSize(9).font('Helvetica').fillColor('#475569').text(lead.societe)
     doc.fontSize(9).font('Helvetica').fillColor('#475569')
        .text(lead.email)
-       .text(lead.telephone)
+       .text(lead.telephone || '')
 
     // ── Trajet ───────────────────────────────────────────────────────────────
     doc.y = 120
