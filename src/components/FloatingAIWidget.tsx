@@ -81,25 +81,67 @@ export default function FloatingAIWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: history, currentFields: fields }),
       })
-      const data: ApiResponse = await res.json()
+      if (!res.ok || !res.body) throw new Error('Erreur serveur')
 
-      if (data.unavailable) {
-        setUnavail(true)
-        setMsgs(prev => [...prev, { role: 'assistant', content: data.message || 'Assistant temporairement indisponible.' }])
-      } else {
-        setMsgs(prev => [...prev, { role: 'assistant', content: data.message }])
-        if (data.extractedFields) {
-          setFields(prev => {
-            const next = { ...prev }
-            for (const [k, v] of Object.entries(data.extractedFields!)) {
-              if (v !== null && v !== undefined) (next as Record<string, unknown>)[k] = v
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let streamStarted = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          let event: { t?: string; done?: boolean; result?: ApiResponse }
+          try { event = JSON.parse(line.slice(6)) } catch { continue }
+
+          if (event.t) {
+            if (!streamStarted) {
+              streamStarted = true
+              setLoading(false)
+              setMsgs(prev => [...prev, { role: 'assistant', content: event.t! }])
+            } else {
+              setMsgs(prev => {
+                const updated = [...prev]
+                updated[updated.length - 1] = {
+                  role: 'assistant',
+                  content: updated[updated.length - 1].content + event.t,
+                }
+                return updated
+              })
             }
-            return next
-          })
+          } else if (event.done && event.result) {
+            const data = event.result
+            if (!streamStarted) {
+              setLoading(false)
+              setMsgs(prev => [...prev, { role: 'assistant', content: data.message || 'Assistant temporairement indisponible.' }])
+            } else {
+              setMsgs(prev => {
+                const updated = [...prev]
+                updated[updated.length - 1] = { role: 'assistant', content: data.message }
+                return updated
+              })
+            }
+            if (data.unavailable) { setUnavail(true) }
+            if (data.extractedFields) {
+              setFields(prev => {
+                const next = { ...prev }
+                for (const [k, v] of Object.entries(data.extractedFields!)) {
+                  if (v !== null && v !== undefined) (next as Record<string, unknown>)[k] = v
+                }
+                return next
+              })
+            }
+            if (data.isComplete)             setComplete(true)
+            if (data.besoin_reprise_humaine) setHitl(true)
+            if (!open)                       setBadge(true)
+          }
         }
-        if (data.isComplete)             setComplete(true)
-        if (data.besoin_reprise_humaine) setHitl(true)
-        if (!open)                       setBadge(true)
       }
     } catch {
       setMsgs(prev => [...prev, { role: 'assistant', content: 'Une erreur est survenue. Veuillez réessayer.' }])
