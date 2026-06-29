@@ -56,39 +56,37 @@ export default function FloatingAIWidget() {
   const streamBuf  = useRef('')
   const rafId      = useRef<number | null>(null)
 
+  const streamDone  = useRef(false)
+  const finalMsgRef = useRef('')
+
   function startRaf() {
     const loop = () => {
-      const pending = streamBuf.current
-      if (pending) {
-        streamBuf.current = ''
+      if (streamBuf.current.length > 0) {
+        const chunk = streamBuf.current.slice(0, 2)
+        streamBuf.current = streamBuf.current.slice(2)
         setMsgs(prev => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
           if (last?.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + pending }
+            updated[updated.length - 1] = { ...last, content: last.content + chunk }
           }
           return updated
         })
+        rafId.current = requestAnimationFrame(loop)
+      } else if (streamDone.current) {
+        rafId.current = null
+        if (finalMsgRef.current) {
+          setMsgs(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: finalMsgRef.current }
+            return updated
+          })
+        }
+      } else {
+        rafId.current = requestAnimationFrame(loop)
       }
-      rafId.current = requestAnimationFrame(loop)
     }
     rafId.current = requestAnimationFrame(loop)
-  }
-
-  function stopRaf() {
-    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
-    const pending = streamBuf.current
-    if (pending) {
-      streamBuf.current = ''
-      setMsgs(prev => {
-        const updated = [...prev]
-        const last = updated[updated.length - 1]
-        if (last?.role === 'assistant') {
-          updated[updated.length - 1] = { ...last, content: last.content + pending }
-        }
-        return updated
-      })
-    }
   }
 
   useEffect(() => {
@@ -142,22 +140,20 @@ export default function FloatingAIWidget() {
               streamStarted = true
               setLoading(false)
               streamBuf.current = ''
+              streamDone.current = false
+              finalMsgRef.current = ''
               setMsgs(prev => [...prev, { role: 'assistant', content: '' }])
               startRaf()
             }
             streamBuf.current += event.t
           } else if (event.done && event.result) {
-            stopRaf()
             const data = event.result
             if (!streamStarted) {
               setLoading(false)
               setMsgs(prev => [...prev, { role: 'assistant', content: data.message || 'Assistant temporairement indisponible.' }])
             } else {
-              setMsgs(prev => {
-                const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: data.message }
-                return updated
-              })
+              finalMsgRef.current = data.message
+              streamDone.current = true
             }
             if (data.unavailable) { setUnavail(true) }
             if (data.extractedFields) {

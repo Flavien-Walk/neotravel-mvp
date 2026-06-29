@@ -102,40 +102,40 @@ export default function AIAssistantChat() {
   const streamBuf  = useRef('')
   const rafId      = useRef<number | null>(null)
 
+  const streamDone  = useRef(false)
+  const finalMsgRef = useRef('')
+
   function startRaf() {
     const loop = () => {
-      const pending = streamBuf.current
-      if (pending) {
-        streamBuf.current = ''
+      if (streamBuf.current.length > 0) {
+        // 2 chars par frame → ~120 chars/sec à 60fps, rendu parfaitement fluide
+        const chunk = streamBuf.current.slice(0, 2)
+        streamBuf.current = streamBuf.current.slice(2)
         setMessages(prev => {
           const updated = [...prev]
           const last = updated[updated.length - 1]
           if (last?.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: last.content + pending }
+            updated[updated.length - 1] = { ...last, content: last.content + chunk }
           }
           return updated
         })
+        rafId.current = requestAnimationFrame(loop)
+      } else if (streamDone.current) {
+        // Buffer vide + stream terminé → message final propre
+        rafId.current = null
+        if (finalMsgRef.current) {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: finalMsgRef.current }
+            return updated
+          })
+        }
+      } else {
+        // Buffer vide mais tokens encore en route → attendre
+        rafId.current = requestAnimationFrame(loop)
       }
-      rafId.current = requestAnimationFrame(loop)
     }
     rafId.current = requestAnimationFrame(loop)
-  }
-
-  function stopRaf() {
-    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
-    // flush restant
-    const pending = streamBuf.current
-    if (pending) {
-      streamBuf.current = ''
-      setMessages(prev => {
-        const updated = [...prev]
-        const last = updated[updated.length - 1]
-        if (last?.role === 'assistant') {
-          updated[updated.length - 1] = { ...last, content: last.content + pending }
-        }
-        return updated
-      })
-    }
   }
 
   const [messages, setMessages] = useState<Message[]>([
@@ -207,22 +207,21 @@ export default function AIAssistantChat() {
               streamStarted = true
               setLoading(false)
               streamBuf.current = ''
+              streamDone.current = false
+              finalMsgRef.current = ''
               setMessages(prev => [...prev, { role: 'assistant', content: '' }])
               startRaf()
             }
             streamBuf.current += event.t
           } else if (event.done && event.result) {
-            stopRaf()
             const data = event.result
             if (!streamStarted) {
               setLoading(false)
               setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
             } else {
-              setMessages(prev => {
-                const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: data.message }
-                return updated
-              })
+              // Signale la fin au RAF — il finira de vider le buffer puis mettra le message final
+              finalMsgRef.current = data.message
+              streamDone.current = true
             }
 
             if (data.unavailable) setUnavailable(true)
