@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
 const SYSTEM_PROMPT = `Tu es l'assistant de collecte de demandes de NeoTravel, spécialiste du transport de groupes en autocar.
 
@@ -83,7 +83,7 @@ Omet les champs non connus (ou mets null). Ne mets que les valeurs réellement f
 isComplete = true uniquement quand tu as : nom, email, depart, destination, date_depart, nb_passagers.`
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       {
         message: "L'assistant IA n'est pas configuré sur ce serveur. Utilisez le formulaire guidé pour soumettre votre demande.",
@@ -120,23 +120,26 @@ export async function POST(req: NextRequest) {
     ? `\n\n[Contexte système — champs déjà collectés : ${JSON.stringify(currentFields)}]`
     : ''
 
-  const messagesWithContext = validMessages.map((m, i) =>
-    i === 0 && m.role === 'user'
-      ? { ...m, content: m.content + contextNote }
-      : m
-  ) as Anthropic.Messages.MessageParam[]
+  const messagesWithContext: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...validMessages.map((m, i) =>
+      i === 0 && m.role === 'user'
+        ? { role: 'user' as const, content: m.content + contextNote }
+        : { role: m.role as 'user' | 'assistant', content: m.content }
+    ),
+  ]
 
   try {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      response_format: { type: 'json_object' },
       messages: messagesWithContext,
     })
 
-    const raw = response.content[0]?.type === 'text' ? response.content[0].text.trim() : ''
+    const raw = response.choices[0]?.message?.content?.trim() ?? ''
 
     let parsed: Record<string, unknown>
     try {

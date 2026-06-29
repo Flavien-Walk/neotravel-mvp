@@ -1,14 +1,6 @@
--- ─────────────────────────────────────────────────────────────────────────────
--- NeoTravel — Supabase PostgreSQL schema
--- Run this in Supabase Dashboard → SQL Editor
--- ─────────────────────────────────────────────────────────────────────────────
-
--- Enable UUID generation
 create extension if not exists "pgcrypto";
 
--- ─── profiles ────────────────────────────────────────────────────────────────
--- Extends Supabase auth.users with app-specific fields.
--- Row is created automatically via trigger on auth.users insert.
+
 create table if not exists public.profiles (
   id            uuid primary key references auth.users(id) on delete cascade,
   nom           text not null,
