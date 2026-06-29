@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.2",
     "@anthropic-ai/sdk": "^0.106.0",
     "@floating-ui/react": "^0.27.19",
     "@gsap/react": "^2.1.2",
@@ -16,6 +17,7 @@
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@types/three": "^0.184.0",
+    "ai": "^7.0.5",
     "clsx": "^2.1.1",
     "d3-geo": "^3.1.1",
     "framer-motion": "^12.38.0",
