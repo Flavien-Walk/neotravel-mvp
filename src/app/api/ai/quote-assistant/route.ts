@@ -106,6 +106,8 @@ const API_URL = process.env.API_URL || 'http://localhost:4000'
 // ─── HANDLER ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  console.log('[NeoTravel AI] ANTHROPIC_API_KEY présente:', Boolean(process.env.ANTHROPIC_API_KEY))
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({
       message: "L'assistant IA n'est pas configuré sur ce serveur. Utilisez le formulaire guidé.",
