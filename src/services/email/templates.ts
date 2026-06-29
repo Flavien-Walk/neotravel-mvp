@@ -257,26 +257,44 @@ export function tplQuote(lead: ILead, quote: IQuote): { subject: string; html: s
   }
 }
 
-export function tplQuoteReminder(lead: ILead, quote: IQuote): { subject: string; html: string; text: string } {
+export function tplQuoteReminder(lead: ILead, quote: IQuote, relanceLevel = 1): { subject: string; html: string; text: string } {
   const fmt = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+  const prixTtc = quote.prix_final_ttc || quote.prix_ttc
+
+  const isLast = relanceLevel >= 2
+  const titre  = isLast ? 'Dernier rappel — Votre devis NeoTravel' : 'Votre devis NeoTravel est toujours disponible'
+  const contexte = isLast
+    ? p('Il s\'agit de notre <strong>dernière relance automatique</strong>. Si votre projet évolue ou si vous avez des questions, n\'hésitez pas à nous contacter directement.', '#b45309')
+    : p('Avez-vous eu le temps de consulter notre devis ? Nous restons disponibles pour répondre à toutes vos questions.')
+
   const body = `
-    ${h1('Votre devis NeoTravel est toujours disponible')}
+    ${h1(titre)}
     ${p(`Bonjour ${lead.nom},`)}
     ${p(`Nous souhaitions revenir vers vous concernant votre demande de transport <strong>${lead.depart} → ${lead.destination}</strong>.`)}
+    ${contexte}
     <div style="background:#f0f5ff;border-radius:8px;padding:16px 20px;margin:12px 0 20px;">
       <p style="margin:0 0 4px;font-size:14px;color:#1e3a8a;"><strong>Trajet :</strong> ${lead.depart} → ${lead.destination}</p>
       <p style="margin:0 0 4px;font-size:14px;color:#1e3a8a;"><strong>Passagers :</strong> ${lead.nb_passagers}</p>
-      <p style="margin:0;font-size:22px;font-weight:800;color:#1e3a8a;">${fmt(quote.prix_ttc)} TTC</p>
+      <p style="margin:0;font-size:22px;font-weight:800;color:#1e3a8a;">${fmt(prixTtc)} TTC</p>
     </div>
-    ${p('Si vous avez des questions ou souhaitez modifier certains aspects, un conseiller NeoTravel peut vous aider.')}
-    ${btn('Contacter un conseiller', `mailto:commercial@neotravel.fr`)}
+    ${p('Pour accepter ce devis, le modifier, ou simplement poser une question, un conseiller NeoTravel est à votre disposition.')}
+    ${btn('Contacter un conseiller', 'mailto:commercial@neotravel.fr')}
+    ${lead.trackingToken
+      ? `<div style="text-align:center;margin-top:-8px;">
+           <a href="${FRONTEND_URL}/suivi/${lead.trackingToken}" style="font-size:12px;color:#64748b;text-decoration:none;">
+             Accéder à mon espace suivi
+           </a>
+         </div>`
+      : ''}
     ${divider()}
     ${p('Si votre projet est annulé, vous pouvez ignorer cet email. Aucun engagement de votre part.', '#94a3b8')}
   `
+
+  const subjectLabel = isLast ? 'Dernier rappel' : 'Rappel'
   return {
-    subject: `Rappel : votre devis NeoTravel ${lead.depart} → ${lead.destination}`,
-    html: layout('Rappel devis', body),
-    text: `Rappel NeoTravel : votre devis ${lead.depart} → ${lead.destination} (${fmt(quote.prix_ttc)} TTC) est toujours disponible. Contactez commercial@neotravel.fr`,
+    subject: `${subjectLabel} : votre devis NeoTravel — ${lead.depart} → ${lead.destination}`,
+    html: layout(isLast ? 'Dernier rappel — devis NeoTravel' : 'Rappel devis NeoTravel', body),
+    text: `${subjectLabel} NeoTravel : votre devis ${lead.depart} → ${lead.destination} (${fmt(prixTtc)} TTC) est toujours disponible. Contactez commercial@neotravel.fr`,
   }
 }
 

@@ -34,6 +34,8 @@ export interface IQuote extends Document {
   statut_devis: string
   validite_jours: number
   email_sent_at?: Date
+  lastReminderAt?: Date
+  reminder_count: number
   // Ajustement humain
   ajustement_manuel_ht: number
   raison_ajustement?: string
@@ -80,6 +82,8 @@ const quoteSchema = new Schema<IQuote>(
     statut_devis:     { type: String, default: 'genere' },
     validite_jours:   { type: Number, default: 30 },
     email_sent_at:    { type: Date },
+    lastReminderAt:   { type: Date },
+    reminder_count:   { type: Number, default: 0 },
     // Ajustement humain
     ajustement_manuel_ht: { type: Number, default: 0 },
     raison_ajustement:    { type: String },

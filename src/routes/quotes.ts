@@ -2,13 +2,98 @@ import { Router, Response } from 'express'
 import PDFDocument from 'pdfkit'
 import { calculer_devis, DevisInput } from '../services/calculer_devis'
 import { Quote } from '../models/Quote'
-import { Lead, ILead } from '../models/Lead'
+import { Lead, ILead, LeadStatus } from '../models/Lead'
 import { Log } from '../models/Log'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { sendQuoteEmail, sendComplexCaseEmail, sendQuoteReminderEmail } from '../services/email/emailService'
 import { notifyQuoteReadyForReview } from '../services/n8nService'
 
+const STOP_STATUTS: LeadStatus[] = ['accepte', 'refuse', 'cloture', 'reprise_humaine', 'cas_complexe']
+
 const router = Router()
+
+// GET /api/quotes/reminders/due — liste des devis à relancer (utilisé par n8n scheduler)
+router.get('/reminders/due', requireAuth, async (req: AuthRequest, res: Response) => {
+  if (req.userRole === 'client') {
+    res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
+    return
+  }
+
+  try {
+    const now  = new Date()
+    const H48  = 48 * 60 * 60 * 1000   // 48h en ms
+    const H72  = 72 * 60 * 60 * 1000   // 72h en ms
+
+    // Quotes envoyés, pas encore relancés 2 fois
+    const quotes = await Quote.find({
+      statut_devis: 'sent',
+      $or: [
+        { reminder_count: { $exists: false } },
+        { reminder_count: { $lt: 2 } },
+      ],
+    }).lean()
+
+    if (quotes.length === 0) {
+      res.json([])
+      return
+    }
+
+    const leadIds  = quotes.map(q => q.leadId)
+    const leads    = await Lead.find({ _id: { $in: leadIds } }).lean()
+    const leadsMap = new Map(leads.map(l => [String(l._id), l]))
+
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://neotravel-mvp.vercel.app'
+    const API_URL      = process.env.API_URL      || 'https://neotravel-mvp.onrender.com'
+
+    const results: object[] = []
+
+    for (const quote of quotes) {
+      const lead = leadsMap.get(String(quote.leadId))
+      if (!lead) continue
+      if (STOP_STATUTS.includes(lead.statut)) continue
+
+      const count = quote.reminder_count ?? 0
+      let dueForRelance = false
+      let relanceLevel  = 1
+
+      if (count === 0 && lead.statut === 'devis_envoye') {
+        // Relance 1 : 48h après envoi initial
+        if (quote.email_sent_at && now.getTime() - new Date(quote.email_sent_at).getTime() >= H48) {
+          dueForRelance = true
+          relanceLevel  = 1
+        }
+      } else if (count === 1 && lead.statut === 'relance_1') {
+        // Relance 2 : 72h après relance 1
+        const lastRem = (quote as unknown as { lastReminderAt?: Date }).lastReminderAt
+        if (lastRem && now.getTime() - new Date(lastRem).getTime() >= H72) {
+          dueForRelance = true
+          relanceLevel  = 2
+        }
+      }
+
+      if (!dueForRelance) continue
+
+      results.push({
+        leadId:  String(lead._id),
+        quoteId: String(quote._id),
+        relanceLevel,
+        client: { nom: lead.nom, email: lead.email },
+        trajet: { depart: lead.depart, destination: lead.destination, date_depart: lead.date_depart },
+        quote: {
+          prix_ttc:       quote.prix_final_ttc || quote.prix_ttc,
+          sentAt:         quote.email_sent_at ?? null,
+          lastReminderAt: (quote as unknown as { lastReminderAt?: Date }).lastReminderAt ?? null,
+        },
+        trackingUrl: `${FRONTEND_URL}/suivi/${lead.trackingToken}`,
+        pdfUrl:      `${API_URL}/api/quotes/${String(quote._id)}/pdf`,
+      })
+    }
+
+    res.json(results)
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur reminders/due', error: String(err) })
+  }
+})
 
 // POST /api/quotes/manual — devis saisi manuellement par un commercial
 router.post('/manual', requireAuth, async (req: AuthRequest, res: Response) => {
@@ -604,7 +689,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
-// POST /api/quotes/:id/remind — envoyer une relance
+// POST /api/quotes/:id/remind — envoyer une relance (appelable par n8n ou commercial)
 router.post('/:id/remind', requireAuth, async (req: AuthRequest, res: Response) => {
   if (req.userRole === 'client') {
     res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
@@ -618,18 +703,67 @@ router.post('/:id/remind', requireAuth, async (req: AuthRequest, res: Response) 
     const lead = await Lead.findById(quote.leadId)
     if (!lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
 
-    const nextStatut = lead.statut === 'relance_1' ? 'relance_2' : 'relance_1'
+    // Garde-fou 1 — le devis doit être envoyé
+    if (quote.statut_devis !== 'sent') {
+      res.status(409).json({
+        message: `Relance impossible : le devis n'est pas encore envoyé (statut actuel : ${quote.statut_devis}).`,
+        statut_devis: quote.statut_devis,
+      })
+      return
+    }
 
-    await sendQuoteReminderEmail(lead, quote)
+    // Garde-fou 2 — pas de relance si lead accepté/refusé/clôturé/reprise
+    if (STOP_STATUTS.includes(lead.statut)) {
+      res.status(409).json({
+        message: `Relance impossible : lead en statut "${lead.statut}".`,
+        statut: lead.statut,
+      })
+      return
+    }
+
+    // Garde-fou 3 — max 2 relances automatiques
+    const currentCount = quote.reminder_count ?? 0
+    if (currentCount >= 2) {
+      res.status(409).json({
+        message: 'Relance impossible : le maximum de 2 relances automatiques est atteint pour ce devis.',
+        reminder_count: currentCount,
+      })
+      return
+    }
+
+    const relanceLevel: 1 | 2  = currentCount === 0 ? 1 : 2
+    const nextStatut: LeadStatus = relanceLevel === 1 ? 'relance_1' : 'relance_2'
+    const logAction = relanceLevel === 1 ? 'QUOTE_REMINDER_1_SENT' : 'QUOTE_REMINDER_2_SENT'
+
+    try {
+      await sendQuoteReminderEmail(lead, quote, relanceLevel)
+    } catch (emailErr) {
+      await Log.create({
+        action:  'QUOTE_REMINDER_ERROR',
+        leadId:  lead._id,
+        status:  'error',
+        message: `Échec relance ${relanceLevel} à ${lead.email} : ${String(emailErr)}`,
+        payload: { quoteId: String(quote._id), relanceLevel, triggeredBy: req.userId },
+      }).catch(() => {})
+      res.status(500).json({ message: `Erreur envoi relance ${relanceLevel}`, error: String(emailErr) })
+      return
+    }
+
+    quote.reminder_count  = relanceLevel
+    quote.lastReminderAt  = new Date()
+    await quote.save()
+
     await Lead.findByIdAndUpdate(lead._id, { statut: nextStatut })
+
     await Log.create({
-      action: 'REMINDER_SENT',
-      leadId: lead._id,
-      status: 'success',
-      message: `Relance envoyée à ${lead.email} — statut → ${nextStatut}`,
+      action:  logAction,
+      leadId:  lead._id,
+      status:  'success',
+      message: `Relance ${relanceLevel} envoyée à ${lead.email} — statut → ${nextStatut} — par : ${req.userId}`,
+      payload: { quoteId: String(quote._id), relanceLevel, triggeredBy: req.userId },
     })
 
-    res.json({ message: 'Relance envoyée.', statut: nextStatut })
+    res.json({ message: `Relance ${relanceLevel} envoyée.`, statut: nextStatut, relanceLevel, reminder_count: relanceLevel })
   } catch (err) {
     res.status(500).json({ message: 'Erreur relance', error: String(err) })
   }

@@ -108,9 +108,9 @@ export function sendQuoteEmail(lead: ILead, quote: IQuote): Promise<void> {
   return sendEmail({ to: [{ email: lead.email, name: lead.nom }], ...tpl, templateName: 'quote', leadId: String(lead._id) })
 }
 
-export function sendQuoteReminderEmail(lead: ILead, quote: IQuote): Promise<void> {
-  const tpl = tplQuoteReminder(lead, quote)
-  return sendEmail({ to: [{ email: lead.email, name: lead.nom }], ...tpl, templateName: 'quote_reminder', leadId: String(lead._id) })
+export function sendQuoteReminderEmail(lead: ILead, quote: IQuote, relanceLevel = 1): Promise<void> {
+  const tpl = tplQuoteReminder(lead, quote, relanceLevel)
+  return sendEmail({ to: [{ email: lead.email, name: lead.nom }], ...tpl, templateName: `quote_reminder_${relanceLevel}`, leadId: String(lead._id) })
 }
 
 export function sendComplexCaseEmail(lead: ILead, reason: string): Promise<void> {
