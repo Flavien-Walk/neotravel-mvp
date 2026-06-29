@@ -42,7 +42,7 @@ const CLIENTS = [
     accent: 'from-sky-700/60 to-neo-900/95',
   },
   {
-    img:    'https://images.unsplash.com/photo-1566087140622-e9b7a71ffff7?w=600&q=80',
+    img:    '/images/neotravel/bus-road.jpg',
     tag:    'Groupes privés',
     title:  'Mariages & événements',
     desc:   'Mariage, EVJF, anniversaire, réunion de famille. Un autocar privatisé, aucune contrainte.',
