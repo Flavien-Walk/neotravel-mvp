@@ -7,6 +7,7 @@ import {
   Send, ArrowRight, AlertCircle, BarChart3,
   UserCheck, MapPin, ArrowUpRight, Activity,
   ChevronRight, AlertTriangle, Zap, FileText,
+  Mail, Bot, CircleDot,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
@@ -196,6 +197,8 @@ export default function DashboardPage() {
   const aRelancer      = leads.filter(l => ['relance_1','relance_2'].includes(l.statut)).length
   const repriseHumaine = leads.filter(l => ['reprise_humaine','cas_complexe'].includes(l.statut)).length
   const autoEnvoyes    = leads.filter(l => l.statut === 'devis_envoye').length
+  const devisCalcules  = leads.filter(l => ['devis_genere','devis_envoye','relance_1','relance_2','accepte'].includes(l.statut)).length
+  const emailsEnvoyes  = leads.filter(l => ['devis_envoye','relance_1','relance_2','accepte'].includes(l.statut)).length
 
   const urgents = leads
     .filter(l => l.urgence !== 'normal' && !['accepte','refuse','cloture'].includes(l.statut))
@@ -590,6 +593,56 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Automatisation */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: '#EFF6FF' }}>
+                <Bot className="w-3 h-3" style={{ color: '#2563EB' }} />
+              </div>
+              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--dash-text-faint)' }}>
+                Automatisation
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Devis calculés',  value: devisCalcules,   icon: FileText, color: '#D97706' },
+                { label: 'Emails envoyés',  value: emailsEnvoyes,   icon: Mail,     color: '#0284C7' },
+                { label: 'Reprises humaines', value: repriseHumaine, icon: UserCheck, color: '#DC2626' },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
+                    <span className="text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>{label}</span>
+                  </div>
+                  <span
+                    className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md"
+                    style={{
+                      background: value > 0 ? color + '12' : 'var(--dash-muted)',
+                      color: value > 0 ? color : 'var(--dash-text-faint)',
+                    }}
+                  >
+                    {loading ? '–' : value}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {!loading && devisCalcules > 0 && (
+              <div className="mt-3 pt-3 flex items-center gap-1.5 text-[10px]" style={{ borderTop: '1px solid var(--dash-border)', color: 'var(--dash-text-faint)' }}>
+                <CircleDot className="w-3 h-3 flex-shrink-0" style={{ color: '#16A34A' }} />
+                <span>
+                  {Math.round((emailsEnvoyes / Math.max(devisCalcules, 1)) * 100)}% des devis envoyés automatiquement
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Garanties */}

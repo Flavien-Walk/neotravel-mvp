@@ -79,11 +79,11 @@ export default function SolutionFlow() {
               }}
             >
               <p className="font-semibold text-white mb-3 leading-snug">
-                &ldquo;L&apos;agent collecte et orchestre,<br />le code calcule.&rdquo;
+                &ldquo;Votre demande est qualifiée, votre devis est préparé, votre client est suivi.&rdquo;
               </p>
               <p className="text-white/40 text-sm leading-relaxed">
-                Aucun prix n&apos;est généré ou estimé par une IA. Le calcul suit des règles métier
-                explicites, auditables et reproductibles. Chaque centime est justifiable.
+                De la réception à la signature, chaque étape est automatisée et tracée.
+                Votre équipe garde la main uniquement sur les cas complexes.
               </p>
             </div>
           </AnimatedSection>

@@ -269,7 +269,7 @@ export default function ChaosToPipeline() {
               {[
                 { val: '< 2h',  label: 'Délai de réponse' },
                 { val: '100%',  label: 'Demandes trackées' },
-                { val: '0',     label: 'Prix estimé par IA' },
+                { val: '100%',  label: 'Devis traçables' },
               ].map(({ val, label }) => (
                 <div key={label} className="text-center">
                   <div className="text-2xl sm:text-3xl font-bold text-gradient-blue">{val}</div>
