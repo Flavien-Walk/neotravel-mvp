@@ -1,141 +1,222 @@
 /**
- * calculer_devis() — Fonction déterministe de calcul de devis transport.
+ * calculer_devis() — Moteur de calcul déterministe NeoTravel.
  *
  * RÈGLE ABSOLUE : Cette fonction ne dépend d'aucun LLM.
  * "L'agent collecte et orchestre, le code calcule."
  *
- * Toutes les hypothèses tarifaires sont marquées [MOCK MVP].
- * source_type = "mock_mvp" → valeur à remplacer par le barème réel NeoTravel.
+ * Barème de base [MOCK MVP] — source_type "mock_mvp".
+ * Règles documentées (TVA, saisonnalité, urgence, capacité, marge) — source_type "regle_documentee".
+ *
+ * Ordre de calcul :
+ *   base_km + frais_mise_en_route
+ *   → × coeff_type_trajet
+ *   → × coeff_capacite
+ *   → × coeff_saisonnalite
+ *   → × coeff_urgence (calculé depuis date_depart, non depuis input.urgence)
+ *   → × (1 + MARGE_TAUX)
+ *   → + options (guide, nuit chauffeur, péages)
+ *   = prix_ht → + TVA 10% = prix_ttc
  */
 
 export type SourceType = 'mock_mvp' | 'regle_documentee' | 'hypothese_mvp' | 'a_definir'
 
 export interface DevisInput {
-  depart: string
-  destination: string
-  date_depart: string
+  depart:       string
+  destination:  string
+  date_depart:  string
   date_retour?: string
   nb_passagers: number
-  type_trajet: string
-  options?: string[]
-  urgence?: string
+  type_trajet:  string
+  options?:     string[]
+  urgence?:     string   // conservé pour compatibilité ascendante ; le coefficient est recalculé depuis date_depart
 }
 
 export interface LigneCalcul {
-  label: string
-  montant: number
-  formule: string
-  variables: Record<string, number | string>
-  source_regle: string
-  source_type: SourceType
+  label:         string
+  montant:       number
+  formule:       string
+  variables:     Record<string, number | string>
+  source_regle:  string
+  source_type:   SourceType
   justification: string
 }
 
 export interface CalculationSource {
-  label: string
-  valeur: string | number
-  source_type: SourceType
+  label:         string
+  valeur:        string | number
+  source_type:   SourceType
   justification: string
 }
 
 export interface DevisResult {
-  success: true
-  prix_ht: number
-  tva: number
-  prix_ttc: number
-  lignes_calcul: LigneCalcul[]
-  coefficients: Record<string, number>
-  warnings: string[]
+  success:                true
+  prix_ht:                number
+  tva:                    number
+  prix_ttc:               number
+  distance_km:            number
+  duree_estimee:          string
+  lignes_calcul:          LigneCalcul[]
+  coefficients:           Record<string, number>
+  warnings:               string[]
   besoin_reprise_humaine: boolean
   raison_reprise_humaine: string | null
-  sources_calcul: CalculationSource[]
-  explication_calcul: string
+  sources_calcul:         CalculationSource[]
+  explication_calcul:     string
 }
 
 export interface DevisError {
-  success: false
-  error: string
+  success:                false
+  error:                  string
   besoin_reprise_humaine: boolean
   raison_reprise_humaine: string | null
-  hint?: string
+  hint?:                  string
 }
 
-// ─── Table de distances [MOCK MVP] ───────────────────────────────────────────
-// Source : distances routières approximatives en km, sans API Maps réelle.
-// À remplacer par l'API Distance Matrix en production.
+// ─── Constantes tarifaires ────────────────────────────────────────────────────
+
+const TARIF_KM            = 2.50   // €/km [MOCK MVP — calibrer avec barème réel]
+const FRAIS_MISE_EN_ROUTE = 80     // € forfait fixe [MOCK MVP]
+const TVA_TAUX            = 0.10   // 10 % — Article 279-b CGI
+const MARGE_TAUX          = 0.15   // 15 % — Politique tarifaire NeoTravel
+
+const COEFF_ALLER_RETOUR  = 1.80   // [MOCK MVP] — pas ×2 : retour à vide optimisé
+const COEFF_CIRCUIT       = 2.20   // [MOCK MVP] — circuit multi-étapes
+
+const OPTION_GUIDE_PAR_JOUR = 80   // €/jour — Tarif guide/accompagnateur NeoTravel
+const OPTION_NUIT_CHAUFFEUR = 120  // €/nuit — Hébergement chauffeur NeoTravel
+
+// ─── Table de distances routières [MOCK MVP] ──────────────────────────────────
 const DISTANCES_KM: Record<string, number> = {
-  'paris|lyon':           465,
-  'paris|marseille':      775,
-  'paris|bordeaux':       585,
-  'paris|toulouse':       680,
-  'paris|lille':          225,
-  'paris|nantes':         385,
-  'paris|strasbourg':     490,
-  'paris|rennes':         350,
-  'paris|nice':           930,
-  'paris|montpellier':    750,
-  'paris|grenoble':       570,
-  'paris|dijon':          310,
-  'paris|reims':          145,
-  'paris|toulon':         840,
-  'lyon|marseille':       315,
-  'lyon|bordeaux':        555,
-  'lyon|toulouse':        430,
-  'lyon|lille':           670,
-  'lyon|nice':            300,
-  'lyon|grenoble':        105,
-  'lyon|montpellier':     330,
-  'lyon|strasbourg':      490,
-  'marseille|toulouse':   405,
-  'marseille|bordeaux':   640,
-  'marseille|nice':       200,
-  'marseille|montpellier': 170,
-  'marseille|toulon':      65,
-  'bordeaux|toulouse':    245,
-  'bordeaux|nantes':      345,
-  'bordeaux|rennes':      445,
-  'toulouse|nice':        600,
-  'toulouse|montpellier': 240,
-  'lille|rennes':         530,
-  'lille|strasbourg':     530,
-  'nantes|rennes':        110,
-  'strasbourg|lyon':      490,
-  'grenoble|nice':        300,
-  'grenoble|marseille':   300,
-  'dijon|lyon':           195,
-  'reims|lille':          200,
-  'reims|strasbourg':     275,
+  'paris|lyon':             465,
+  'paris|marseille':        775,
+  'paris|bordeaux':         585,
+  'paris|toulouse':         680,
+  'paris|lille':            225,
+  'paris|nantes':           385,
+  'paris|strasbourg':       490,
+  'paris|rennes':           350,
+  'paris|nice':             930,
+  'paris|montpellier':      750,
+  'paris|grenoble':         570,
+  'paris|dijon':            310,
+  'paris|reims':            145,
+  'paris|toulon':           840,
+  'paris|angers':           295,
+  'paris|tours':            235,
+  'paris|caen':             230,
+  'paris|rouen':            135,
+  'paris|metz':             310,
+  'paris|nancy':            370,
+  'paris|clermont':         425,
+  'paris|clermontferrand':  425,
+  'paris|limoges':          395,
+  'paris|amiens':           140,
+  'paris|orleans':          130,
+  'lyon|marseille':         315,
+  'lyon|bordeaux':          555,
+  'lyon|toulouse':          430,
+  'lyon|lille':             670,
+  'lyon|nice':              300,
+  'lyon|grenoble':          105,
+  'lyon|montpellier':       330,
+  'lyon|strasbourg':        490,
+  'lyon|dijon':             195,
+  'lyon|clermont':          165,
+  'lyon|clermontferrand':   165,
+  'marseille|toulouse':     405,
+  'marseille|bordeaux':     640,
+  'marseille|nice':         200,
+  'marseille|montpellier':  170,
+  'marseille|toulon':        65,
+  'bordeaux|toulouse':      245,
+  'bordeaux|nantes':        345,
+  'bordeaux|rennes':        445,
+  'bordeaux|limoges':       215,
+  'toulouse|nice':          600,
+  'toulouse|montpellier':   240,
+  'lille|rennes':           530,
+  'lille|strasbourg':       530,
+  'nantes|rennes':          110,
+  'nantes|tours':           135,
+  'nantes|angers':           95,
+  'strasbourg|metz':        165,
+  'strasbourg|nancy':       150,
+  'grenoble|nice':          300,
+  'grenoble|marseille':     300,
+  'dijon|reims':            290,
+  'reims|lille':            200,
+  'reims|strasbourg':       275,
+  'angers|tours':            90,
+  'tours|orleans':          115,
+  'metz|nancy':              55,
+  'caen|rouen':             130,
+  'caen|rennes':            185,
+  'rouen|amiens':            90,
 }
 
-// ─── Constantes tarifaires [MOCK MVP] ────────────────────────────────────────
-const TARIF_KM             = 2.50   // €/km — coût de base d'un car standard
-const FRAIS_MISE_EN_ROUTE  = 80     // € — forfait fixe par trajet
-const TVA_TAUX             = 0.10   // 10 % — TVA transport voyageurs France
+// ─── Règles saisonnalité ──────────────────────────────────────────────────────
 
-const COEFF_URGENCE: Record<string, number> = {
-  normal:      1.00,
-  urgent:      1.15,
-  tres_urgent: 1.30,
+interface SaisonInfo { label: string; coeff: number; nom: string }
+
+const SAISON_PAR_MOIS: Record<number, SaisonInfo> = {
+  1:  { nom: 'basse',      coeff: 0.93, label: 'Basse saison — janvier'         },
+  2:  { nom: 'basse',      coeff: 0.93, label: 'Basse saison — février'          },
+  3:  { nom: 'haute',      coeff: 1.10, label: 'Haute saison — mars'             },
+  4:  { nom: 'haute',      coeff: 1.10, label: 'Haute saison — avril'            },
+  5:  { nom: 'tres_haute', coeff: 1.15, label: 'Très haute saison — mai'         },
+  6:  { nom: 'tres_haute', coeff: 1.15, label: 'Très haute saison — juin'        },
+  7:  { nom: 'haute',      coeff: 1.10, label: 'Haute saison — juillet'          },
+  8:  { nom: 'basse',      coeff: 0.93, label: 'Basse saison — août'             },
+  9:  { nom: 'moyenne',    coeff: 1.00, label: 'Moyenne saison — septembre'      },
+  10: { nom: 'moyenne',    coeff: 1.00, label: 'Moyenne saison — octobre'        },
+  11: { nom: 'basse',      coeff: 0.93, label: 'Basse saison — novembre'         },
+  12: { nom: 'moyenne',    coeff: 1.00, label: 'Moyenne saison — décembre'       },
 }
 
-const COEFF_ALLER_RETOUR = 1.80  // Pas ×2 — optimisation retour à vide partiel
-const COEFF_CIRCUIT      = 2.20  // Circuit multi-étapes
-
-const OPTIONS_PRIX: Record<string, number | ((nb: number) => number)> = {
-  wifi:          150,
-  hostesse:      250,
-  repas:         (nb: number) => nb * 15,
-  climatisation: 0, // Inclus standard
+function getSaison(date_depart: string): SaisonInfo {
+  const mois = new Date(date_depart).getMonth() + 1
+  return SAISON_PAR_MOIS[mois] ?? { nom: 'inconnue', label: 'Saison inconnue', coeff: 1.0 }
 }
 
-// ─── Normalisation villes ─────────────────────────────────────────────────────
+// ─── Règles urgence (calculées depuis date_depart) ────────────────────────────
+
+interface UrgenceInfo { label: string; coeff: number; diffDays: number; niveau: string }
+
+function getUrgence(date_depart: string, todayISO?: string): UrgenceInfo {
+  const today = todayISO ? new Date(todayISO) : new Date()
+  today.setHours(0, 0, 0, 0)
+  const dep = new Date(date_depart)
+  dep.setHours(0, 0, 0, 0)
+  const diffDays = Math.floor((dep.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 2)   return { niveau: 'prioritaire',  coeff: 1.10, diffDays, label: `Prioritaire — départ dans ${Math.max(0, diffDays)}j (<2j)` }
+  if (diffDays <= 7)  return { niveau: 'urgent',        coeff: 1.05, diffDays, label: `Urgent — départ dans ${diffDays}j (2–7j)` }
+  if (diffDays <= 90) return { niveau: 'normal',        coeff: 0.95, diffDays, label: `Normal — départ dans ${diffDays}j (8–90j)` }
+  return               { niveau: 'anticipation',        coeff: 0.90, diffDays, label: `Anticipation — départ dans ${diffDays}j (>90j)` }
+}
+
+// ─── Règles capacité ─────────────────────────────────────────────────────────
+
+interface CapaciteInfo { label: string; coeff: number; besoin_reprise: boolean }
+
+function getCapacite(nb: number): CapaciteInfo {
+  if (nb > 85) return { coeff: 1,    besoin_reprise: true,  label: `Grand groupe (${nb} pax > 85)` }
+  if (nb >= 68) return { coeff: 1.40, besoin_reprise: false, label: `Grand autocar 68–85 pax (${nb} pax)` }
+  if (nb >= 64) return { coeff: 1.20, besoin_reprise: false, label: `Grand autocar 64–67 pax (${nb} pax)` }
+  if (nb >= 54) return { coeff: 1.15, besoin_reprise: false, label: `Grand autocar 54–63 pax (${nb} pax)` }
+  if (nb >= 20) return { coeff: 1.00, besoin_reprise: false, label: `Autocar standard 20–53 pax (${nb} pax)` }
+  return               { coeff: 0.95, besoin_reprise: false, label: `Minibus ≤ 19 pax (${nb} pax)` }
+}
+
+// ─── Utilitaires ─────────────────────────────────────────────────────────────
+
 function normaliser(ville: string): string {
   return ville
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // supprime les diacritiques combinants
-    .replace(/[^a-z0-9]/g, '')       // supprime tout sauf lettres/chiffres
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]/g, '')
 }
 
 function getDistance(depart: string, destination: string): number | null {
@@ -145,57 +226,70 @@ function getDistance(depart: string, destination: string): number | null {
   return DISTANCES_KM[`${a}|${b}`] ?? DISTANCES_KM[`${b}|${a}`] ?? null
 }
 
+function r2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+function estimerDuree(distanceKm: number, typeTrajet: string): string {
+  const baseMins = Math.round(distanceKm * (60 / 80) + 30)
+  const totalMins = typeTrajet === 'aller_retour' ? baseMins * 2 : baseMins
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  const sfx = typeTrajet === 'aller_retour' ? ' (aller + retour)' : typeTrajet === 'circuit' ? ' (estimation)' : ''
+  return `${h}h${m.toString().padStart(2, '0')}${sfx}`
+}
+
+function getNbJoursNuits(date_depart: string, date_retour?: string): { jours: number; nuits: number } {
+  if (!date_retour) return { jours: 1, nuits: 0 }
+  const dep = new Date(date_depart)
+  const ret = new Date(date_retour)
+  const diff = Math.round((ret.getTime() - dep.getTime()) / (1000 * 60 * 60 * 24))
+  return { jours: Math.max(1, diff + 1), nuits: Math.max(0, diff) }
+}
+
 // ─── Validation ───────────────────────────────────────────────────────────────
+
 function valider(input: DevisInput): string | null {
   const dep = input.depart?.trim()
   const dst = input.destination?.trim()
-
-  if (!dep)  return 'Ville de départ manquante ou vide.'
-  if (!dst)  return 'Ville de destination manquante ou vide.'
+  if (!dep) return 'Ville de départ manquante ou vide.'
+  if (!dst) return 'Ville de destination manquante ou vide.'
   if (dep.toLowerCase() === dst.toLowerCase()) return 'Le départ et la destination ne peuvent pas être identiques.'
   if (!input.date_depart) return 'Date de départ manquante.'
-
+  if (isNaN(new Date(input.date_depart).getTime())) return 'Date de départ invalide.'
   const nbPax = input.nb_passagers
   if (nbPax === undefined || nbPax === null) return 'Nombre de passagers manquant.'
-  if (!Number.isFinite(nbPax) || nbPax < 1)  return 'Le nombre de passagers doit être un entier positif.'
-
+  if (!Number.isFinite(nbPax) || nbPax < 1) return 'Le nombre de passagers doit être un entier positif.'
   if (input.date_retour) {
-    const dep  = new Date(input.date_depart)
-    const ret  = new Date(input.date_retour)
-    if (isNaN(dep.getTime())) return 'Date de départ invalide.'
-    if (isNaN(ret.getTime())) return 'Date de retour invalide.'
-    if (ret < dep)            return 'La date de retour est antérieure à la date de départ.'
+    if (isNaN(new Date(input.date_retour).getTime())) return 'Date de retour invalide.'
+    if (new Date(input.date_retour) < new Date(input.date_depart)) return 'La date de retour est antérieure à la date de départ.'
   }
-
   return null
 }
 
 // ─── Fonction principale ──────────────────────────────────────────────────────
-export function calculer_devis(input: DevisInput): DevisResult | DevisError {
 
-  // 1. Validation des champs
+/**
+ * @param input  Données du devis
+ * @param _testTodayISO  Date de référence ISO pour les tests (ex: "2026-01-01"). En production, omis = Date.now().
+ */
+export function calculer_devis(input: DevisInput, _testTodayISO?: string): DevisResult | DevisError {
+
+  // 1. Validation
   const errValidation = valider(input)
   if (errValidation) {
-    return {
-      success: false,
-      error: errValidation,
-      besoin_reprise_humaine: false,
-      raison_reprise_humaine: null,
-      hint: 'Vérifiez que tous les champs obligatoires sont renseignés et non vides.',
-    }
+    return { success: false, error: errValidation, besoin_reprise_humaine: false, raison_reprise_humaine: null, hint: 'Vérifiez que tous les champs obligatoires sont renseignés.' }
   }
 
   // 2. Distance
   const distanceKm = getDistance(input.depart, input.destination)
   if (distanceKm === null) {
-    const departN = normaliser(input.depart)
-    const destN   = normaliser(input.destination)
     return {
       success: false,
-      error: `Distance "${input.depart} → ${input.destination}" non disponible dans le référentiel MVP — reprise humaine nécessaire.`,
+      error: `Distance "${input.depart} → ${input.destination}" non disponible dans le référentiel — reprise humaine nécessaire.`,
       besoin_reprise_humaine: true,
-      raison_reprise_humaine: `Combinaison "${departN}|${destN}" absente de la table de distances MVP. Ajouter la distance ou intégrer une API Maps.`,
-      hint: 'Ce n\'est pas un champ manquant — les villes ont bien été trouvées mais la paire n\'existe pas dans le référentiel interne.',
+      raison_reprise_humaine: `Paire "${normaliser(input.depart)}|${normaliser(input.destination)}" absente du référentiel. Ajouter la distance ou intégrer une API Maps.`,
+      hint: 'Les villes ont été trouvées mais la paire n\'existe pas dans le référentiel de distances interne.',
     }
   }
 
@@ -203,180 +297,267 @@ export function calculer_devis(input: DevisInput): DevisResult | DevisError {
   let besoin_reprise_humaine = false
   let raison_reprise_humaine: string | null = null
 
-  if (input.nb_passagers > 85) {
+  // 3. Règles métier
+  const typeTrajet = input.type_trajet || 'aller_simple'
+  const saison     = getSaison(input.date_depart)
+  const urgence    = getUrgence(input.date_depart, _testTodayISO)
+  const capacite   = getCapacite(input.nb_passagers)
+
+  if (capacite.besoin_reprise) {
     besoin_reprise_humaine = true
-    raison_reprise_humaine = `Groupe de ${input.nb_passagers} passagers dépasse la capacité standard (85 pax). Contactez-nous pour les grands groupes.`
+    raison_reprise_humaine = `Groupe de ${input.nb_passagers} passagers (> 85 pax) — plusieurs autocars nécessaires. Contactez-nous pour les grands groupes.`
   }
-  if (input.type_trajet === 'circuit') {
+  if (typeTrajet === 'circuit') {
     besoin_reprise_humaine = true
     raison_reprise_humaine = raison_reprise_humaine ?? 'Circuit multi-étapes — validation humaine recommandée pour confirmer les étapes.'
   }
-  if (input.urgence === 'tres_urgent') {
-    warnings.push('Demande très urgente — le prix inclut une majoration de 30 %.')
-  }
-  if (input.nb_passagers > 50) {
-    warnings.push('Grand groupe (> 50 pax) — vérification capacité autocar recommandée.')
-  }
-  if (input.options?.includes('hostesse')) {
-    warnings.push('Hôtesse : disponibilité à confirmer selon le prestataire.')
+  if (urgence.niveau === 'prioritaire') {
+    warnings.push(`Départ dans ${Math.max(0, urgence.diffDays)} jour(s) — majoration prioritaire +10 %.`)
   }
 
-  // 3. Calcul ligne par ligne
+  // 4. Lignes de calcul
   const lignes: LigneCalcul[] = []
   const coefficients: Record<string, number> = {}
 
-  // — Base kilométrique [MOCK MVP]
-  const baseKm = Math.round(distanceKm * TARIF_KM * 100) / 100
+  // — Base kilométrique
+  const baseKm = r2(distanceKm * TARIF_KM)
   lignes.push({
-    label: 'Transport kilométrique',
-    montant: baseKm,
-    formule: 'distance_km × tarif_km',
-    variables: { distance_km: distanceKm, tarif_km: TARIF_KM },
-    source_regle: 'Barème kilométrique MVP',
-    source_type: 'mock_mvp',
-    justification: `${distanceKm} km (référentiel distance interne MVP) × ${TARIF_KM} €/km — Hypothèse MVP : à remplacer par le barème réel NeoTravel.`,
+    label:         'Transport kilométrique',
+    montant:       baseKm,
+    formule:       'distance_km × tarif_km',
+    variables:     { distance_km: distanceKm, tarif_km: TARIF_KM },
+    source_regle:  'Barème kilométrique MVP',
+    source_type:   'mock_mvp',
+    justification: `${distanceKm} km × ${TARIF_KM} €/km. [MOCK MVP — à calibrer avec le barème réel NeoTravel]`,
   })
 
-  // — Frais de mise en route [MOCK MVP]
+  // — Frais de mise en route
   lignes.push({
-    label: 'Frais de mise en route',
-    montant: FRAIS_MISE_EN_ROUTE,
-    formule: 'forfait_fixe',
-    variables: { forfait_fixe: FRAIS_MISE_EN_ROUTE },
-    source_regle: 'Forfait mise en route MVP',
-    source_type: 'mock_mvp',
-    justification: `Forfait fixe de ${FRAIS_MISE_EN_ROUTE} € couvrant les frais administratifs et logistiques de mise en route — Hypothèse MVP.`,
+    label:         'Frais de mise en route',
+    montant:       FRAIS_MISE_EN_ROUTE,
+    formule:       'forfait_fixe',
+    variables:     { forfait: FRAIS_MISE_EN_ROUTE },
+    source_regle:  'Forfait mise en route MVP',
+    source_type:   'mock_mvp',
+    justification: `Forfait fixe ${FRAIS_MISE_EN_ROUTE} € — frais logistiques et administratifs. [MOCK MVP]`,
   })
+
+  let sousTotal = r2(baseKm + FRAIS_MISE_EN_ROUTE)
 
   // — Coefficient type de trajet
-  let coeffTrajet = 1.0
-  const typeTrajet = input.type_trajet || 'aller_simple'
-  const baseAvantCoeff = baseKm + FRAIS_MISE_EN_ROUTE
-
-  if (typeTrajet === 'aller_retour') {
-    coeffTrajet = COEFF_ALLER_RETOUR
-    coefficients['aller_retour'] = coeffTrajet
-    const surplus = Math.round(baseAvantCoeff * (COEFF_ALLER_RETOUR - 1) * 100) / 100
+  const coeffTrajet = typeTrajet === 'aller_retour' ? COEFF_ALLER_RETOUR : typeTrajet === 'circuit' ? COEFF_CIRCUIT : 1.0
+  coefficients['type_trajet'] = coeffTrajet
+  if (coeffTrajet !== 1.0) {
+    const delta = r2(sousTotal * (coeffTrajet - 1))
+    const typeLabel = typeTrajet === 'aller_retour' ? 'aller-retour' : 'circuit'
     lignes.push({
-      label: 'Supplément aller-retour',
-      montant: surplus,
-      formule: 'base × (coeff_ar - 1)',
-      variables: { base: baseAvantCoeff, coeff_ar: COEFF_ALLER_RETOUR },
-      source_regle: 'Règle aller-retour MVP',
-      source_type: 'mock_mvp',
-      justification: `Coefficient ×${COEFF_ALLER_RETOUR} appliqué sur la base — pas un simple ×2 car le retour à vide est optimisé. Hypothèse MVP.`,
+      label:         `Supplément ${typeLabel}`,
+      montant:       delta,
+      formule:       `sous_total × (coeff_trajet − 1) = ${sousTotal.toFixed(2)} × ${(coeffTrajet - 1).toFixed(2)}`,
+      variables:     { sous_total: sousTotal, coeff_trajet: coeffTrajet },
+      source_regle:  'Règle type trajet MVP',
+      source_type:   'mock_mvp',
+      justification: typeTrajet === 'aller_retour'
+        ? `Coefficient ×${COEFF_ALLER_RETOUR} — retour à vide partiellement optimisé, pas ×2. [MOCK MVP]`
+        : `Coefficient ×${COEFF_CIRCUIT} — circuit multi-étapes avec temps d'attente. [MOCK MVP]`,
     })
-  } else if (typeTrajet === 'circuit') {
-    coeffTrajet = COEFF_CIRCUIT
-    coefficients['circuit'] = coeffTrajet
-    const surplus = Math.round(baseAvantCoeff * (COEFF_CIRCUIT - 1) * 100) / 100
-    lignes.push({
-      label: 'Supplément circuit multi-étapes',
-      montant: surplus,
-      formule: 'base × (coeff_circuit - 1)',
-      variables: { base: baseAvantCoeff, coeff_circuit: COEFF_CIRCUIT },
-      source_regle: 'Règle circuit MVP',
-      source_type: 'mock_mvp',
-      justification: `Circuit avec étapes multiples — coefficient ×${COEFF_CIRCUIT} pour couvrir les temps d'attente et détours. Hypothèse MVP.`,
-    })
+    sousTotal = r2(sousTotal * coeffTrajet)
   }
 
-  // — Coefficient urgence
-  const urgenceKey = input.urgence || 'normal'
-  const coeffUrg = COEFF_URGENCE[urgenceKey] ?? 1.0
-  coefficients['urgence'] = coeffUrg
-  if (coeffUrg > 1.0) {
-    const sousTotal = baseAvantCoeff * coeffTrajet
-    const surplus = Math.round(sousTotal * (coeffUrg - 1) * 100) / 100
+  // — Ajustement capacité
+  coefficients['capacite'] = capacite.coeff
+  if (capacite.coeff !== 1.0 && !capacite.besoin_reprise) {
+    const delta = r2(sousTotal * (capacite.coeff - 1))
+    const pct   = ((capacite.coeff - 1) * 100).toFixed(0)
     lignes.push({
-      label: `Supplément urgence (${urgenceKey.replace('_', ' ')})`,
-      montant: surplus,
-      formule: 'sous_total × (coeff_urgence - 1)',
-      variables: { sous_total: sousTotal, coeff_urgence: coeffUrg },
-      source_regle: 'Règle urgence MVP',
-      source_type: 'mock_mvp',
-      justification: `Majoration de ${Math.round((coeffUrg - 1) * 100)} % pour demande urgente — mobilisation prioritaire des prestataires. Hypothèse MVP.`,
+      label:         `Ajustement capacité — ${capacite.label}`,
+      montant:       delta,
+      formule:       `sous_total × (coeff_cap − 1) = ${sousTotal.toFixed(2)} × ${(capacite.coeff - 1).toFixed(2)}`,
+      variables:     { sous_total: sousTotal, coeff_cap: capacite.coeff, nb_passagers: input.nb_passagers },
+      source_regle:  'Barème capacité NeoTravel',
+      source_type:   'regle_documentee',
+      justification: `${capacite.label} → ajustement ${delta >= 0 ? '+' : ''}${pct} % selon barème capacité NeoTravel.`,
+    })
+    sousTotal = r2(sousTotal * capacite.coeff)
+  }
+
+  // — Ajustement saisonnalité
+  coefficients['saison'] = saison.coeff
+  if (saison.coeff !== 1.0) {
+    const delta = r2(sousTotal * (saison.coeff - 1))
+    const pct   = ((saison.coeff - 1) * 100).toFixed(0)
+    lignes.push({
+      label:         `Ajustement saisonnalité — ${saison.label}`,
+      montant:       delta,
+      formule:       `sous_total × (coeff_saison − 1) = ${sousTotal.toFixed(2)} × ${(saison.coeff - 1).toFixed(2)}`,
+      variables:     { sous_total: sousTotal, coeff_saison: saison.coeff, mois: new Date(input.date_depart).getMonth() + 1 },
+      source_regle:  'Barème saisonnalité NeoTravel',
+      source_type:   'regle_documentee',
+      justification: `${saison.label} → ajustement ${delta >= 0 ? '+' : ''}${pct} % selon barème saisonnalité NeoTravel.`,
+    })
+    sousTotal = r2(sousTotal * saison.coeff)
+  }
+
+  // — Ajustement urgence (calculé depuis date_depart, pas depuis input.urgence)
+  coefficients['urgence'] = urgence.coeff
+  const deltaUrgence = r2(sousTotal * (urgence.coeff - 1))
+  if (urgence.coeff !== 1.0) {
+    const pct = ((urgence.coeff - 1) * 100).toFixed(0)
+    lignes.push({
+      label:         `Ajustement urgence — ${urgence.label}`,
+      montant:       deltaUrgence,
+      formule:       `sous_total × (coeff_urgence − 1) = ${sousTotal.toFixed(2)} × ${(urgence.coeff - 1).toFixed(2)}`,
+      variables:     { sous_total: sousTotal, coeff_urgence: urgence.coeff, jours_avant_depart: urgence.diffDays },
+      source_regle:  'Barème urgence NeoTravel',
+      source_type:   'regle_documentee',
+      justification: `${urgence.label} → ajustement ${deltaUrgence >= 0 ? '+' : ''}${pct} % selon barème urgence NeoTravel.`,
     })
   }
+  sousTotal = r2(sousTotal * urgence.coeff)
+
+  // — Marge commerciale NeoTravel (15%)
+  coefficients['marge'] = MARGE_TAUX
+  const deltaMarge = r2(sousTotal * MARGE_TAUX)
+  lignes.push({
+    label:         'Marge commerciale NeoTravel',
+    montant:       deltaMarge,
+    formule:       `sous_total × marge = ${sousTotal.toFixed(2)} × ${MARGE_TAUX}`,
+    variables:     { sous_total: sousTotal, marge: MARGE_TAUX },
+    source_regle:  'Politique tarifaire NeoTravel',
+    source_type:   'regle_documentee',
+    justification: `Marge commerciale NeoTravel de ${MARGE_TAUX * 100} % incluse dans le prix de vente.`,
+  })
+  sousTotal = r2(sousTotal * (1 + MARGE_TAUX))
 
   // — Options
+  const { jours: nbJours, nuits: nbNuits } = getNbJoursNuits(input.date_depart, input.date_retour)
+
   for (const opt of input.options ?? []) {
-    const tarif = OPTIONS_PRIX[opt]
-    if (tarif === undefined) continue
-    const montant = typeof tarif === 'function' ? tarif(input.nb_passagers) : tarif
-    if (montant > 0) {
-      const isPerPax = typeof tarif === 'function'
+    const optNorm = opt.toLowerCase().replace(/[\s_-]+/g, '_')
+
+    if (optNorm.includes('guide') || optNorm.includes('accompagnateur')) {
+      const montant = r2(OPTION_GUIDE_PAR_JOUR * nbJours)
       lignes.push({
-        label: `Option : ${opt}`,
+        label:         'Option : guide / accompagnateur',
         montant,
-        formule: isPerPax ? 'prix_par_pax × nb_passagers' : 'forfait_fixe',
-        variables: isPerPax ? { prix_par_pax: montant / input.nb_passagers, nb_passagers: input.nb_passagers } : { forfait: montant },
-        source_regle: `Tarif option ${opt} MVP`,
-        source_type: 'mock_mvp',
-        justification: isPerPax
-          ? `${montant / input.nb_passagers} €/passager × ${input.nb_passagers} passagers. Hypothèse MVP.`
-          : `Forfait fixe ${opt}. Hypothèse MVP.`,
+        formule:       `prix_jour × nb_jours = ${OPTION_GUIDE_PAR_JOUR} × ${nbJours}`,
+        variables:     { prix_jour: OPTION_GUIDE_PAR_JOUR, nb_jours: nbJours },
+        source_regle:  'Tarif option guide NeoTravel',
+        source_type:   'regle_documentee',
+        justification: `Guide/accompagnateur : ${OPTION_GUIDE_PAR_JOUR} €/jour × ${nbJours} jour(s) = ${montant} €.`,
       })
+    } else if (optNorm.includes('nuit') || (optNorm.includes('chauffeur') && !optNorm.includes('guide'))) {
+      if (nbNuits === 0) {
+        warnings.push('Option "nuit chauffeur" sélectionnée mais aucune nuit détectée (trajet en 1 jour) — non facturée. Ajoutez une date de retour si le séjour est multi-jours.')
+      } else {
+        const montant = r2(OPTION_NUIT_CHAUFFEUR * nbNuits)
+        lignes.push({
+          label:         'Option : nuit chauffeur',
+          montant,
+          formule:       `prix_nuit × nb_nuits = ${OPTION_NUIT_CHAUFFEUR} × ${nbNuits}`,
+          variables:     { prix_nuit: OPTION_NUIT_CHAUFFEUR, nb_nuits: nbNuits },
+          source_regle:  'Tarif option nuit chauffeur NeoTravel',
+          source_type:   'regle_documentee',
+          justification: `Hébergement chauffeur : ${OPTION_NUIT_CHAUFFEUR} €/nuit × ${nbNuits} nuit(s) = ${montant} €.`,
+        })
+      }
+    } else if (optNorm.includes('peage') || optNorm.includes('toll') || optNorm.includes('autoroute')) {
+      warnings.push('Option "péages" : forfait non disponible pour cette route — montant à définir avec le commercial NeoTravel.')
+      lignes.push({
+        label:         'Option : péages autoroute',
+        montant:       0,
+        formule:       'a_definir',
+        variables:     {},
+        source_regle:  'Péages NeoTravel',
+        source_type:   'a_definir',
+        justification: 'Péages autoroute : montant à confirmer selon l\'itinéraire exact. Non inclus dans ce devis indicatif.',
+      })
+    } else if (optNorm !== '') {
+      warnings.push(`Option "${opt}" non reconnue — ignorée dans le calcul.`)
     }
   }
 
-  // 4. Totaux
-  const prix_ht  = Math.round(lignes.reduce((s, l) => s + l.montant, 0) * 100) / 100
-  const tva      = Math.round(prix_ht * TVA_TAUX * 100) / 100
-  const prix_ttc = Math.round((prix_ht + tva) * 100) / 100
+  // 5. Totaux
+  const prix_ht  = r2(lignes.reduce((s, l) => s + l.montant, 0))
+  const tva      = r2(prix_ht * TVA_TAUX)
+  const prix_ttc = r2(prix_ht + tva)
 
-  // 5. Sources synthétiques
+  // Stocker distance_km pour PDF (coefficients est sauvegardé en DB)
+  coefficients['distance_km'] = distanceKm
+  coefficients['tva']         = TVA_TAUX
+
+  const duree_estimee = estimerDuree(distanceKm, typeTrajet)
+
+  // 6. Sources synthétiques
   const sources_calcul: CalculationSource[] = [
     {
-      label: 'Distance utilisée',
-      valeur: `${distanceKm} km`,
-      source_type: 'mock_mvp',
-      justification: 'Référentiel distance interne MVP — distances routières approximatives. À remplacer par l\'API Google Maps Distance Matrix ou équivalent.',
+      label:         'Distance utilisée',
+      valeur:        `${distanceKm} km`,
+      source_type:   'mock_mvp',
+      justification: 'Référentiel distance interne MVP — distances routières approximatives. À remplacer par l\'API Google Maps Distance Matrix.',
     },
     {
-      label: 'Tarif kilométrique',
-      valeur: `${TARIF_KM} €/km`,
-      source_type: 'mock_mvp',
+      label:         'Tarif kilométrique',
+      valeur:        `${TARIF_KM} €/km`,
+      source_type:   'mock_mvp',
       justification: 'Hypothèse MVP : 2,50 €/km. À calibrer avec les barèmes réels des autocaristes partenaires.',
     },
     {
-      label: 'TVA transport voyageurs',
-      valeur: `${TVA_TAUX * 100} %`,
-      source_type: 'regle_documentee',
-      justification: 'Article 279-b CGI — taux réduit de TVA à 10 % applicable aux prestations de transport de voyageurs.',
+      label:         'TVA transport voyageurs',
+      valeur:        `${TVA_TAUX * 100} %`,
+      source_type:   'regle_documentee',
+      justification: 'Article 279-b CGI — taux réduit de TVA à 10 % pour les prestations de transport de voyageurs.',
     },
     {
-      label: 'Coefficient urgence',
-      valeur: coeffUrg,
-      source_type: 'mock_mvp',
-      justification: 'Hypothèse MVP : ×1,15 (urgent), ×1,30 (très urgent). À valider avec l\'équipe commerciale NeoTravel.',
+      label:         `Saisonnalité — ${saison.label}`,
+      valeur:        `×${saison.coeff}`,
+      source_type:   'regle_documentee',
+      justification: `Barème saisonnalité NeoTravel. Mois ${new Date(input.date_depart).getMonth() + 1} → coefficient ×${saison.coeff}.`,
     },
-    ...(typeTrajet !== 'aller_simple' ? [{
-      label: `Coefficient ${typeTrajet.replace('_', '-')}`,
-      valeur: coeffTrajet,
-      source_type: 'mock_mvp' as SourceType,
-      justification: 'Hypothèse MVP — voir règle barème interne à définir.',
-    }] : []),
+    {
+      label:         `Urgence — ${urgence.label}`,
+      valeur:        `×${urgence.coeff}`,
+      source_type:   'regle_documentee',
+      justification: `Barème urgence NeoTravel. ${urgence.diffDays} jours avant départ → coefficient ×${urgence.coeff}.`,
+    },
+    {
+      label:         `Capacité — ${capacite.label}`,
+      valeur:        `×${capacite.coeff}`,
+      source_type:   'regle_documentee',
+      justification: `Barème capacité NeoTravel. ${input.nb_passagers} passager(s) → coefficient ×${capacite.coeff}.`,
+    },
+    {
+      label:         'Marge commerciale',
+      valeur:        `${MARGE_TAUX * 100} %`,
+      source_type:   'regle_documentee',
+      justification: 'Marge commerciale NeoTravel de 15 % incluse dans le prix HT.',
+    },
   ]
 
-  // 6. Explication synthétique
-  const typeLabel = { aller_simple: 'aller simple', aller_retour: 'aller-retour', circuit: 'circuit' }[typeTrajet] ?? typeTrajet
+  // 7. Explication synthétique
+  const typeLabel   = ({ aller_simple: 'aller simple', aller_retour: 'aller-retour', circuit: 'circuit' } as Record<string, string>)[typeTrajet] ?? typeTrajet
+  const baseTotal   = r2(baseKm + FRAIS_MISE_EN_ROUTE)
   const explication_calcul =
-    `Devis calculé pour un ${typeLabel} de ${input.depart} à ${input.destination} ` +
-    `(${distanceKm} km, référentiel MVP) pour ${input.nb_passagers} passager(s). ` +
-    `Base : ${distanceKm} km × ${TARIF_KM} €/km + forfait ${FRAIS_MISE_EN_ROUTE} € = ${baseAvantCoeff.toFixed(2)} € HT. ` +
-    (coeffUrg > 1 ? `Majoration urgence ×${coeffUrg}. ` : '') +
-    (coeffTrajet > 1 ? `Coefficient trajet ×${coeffTrajet}. ` : '') +
-    `Total HT : ${prix_ht} € — TVA ${TVA_TAUX * 100} % (règle documentée) : ${tva} € — ` +
-    `Total TTC : ${prix_ttc} €. ` +
-    `⚠ Ce calcul repose sur des hypothèses MVP. Les montants sont indicatifs.`
+    `Devis ${typeLabel} ${input.depart} → ${input.destination} (${distanceKm} km) pour ${input.nb_passagers} passager(s). ` +
+    `Durée estimée : ${duree_estimee}. ` +
+    `Base : ${distanceKm} km × ${TARIF_KM} €/km + ${FRAIS_MISE_EN_ROUTE} € = ${baseTotal.toFixed(2)} € HT. ` +
+    (coeffTrajet !== 1 ? `Type trajet ×${coeffTrajet}. ` : '') +
+    (capacite.coeff !== 1 && !capacite.besoin_reprise ? `Capacité ×${capacite.coeff} (${capacite.label}). ` : '') +
+    (saison.coeff !== 1 ? `Saisonnalité ×${saison.coeff} (${saison.label}). ` : '') +
+    `Urgence ×${urgence.coeff} (${urgence.label}). ` +
+    `Marge ×${(1 + MARGE_TAUX).toFixed(2)}. ` +
+    `Total HT : ${prix_ht.toFixed(2)} € — TVA 10 % (Art.279-b CGI) : ${tva.toFixed(2)} € — TTC : ${prix_ttc.toFixed(2)} €.` +
+    (besoin_reprise_humaine ? ` ⚠ Reprise humaine nécessaire : ${raison_reprise_humaine}` : '') +
+    ` ⚠ Valeurs MOCK MVP indicatives — à valider avec NeoTravel.`
 
   return {
-    success: true,
+    success:                true,
     prix_ht,
     tva,
     prix_ttc,
-    lignes_calcul: lignes,
+    distance_km:            distanceKm,
+    duree_estimee,
+    lignes_calcul:          lignes,
     coefficients,
     warnings,
     besoin_reprise_humaine,

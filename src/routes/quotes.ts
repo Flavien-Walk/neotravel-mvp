@@ -205,11 +205,13 @@ router.post('/calculate', requireAuth, async (req: AuthRequest, res: Response) =
 
     res.status(201).json({
       ...quote.toObject(),
-      warnings: result.warnings,
+      distance_km:            result.distance_km,
+      duree_estimee:          result.duree_estimee,
+      warnings:               result.warnings,
       besoin_reprise_humaine: result.besoin_reprise_humaine,
       raison_reprise_humaine: result.raison_reprise_humaine,
-      sources_calcul: result.sources_calcul,
-      explication_calcul: result.explication_calcul,
+      sources_calcul:         result.sources_calcul,
+      explication_calcul:     result.explication_calcul,
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur sauvegarde devis', error: String(err) })
@@ -314,7 +316,10 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
     const ht  = quote.prix_final_ht  || quote.prix_ht
     const ttc = quote.prix_final_ttc || quote.prix_ttc
     const tva = Math.round((ttc - ht) * 100) / 100
-    const validite = (quote.coefficients as Record<string, number>)?.validite_jours || 30
+    const coeffs = quote.coefficients as unknown as Record<string, number>
+    const validite    = coeffs?.validite_jours || 30
+    const distanceKm  = coeffs?.distance_km || null
+    const tvaTaux     = coeffs?.tva ?? 0.10
     const isManual = quote.source === 'manuel_commercial'
     const devisNum = `DEV-${String(quote._id).slice(-8).toUpperCase()}`
     const dateStr  = new Date(quote.createdAt).toLocaleDateString('fr-FR')
@@ -356,7 +361,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
        .text(`${lead.depart} → ${lead.destination}`, 300, doc.y + 4)
     doc.fontSize(9).font('Helvetica').fillColor('#475569')
        .text(`Départ : ${lead.date_depart}${lead.date_retour ? `  •  Retour : ${lead.date_retour}` : ''}`, 300)
-       .text(`${lead.nb_passagers} passager(s) — ${lead.type_trajet.replace('_', ' ')}`, 300)
+       .text(`${lead.nb_passagers} passager(s) — ${lead.type_trajet.replace('_', ' ')}${distanceKm ? ` — ${distanceKm} km` : ''}`, 300)
 
     doc.y = Math.max(doc.y, 220) + 20
     doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E2E8F0').lineWidth(0.5).stroke()
@@ -388,7 +393,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
     doc.moveTo(300, doc.y).lineTo(545, doc.y).strokeColor('#CBD5E1').lineWidth(0.5).stroke()
     doc.y += 8
 
-    const remise = (quote.coefficients as Record<string, number>)?.remise_pct || 0
+    const remise = coeffs?.remise_pct || 0
 
     function totalRow(label: string, value: string, bold = false, highlight = false) {
       doc.fontSize(9)
@@ -401,7 +406,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res: Response) => {
 
     totalRow('Total HT', `${ht.toFixed(2)} €`)
     if (remise > 0) totalRow(`Remise (${remise}%)`, `incluse`, false)
-    totalRow('TVA (20%)', `${tva.toFixed(2)} €`)
+    totalRow(`TVA (${Math.round(tvaTaux * 100)} %)`, `${tva.toFixed(2)} €`)
     doc.y += 4
     doc.moveTo(300, doc.y).lineTo(545, doc.y).strokeColor('#1E3A5F').lineWidth(1).stroke()
     doc.y += 8
