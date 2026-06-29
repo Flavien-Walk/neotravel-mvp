@@ -16,33 +16,39 @@ const EASE = [0.21, 0.47, 0.32, 0.98] as const
 
 // Client-facing status labels (reassuring, no jargon)
 const CLIENT_LABELS: Record<LeadStatus, string> = {
-  nouveau:         'Demande reçue',
-  incomplet:       'Informations manquantes',
-  qualifie:        'Qualification en cours',
-  devis_genere:    'Devis en cours de préparation',
-  devis_envoye:    'Devis disponible',
-  relance_1:       'Devis disponible',
-  relance_2:       'Devis disponible',
-  accepte:         'Demande acceptée ✓',
-  refuse:          'Demande non retenue',
-  cloture:         'Dossier clôturé',
-  cas_complexe:    'Suivi personnalisé',
-  reprise_humaine: 'Suivi par un conseiller',
+  nouveau:               'Demande reçue',
+  incomplet:             'Informations manquantes',
+  qualifie:              'Qualification en cours',
+  devis_genere:          'Devis en cours de préparation',
+  en_attente_validation: 'Devis en cours de validation',
+  devis_valide:          'Devis validé',
+  devis_envoye:          'Devis disponible',
+  relance_1:             'Devis disponible',
+  relance_2:             'Devis disponible',
+  accepte:               'Demande acceptée ✓',
+  refuse:                'Demande non retenue',
+  cloture:               'Dossier clôturé',
+  cas_complexe:          'Suivi personnalisé',
+  reprise_humaine:       'Suivi par un conseiller',
+  erreur_envoi:          'En cours de traitement',
 }
 
 const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string; border: string }> = {
-  nouveau:         { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  incomplet:       { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
-  qualifie:        { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  devis_genere:    { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  devis_envoye:    { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  relance_1:       { color: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
-  relance_2:       { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
-  accepte:         { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-  refuse:          { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
-  cloture:         { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
-  cas_complexe:    { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-  reprise_humaine: { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  nouveau:               { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  incomplet:             { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
+  qualifie:              { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  devis_genere:          { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  en_attente_validation: { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  devis_valide:          { color: '#0F766E', bg: '#F0FDFA', border: '#99F6E4' },
+  devis_envoye:          { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  relance_1:             { color: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
+  relance_2:             { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  accepte:               { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  refuse:                { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  cloture:               { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  cas_complexe:          { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  reprise_humaine:       { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
+  erreur_envoi:          { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
 }
 
 interface TimelineStep {
@@ -61,16 +67,16 @@ const TIMELINE: TimelineStep[] = [
 ]
 
 function getTimelineIndex(statut: LeadStatus): number {
-  if (['nouveau', 'incomplet'].includes(statut)) return 0
-  if (statut === 'qualifie')                      return 1
-  if (statut === 'devis_genere')                  return 2
-  if (['devis_envoye', 'relance_1', 'relance_2'].includes(statut)) return 3
-  if (['accepte', 'refuse', 'cloture'].includes(statut))           return 4
-  return 0 // cas_complexe / reprise_humaine — shown specially
+  if (['nouveau', 'incomplet'].includes(statut))                          return 0
+  if (statut === 'qualifie')                                              return 1
+  if (['devis_genere', 'en_attente_validation', 'devis_valide'].includes(statut)) return 2
+  if (['devis_envoye', 'relance_1', 'relance_2'].includes(statut))        return 3
+  if (['accepte', 'refuse', 'cloture'].includes(statut))                  return 4
+  return 0
 }
 
 function isSpecial(statut: LeadStatus): boolean {
-  return ['cas_complexe', 'reprise_humaine'].includes(statut)
+  return ['cas_complexe', 'reprise_humaine', 'erreur_envoi'].includes(statut)
 }
 
 function LeadCard({ lead, index }: { lead: Lead; index: number }) {

@@ -68,6 +68,9 @@ export const api = {
     update: (id: string, data: { ajustement_manuel_ht: number; raison_ajustement?: string }) =>
       request(`/api/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
+    approve: (id: string) =>
+      request(`/api/quotes/${id}/approve`, { method: 'POST' }),
+
     send: (id: string) =>
       request(`/api/quotes/${id}/send`, { method: 'POST' }),
 

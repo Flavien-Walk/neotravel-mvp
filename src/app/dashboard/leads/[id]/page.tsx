@@ -9,6 +9,7 @@ import {
   CheckCircle, Activity, MapPin, Users, Calendar,
   Send, Mail, AlertTriangle, XCircle, X, Edit2, Save,
   Info, ChevronDown, ChevronUp, Euro, Download, FileText,
+  ShieldCheck, Clock,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul } from '@/types'
@@ -17,8 +18,10 @@ import UrgencyBadge from '@/components/UrgencyBadge'
 import ManualQuoteModal from '@/components/ManualQuoteModal'
 
 const STATUS_OPTIONS: LeadStatus[] = [
-  'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
-  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'reprise_humaine', 'cloture',
+  'nouveau', 'incomplet', 'qualifie',
+  'devis_genere', 'en_attente_validation', 'devis_valide', 'devis_envoye',
+  'relance_1', 'relance_2', 'accepte', 'refuse',
+  'cas_complexe', 'reprise_humaine', 'erreur_envoi', 'cloture',
 ]
 
 const LOG_STATUS: Record<string, { dot: string; text: string }> = {
@@ -67,6 +70,7 @@ export default function DashboardLeadDetailPage() {
   const [logs, setLogs]       = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [calculating, setCalc]    = useState(false)
+  const [approving, setApproving] = useState(false)
   const [sending, setSending]     = useState(false)
   const [reminding, setRemind]    = useState(false)
   const [editingQuote, setEditQ]  = useState(false)
@@ -138,6 +142,19 @@ export default function DashboardLeadDetailPage() {
       flash((e as Error).message || 'Erreur modification devis', false)
     }
     setSavingAdj(false)
+  }
+
+  async function approveQuote() {
+    if (!quote) return
+    setApproving(true)
+    try {
+      await api.quotes.approve(quote._id)
+      await fetchAll()
+      flash('Devis approuvé — n8n va déclencher l\'envoi au client.', true)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur approbation devis', false)
+    }
+    setApproving(false)
   }
 
   async function sendQuote() {
@@ -231,7 +248,8 @@ export default function DashboardLeadDetailPage() {
 
   if (!lead) return null
 
-  const canSend    = quote && ['devis_genere'].includes(lead.statut)
+  const canApprove = quote && quote.statut_devis === 'pending_human_validation'
+  const canSend    = quote && quote.statut_devis === 'approved'
   const canRemind  = quote && ['devis_envoye', 'relance_1'].includes(lead.statut)
   const finalTtc   = quote ? (quote.prix_final_ttc || quote.prix_ttc) : 0
   const finalHt    = quote ? (quote.prix_final_ht  || quote.prix_ht)  : 0
@@ -416,6 +434,17 @@ export default function DashboardLeadDetailPage() {
                     >
                       <Edit2 className="w-3.5 h-3.5" /> Ajuster
                     </button>
+                    {canApprove && (
+                      <button
+                        onClick={approveQuote}
+                        disabled={approving}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                        style={{ background: '#7E22CE', color: '#fff' }}
+                      >
+                        {approving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        {approving ? 'Approbation…' : 'Approuver'}
+                      </button>
+                    )}
                     {canSend && (
                       <button
                         onClick={sendQuote}
@@ -455,6 +484,37 @@ export default function DashboardLeadDetailPage() {
 
             {quote && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {/* Bandeau validation humaine */}
+                {quote.statut_devis === 'pending_human_validation' && (
+                  <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                    style={{ background: '#FDF4FF', border: '1px solid #E9D5FF' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#7E22CE' }}>
+                      <Clock className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-medium">En attente de validation humaine</span>
+                    </div>
+                    <button
+                      onClick={approveQuote}
+                      disabled={approving}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all flex-shrink-0"
+                      style={{ background: '#7E22CE', color: '#fff' }}
+                    >
+                      {approving
+                        ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        : <ShieldCheck className="w-3.5 h-3.5" />}
+                      {approving ? 'Approbation…' : 'Approuver le devis'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Bandeau devis approuvé — n8n en cours */}
+                {quote.statut_devis === 'approved' && (
+                  <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
+                    <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                    <span><strong>Devis approuvé.</strong> n8n va déclencher l&apos;envoi au client.</span>
+                  </div>
+                )}
+
                 {/* Warnings */}
                 {quote.warnings?.length > 0 && (
                   <div className="mb-4 space-y-1.5">
@@ -721,6 +781,17 @@ export default function DashboardLeadDetailPage() {
                     Créer devis manuel
                   </button>
                 </>
+              )}
+              {canApprove && (
+                <button
+                  onClick={approveQuote}
+                  disabled={approving}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-semibold transition-all"
+                  style={{ background: '#7E22CE', color: '#fff' }}
+                >
+                  {approving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  {approving ? 'Approbation…' : 'Approuver le devis'}
+                </button>
               )}
               {canSend && (
                 <button
