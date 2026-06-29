@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { flushSync } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -101,8 +100,6 @@ export default function AIAssistantChat() {
   const chatRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const typerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: GREETING },
   ])
@@ -124,10 +121,6 @@ export default function AIAssistantChat() {
     }
   }, [messages])
 
-  useEffect(() => {
-    return () => { if (typerRef.current) clearInterval(typerRef.current) }
-  }, [])
-
   const filledCount = REQUIRED_FIELDS.filter(k => {
     const v = fields[k]
     return v !== null && v !== undefined && v !== ''
@@ -148,62 +141,88 @@ export default function AIAssistantChat() {
       const res = await fetch('/api/ai/quote-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          currentFields: fields,
-        }),
+        body: JSON.stringify({ messages: newMessages, currentFields: fields }),
       })
 
-      if (!res.ok) throw new Error('Erreur serveur')
-      const data: AIResponse = await res.json()
+      if (!res.ok || !res.body) throw new Error('Erreur serveur')
 
-      if (data.unavailable) setUnavailable(true)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let streamStarted = false
 
-      // Typewriter effect — reveals the message progressively
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-      const text = data.message
-      const charsPerTick = Math.max(1, Math.ceil(text.length / 40))
-      let idx = 0
-      if (typerRef.current) clearInterval(typerRef.current)
-      typerRef.current = setInterval(() => {
-        idx = Math.min(idx + charsPerTick, text.length)
-        flushSync(() => {
-          setMessages(prev => {
-            const updated = [...prev]
-            updated[updated.length - 1] = { role: 'assistant', content: text.slice(0, idx) }
-            return updated
-          })
-        })
-        if (idx >= text.length) {
-          clearInterval(typerRef.current!)
-          typerRef.current = null
-        }
-      }, 30)
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-      if (data.extractedFields) {
-        setFields(prev => {
-          const merged = { ...prev }
-          for (const [k, v] of Object.entries(data.extractedFields)) {
-            if (v !== null && v !== undefined && v !== '') {
-              (merged as Record<string, unknown>)[k] = v
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          let event: { t?: string; done?: boolean; result?: AIResponse }
+          try { event = JSON.parse(line.slice(6)) } catch { continue }
+
+          if (event.t) {
+            // Token réel d'Anthropic : afficher en temps réel
+            if (!streamStarted) {
+              streamStarted = true
+              setLoading(false)
+              setMessages(prev => [...prev, { role: 'assistant', content: event.t! }])
+            } else {
+              setMessages(prev => {
+                const updated = [...prev]
+                updated[updated.length - 1] = {
+                  role: 'assistant',
+                  content: updated[updated.length - 1].content + event.t,
+                }
+                return updated
+              })
             }
+          } else if (event.done && event.result) {
+            // Fin du stream : mise à jour du message final + champs structurés
+            const data = event.result
+            if (!streamStarted) {
+              setLoading(false)
+              setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+            } else {
+              setMessages(prev => {
+                const updated = [...prev]
+                updated[updated.length - 1] = { role: 'assistant', content: data.message }
+                return updated
+              })
+            }
+
+            if (data.unavailable) setUnavailable(true)
+
+            if (data.extractedFields) {
+              setFields(prev => {
+                const merged = { ...prev }
+                for (const [k, v] of Object.entries(data.extractedFields)) {
+                  if (v !== null && v !== undefined && v !== '') {
+                    (merged as Record<string, unknown>)[k] = v
+                  }
+                }
+                return merged
+              })
+            }
+
+            setMissingFields(data.missingFields ?? [])
+            setConfidence(data.confidence ?? 0)
+            setIsComplete(data.isComplete ?? false)
+            setHitl({ needed: data.besoin_reprise_humaine ?? false, raison: data.raison_reprise ?? null })
+
+            const villes = data.villes ?? {}
+            const warnings: string[] = []
+            if (villes.depart_status === 'ambigu') warnings.push('Ville de départ ambiguë')
+            if (villes.depart_status === 'inconnu') warnings.push('Ville de départ non reconnue')
+            if (villes.destination_status === 'ambigu') warnings.push('Ville de destination ambiguë')
+            if (villes.destination_status === 'inconnu') warnings.push('Ville de destination non reconnue')
+            setVilleWarning(warnings.length > 0 ? warnings.join(' · ') : null)
           }
-          return merged
-        })
+        }
       }
-
-      setMissingFields(data.missingFields ?? [])
-      setConfidence(data.confidence ?? 0)
-      setIsComplete(data.isComplete ?? false)
-      setHitl({ needed: data.besoin_reprise_humaine ?? false, raison: data.raison_reprise ?? null })
-
-      const villes = data.villes ?? {}
-      const warnings: string[] = []
-      if (villes.depart_status === 'ambigu') warnings.push('Ville de départ ambiguë')
-      if (villes.depart_status === 'inconnu') warnings.push('Ville de départ non reconnue')
-      if (villes.destination_status === 'ambigu') warnings.push('Ville de destination ambiguë')
-      if (villes.destination_status === 'inconnu') warnings.push('Ville de destination non reconnue')
-      setVilleWarning(warnings.length > 0 ? warnings.join(' · ') : null)
     } catch {
       setError("Impossible de contacter l'assistant. Vérifiez votre connexion et réessayez.")
     }
@@ -243,7 +262,6 @@ export default function AIAssistantChat() {
   }
 
   function reset() {
-    if (typerRef.current) { clearInterval(typerRef.current); typerRef.current = null }
     setMessages([{ role: 'assistant', content: GREETING }])
     setInput('')
     setFields({})
