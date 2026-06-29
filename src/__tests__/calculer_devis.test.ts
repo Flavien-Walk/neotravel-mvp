@@ -182,17 +182,17 @@ describe('Urgence (calculée depuis date)', () => {
     assert.strictEqual(res.coefficients['urgence'], 1.10)
   })
 
-  it('Urgent — départ dans 3 jours → +5% (coeff 1.05)', () => {
+  it('Urgent — départ dans 20 jours → +5% (coeff 1.05)', () => {
     const today = '2026-03-10'
-    const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-03-13', nb_passagers: 30, type_trajet: 'aller_simple' }, today))
+    const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-03-30', nb_passagers: 30, type_trajet: 'aller_simple' }, today))
     assert.strictEqual(res.coefficients['urgence'], 1.05)
     const u = res.lignes_calcul.find(l => l.label.includes('urgence'))
     assert.ok(u && u.montant > 0, 'Urgence urgent doit être positive')
   })
 
-  it('Normal — départ dans 30 jours → −5% (coeff 0.95)', () => {
+  it('Normal — départ dans 60 jours → −5% (coeff 0.95)', () => {
     const today = '2026-01-01'
-    const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-01-31', nb_passagers: 30, type_trajet: 'aller_simple' }, today))
+    const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-03-02', nb_passagers: 30, type_trajet: 'aller_simple' }, today))
     assert.strictEqual(res.coefficients['urgence'], 0.95)
     const u = res.lignes_calcul.find(l => l.label.includes('urgence'))
     assert.ok(u && u.montant < 0, 'Urgence normal doit être négative (réduction)')
@@ -387,24 +387,24 @@ describe('Cas métier intégration', () => {
 
   it('Paris → Lyon, 50 pax, aller-retour, mars (haute), normal (73j)', () => {
     // today = 2026-01-01, depart = 2026-03-15 → 73 jours → normal (0.95)
-    // saison mars → 1.10, capacite 50 pax → 1.00, type_trajet AR → 1.80
+    // saison mars → 1.10, capacite 50 pax → 1.00, type_trajet AR → 2.00
     const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-03-15', nb_passagers: 50, type_trajet: 'aller_retour' }, TODAY))
     assert.strictEqual(res.distance_km, DIST_PARIS_LYON)
     assert.strictEqual(res.coefficients['saison'],     1.10)
     assert.strictEqual(res.coefficients['urgence'],    0.95)
     assert.strictEqual(res.coefficients['capacite'],   1.00)
-    assert.strictEqual(res.coefficients['type_trajet'],1.80)
+    assert.strictEqual(res.coefficients['type_trajet'],2.00)
     assert.strictEqual(res.coefficients['marge'],      0.15)
     assert.ok(!res.besoin_reprise_humaine)
 
     // Vérification arithmétique complète
-    // base = 465×2.50 = 1162.50, frais = 80 → S0=1242.50
-    // AR: S1 = 1242.50×1.80 = 2236.50, delta = 994.00
-    // cap=1.00: S2=2236.50
-    // saison: delta = 2236.50×0.10 = 223.65, S3=2460.15
-    // urgence: delta = 2460.15×(-0.05) = -123.01 (arrondi), S4=2337.14
-    // marge: delta = 2337.14×0.15 = 350.57, S5=2687.71
-    assert.ok(Math.abs(res.prix_ht - 2687.71) < 0.05, `prix_ht attendu ~2687.71, obtenu ${res.prix_ht}`)
+    // base = (465×2)×2.50 = 2325.00 (>180km formule)
+    // AR: S1 = 2325×2.00 = 4650.00, delta = 2325.00
+    // cap=1.00: S2=4650.00
+    // saison: delta = 4650.00×0.10 = 465.00, S3=5115.00
+    // urgence: delta = 5115.00×(-0.05) = -255.75, S4=4859.25
+    // marge: delta = 4859.25×0.15 = 728.89, S5=5588.14
+    assert.ok(Math.abs(res.prix_ht - 5588.14) < 0.05, `prix_ht attendu ~5588.14, obtenu ${res.prix_ht}`)
     const expectedTtc = r2(res.prix_ht * 1.10)
     assert.ok(Math.abs(res.prix_ttc - expectedTtc) < 0.02)
   })
@@ -424,7 +424,7 @@ describe('Cas métier intégration', () => {
   })
 
   it('Paris → Lyon, 60 pax, très haute saison, urgent', () => {
-    const today = '2026-05-28'
+    const today = '2026-05-10'
     const res = ok(calculer_devis({ ...PARIS_LYON, date_depart: '2026-06-01', nb_passagers: 60, type_trajet: 'aller_simple' }, today))
     assert.strictEqual(res.coefficients['capacite'], 1.15)
     assert.strictEqual(res.coefficients['saison'],   1.15)
