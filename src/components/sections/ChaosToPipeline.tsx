@@ -1,18 +1,12 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
+import Image from 'next/image'
 import {
   Inbox, Phone, MessageSquare, BellOff, FileSpreadsheet,
   ArrowRight,
 } from 'lucide-react'
-import {
-  Tray,
-  NavigationArrow,
-  CurrencyEur,
-  PaperPlaneTilt,
-  BellSimpleRinging,
-  SealCheck,
-} from '@phosphor-icons/react'
+import { SealCheck } from '@phosphor-icons/react'
 import Link from 'next/link'
 
 const CHAOS = [
@@ -24,11 +18,11 @@ const CHAOS = [
 ]
 
 const PIPELINE = [
-  { Icon: Tray,                label: 'Demande centralisée', color: '#60A5FA' },
-  { Icon: NavigationArrow,     label: 'Trajet qualifié',      color: '#A78BFA' },
-  { Icon: CurrencyEur,         label: 'Prix calculé',          color: '#4ADE80' },
-  { Icon: PaperPlaneTilt,      label: 'Devis envoyé',          color: '#38BDF8' },
-  { Icon: BellSimpleRinging,   label: 'Suivi automatique',     color: '#FCD34D' },
+  { img: '/images/neotravel/demande-centralise.png', label: 'Demande centralisée', color: '#60A5FA' },
+  { img: '/images/neotravel/trajet-qualifie.png',    label: 'Trajet qualifié',      color: '#A78BFA' },
+  { img: '/images/neotravel/prix-calcule.png',       label: 'Prix calculé',          color: '#4ADE80' },
+  { img: '/images/neotravel/devis-envoye.png',       label: 'Devis envoyé',          color: '#38BDF8' },
+  { img: '/images/neotravel/suivie-automatique.png', label: 'Suivi automatique',     color: '#FCD34D' },
 ]
 
 function lerp(from: number, to: number, p: number, pFrom: number, pTo: number): number {
@@ -231,13 +225,13 @@ export default function ChaosToPipeline() {
                 <div className="relative flex flex-col gap-2.5" style={{ width: 330 }}>
                   <div
                     className="absolute z-0 pointer-events-none"
-                    style={{ left: 26, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
+                    style={{ left: 36, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
                   />
-                  {PIPELINE.map(({ Icon, label, color }, i) => (
+                  {PIPELINE.map(({ img, label, color }, i) => (
                     <div
                       key={label}
                       ref={el => { pipeItems.current[i] = el }}
-                      className="relative z-10 flex items-center gap-3 px-4 py-2.5 rounded-2xl"
+                      className="relative z-10 flex items-center gap-3 px-4 py-2 rounded-2xl"
                       style={{
                         opacity:    0,
                         background: 'rgba(255,255,255,0.05)',
@@ -246,11 +240,8 @@ export default function ChaosToPipeline() {
                         backdropFilter: 'blur(8px)',
                       }}
                     >
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color}18`, border: `1px solid ${color}30` }}
-                      >
-                        <Icon weight="duotone" className="w-4 h-4" style={{ color }} />
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" />
                       </div>
                       <span className="text-sm font-medium text-white/85">{label}</span>
                       <SealCheck weight="duotone" className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}90` }} />
@@ -358,10 +349,10 @@ export default function ChaosToPipeline() {
               Avec NeoTravel ✓
             </div>
             <div className="space-y-2">
-              {PIPELINE.map(({ Icon, label, color }) => (
+              {PIPELINE.map(({ img, label, color }) => (
                 <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}18` }}>
-                    <Icon weight="duotone" className="w-3 h-3" style={{ color }} />
+                  <div className="w-8 h-8 flex-shrink-0">
+                    <Image src={img} alt={label} width={32} height={32} className="w-full h-full object-contain" />
                   </div>
                   <span className="text-xs font-medium text-white/80">{label}</span>
                   <SealCheck weight="duotone" className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
