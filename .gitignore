@@ -34,3 +34,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 dist/
+
+# graphify
+graphify-out/graph.html
+graphify-out/.graphify_analysis.json
