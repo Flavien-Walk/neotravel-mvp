@@ -17,7 +17,7 @@ export interface ILead extends Document {
   nom: string
   societe?: string
   email: string
-  telephone: string
+  telephone?: string
   depart: string
   destination: string
   date_depart: string
@@ -40,7 +40,7 @@ const leadSchema = new Schema<ILead>(
     nom:          { type: String, required: true, trim: true },
     societe:      { type: String, trim: true },
     email:        { type: String, required: true, trim: true, lowercase: true },
-    telephone:    { type: String, required: true, trim: true },
+    telephone:    { type: String, required: false, trim: true, default: '' },
     depart:       { type: String, required: true, trim: true },
     destination:  { type: String, required: true, trim: true },
     date_depart:  { type: String, required: true },
@@ -59,7 +59,7 @@ const leadSchema = new Schema<ILead>(
 )
 
 function computeScore(lead: Partial<ILead>): number {
-  const champs = ['nom', 'email', 'telephone', 'depart', 'destination', 'date_depart', 'nb_passagers', 'type_trajet', 'urgence']
+  const champs = ['nom', 'email', 'depart', 'destination', 'date_depart', 'nb_passagers', 'type_trajet', 'urgence']
   const bonus  = ['societe', 'date_retour', 'commentaire']
   const base  = champs.filter(c => !!(lead as Record<string, unknown>)[c]).length / champs.length * 80
   const extra = bonus.filter(c  => !!(lead as Record<string, unknown>)[c]).length / bonus.length * 20
