@@ -191,24 +191,28 @@ export default function AIAssistantChat() {
     setSubmitting(true)
     setError(null)
     try {
-      await api.leads.create({
+      const payload: Record<string, unknown> = {
         nom:          fields.nom ?? '',
         email:        fields.email ?? '',
         telephone:    fields.telephone ?? '',
-        societe:      fields.societe ?? '',
         depart:       fields.depart ?? '',
         destination:  fields.destination ?? '',
         date_depart:  fields.date_depart ?? '',
-        date_retour:  fields.date_retour ?? '',
-        nb_passagers: Number(fields.nb_passagers) || 0,
+        nb_passagers: Number(fields.nb_passagers) || 1,
         type_trajet:  fields.type_trajet || 'aller_simple',
         urgence:      (fields.urgence === 'prioritaire' ? 'tres_urgent' : fields.urgence) || 'normal',
         options:      Array.isArray(fields.options) ? fields.options : [],
-        commentaire:  fields.commentaire ?? '',
-      })
+      }
+      // Champs optionnels : n'envoyer que s'ils ont une vraie valeur
+      if (fields.societe)     payload.societe     = fields.societe
+      if (fields.date_retour) payload.date_retour = fields.date_retour
+      if (fields.commentaire) payload.commentaire = fields.commentaire
+
+      await api.leads.create(payload)
       router.push('/merci')
-    } catch {
-      setError("Erreur lors de l'envoi. Veuillez réessayer.")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi."
+      setError(msg)
       setSubmitting(false)
     }
   }

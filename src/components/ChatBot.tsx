@@ -83,9 +83,33 @@ export default function ChatBot() {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      await api.leads.create({ ...formData, nb_passagers: parseInt(formData.nb_passagers) || 0, options: typeof formData.options === 'string' ? (formData.options as string).split(',').filter(Boolean) : formData.options })
+      const resolvedOptions = typeof formData.options === 'string'
+        ? (formData.options as string).split(',').filter(Boolean)
+        : formData.options
+
+      const payload: Record<string, unknown> = {
+        nom:          formData.nom,
+        email:        formData.email,
+        telephone:    formData.telephone,
+        depart:       formData.depart,
+        destination:  formData.destination,
+        date_depart:  formData.date_depart,
+        nb_passagers: parseInt(formData.nb_passagers) || 1,
+        type_trajet:  formData.type_trajet || 'aller_simple',
+        urgence:      formData.urgence || 'normal',
+        options:      resolvedOptions,
+      }
+      if (formData.societe)     payload.societe     = formData.societe
+      if (formData.date_retour) payload.date_retour = formData.date_retour
+      if (formData.commentaire) payload.commentaire = formData.commentaire
+
+      await api.leads.create(payload)
       router.push('/merci')
-    } catch { setError('Erreur lors de l\'envoi. Veuillez réessayer.'); setIsSubmitting(false) }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi."
+      setError(msg)
+      setIsSubmitting(false)
+    }
   }
 
   if (showSummary) {
