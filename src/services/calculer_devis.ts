@@ -4,15 +4,15 @@
  * RÈGLE ABSOLUE : Cette fonction ne dépend d'aucun LLM.
  * "L'agent collecte et orchestre, le code calcule."
  *
- * Barème de base [MOCK MVP] — source_type "mock_mvp".
+ * Barème : grille tarifaire fixe (≤180 km) ou (KM×2)×2.50€ (>180 km) — source_type "regle_documentee".
  * Règles documentées (TVA, saisonnalité, urgence, capacité, marge) — source_type "regle_documentee".
  *
  * Ordre de calcul :
- *   base_km + frais_mise_en_route
- *   → × coeff_type_trajet
+ *   prix_base (grille ou formule >180km)
+ *   → × coeff_type_trajet (aller-retour = ×2)
  *   → × coeff_capacite
  *   → × coeff_saisonnalite
- *   → × coeff_urgence (calculé depuis date_depart, non depuis input.urgence)
+ *   → × coeff_urgence (calculé depuis date_depart : ≤14j/15-30j/31-90j/>90j)
  *   → × (1 + MARGE_TAUX)
  *   → + options (guide, nuit chauffeur, péages)
  *   = prix_ht → + TVA 10% = prix_ttc
@@ -74,16 +74,40 @@ export interface DevisError {
 
 // ─── Constantes tarifaires ────────────────────────────────────────────────────
 
-const TARIF_KM            = 2.50   // €/km [MOCK MVP — calibrer avec barème réel]
-const FRAIS_MISE_EN_ROUTE = 80     // € forfait fixe [MOCK MVP]
 const TVA_TAUX            = 0.10   // 10 % — Article 279-b CGI
 const MARGE_TAUX          = 0.15   // 15 % — Politique tarifaire NeoTravel
 
-const COEFF_ALLER_RETOUR  = 1.80   // [MOCK MVP] — pas ×2 : retour à vide optimisé
+const COEFF_ALLER_RETOUR  = 2.00   // Règle NeoTravel : prix simple × 2
 const COEFF_CIRCUIT       = 2.20   // [MOCK MVP] — circuit multi-étapes
 
 const OPTION_GUIDE_PAR_JOUR = 80   // €/jour — Tarif guide/accompagnateur NeoTravel
 const OPTION_NUIT_CHAUFFEUR = 120  // €/nuit — Hébergement chauffeur NeoTravel
+
+const TARIF_KM_HORS_GRILLE = 2.50  // €/km pour distances > 180 km
+
+// ─── Grille tarifaire transfert simple (≤ 180 km) ────────────────────────────
+const TARIF_GRILLE: { maxKm: number; prix: number }[] = [
+  { maxKm: 10,  prix: 250 },
+  { maxKm: 20,  prix: 250 },
+  { maxKm: 30,  prix: 250 },
+  { maxKm: 40,  prix: 320 },
+  { maxKm: 50,  prix: 350 },
+  { maxKm: 60,  prix: 390 },
+  { maxKm: 70,  prix: 430 },
+  { maxKm: 80,  prix: 500 },
+  { maxKm: 90,  prix: 540 },
+  { maxKm: 100, prix: 580 },
+  { maxKm: 110, prix: 620 },
+  { maxKm: 120, prix: 660 },
+  { maxKm: 130, prix: 700 },
+  { maxKm: 140, prix: 740 },
+  { maxKm: 150, prix: 780 },
+  { maxKm: 160, prix: 820 },
+  { maxKm: 170, prix: 860 },
+  { maxKm: 180, prix: 900 },
+]
+
+// getPrixBase défini après r2() — voir section Utilitaires
 
 // ─── Table de distances routières [MOCK MVP] ──────────────────────────────────
 const DISTANCES_KM: Record<string, number> = {
@@ -189,9 +213,9 @@ function getUrgence(date_depart: string, todayISO?: string): UrgenceInfo {
   dep.setHours(0, 0, 0, 0)
   const diffDays = Math.floor((dep.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (diffDays < 2)   return { niveau: 'prioritaire',  coeff: 1.10, diffDays, label: `Prioritaire — départ dans ${Math.max(0, diffDays)}j (<2j)` }
-  if (diffDays <= 7)  return { niveau: 'urgent',        coeff: 1.05, diffDays, label: `Urgent — départ dans ${diffDays}j (2–7j)` }
-  if (diffDays <= 90) return { niveau: 'normal',        coeff: 0.95, diffDays, label: `Normal — départ dans ${diffDays}j (8–90j)` }
+  if (diffDays <= 14) return { niveau: 'prioritaire',  coeff: 1.10, diffDays, label: `Prioritaire — départ dans ${Math.max(0, diffDays)}j (≤14j)` }
+  if (diffDays <= 30) return { niveau: 'urgent',        coeff: 1.05, diffDays, label: `Urgent — départ dans ${diffDays}j (15–30j)` }
+  if (diffDays <= 90) return { niveau: 'normal',        coeff: 0.95, diffDays, label: `Normal — départ dans ${diffDays}j (31–90j)` }
   return               { niveau: 'anticipation',        coeff: 0.90, diffDays, label: `Anticipation — départ dans ${diffDays}j (>90j)` }
 }
 
@@ -228,6 +252,24 @@ function getDistance(depart: string, destination: string): number | null {
 
 function r2(n: number): number {
   return Math.round(n * 100) / 100
+}
+
+function getPrixBase(distanceKm: number): { prix: number; formule: string; source_type: SourceType } {
+  const entry = TARIF_GRILLE.find(t => distanceKm <= t.maxKm)
+  if (entry) {
+    return {
+      prix: entry.prix,
+      formule: `grille_tarifaire[≤${entry.maxKm}km]`,
+      source_type: 'regle_documentee',
+    }
+  }
+  // > 180 km : (KM × 2) × 2.50 €/km
+  const prix = r2(distanceKm * 2 * TARIF_KM_HORS_GRILLE)
+  return {
+    prix,
+    formule: `(${distanceKm} × 2) × ${TARIF_KM_HORS_GRILLE} €/km`,
+    source_type: 'regle_documentee',
+  }
 }
 
 function estimerDuree(distanceKm: number, typeTrajet: string): string {
@@ -319,30 +361,21 @@ export function calculer_devis(input: DevisInput, _testTodayISO?: string): Devis
   const lignes: LigneCalcul[] = []
   const coefficients: Record<string, number> = {}
 
-  // — Base kilométrique
-  const baseKm = r2(distanceKm * TARIF_KM)
+  // — Prix de base (grille tarifaire ≤180 km ou formule >180 km)
+  const prixBase = getPrixBase(distanceKm)
   lignes.push({
-    label:         'Transport kilométrique',
-    montant:       baseKm,
-    formule:       'distance_km × tarif_km',
-    variables:     { distance_km: distanceKm, tarif_km: TARIF_KM },
-    source_regle:  'Barème kilométrique MVP',
-    source_type:   'mock_mvp',
-    justification: `${distanceKm} km × ${TARIF_KM} €/km. [MOCK MVP — à calibrer avec le barème réel NeoTravel]`,
+    label:         'Transfert simple',
+    montant:       prixBase.prix,
+    formule:       prixBase.formule,
+    variables:     { distance_km: distanceKm, prix_base: prixBase.prix },
+    source_regle:  'Grille tarifaire NeoTravel',
+    source_type:   prixBase.source_type,
+    justification: distanceKm <= 180
+      ? `Distance ${distanceKm} km → grille tarifaire : ${prixBase.prix} €.`
+      : `Distance ${distanceKm} km (> 180 km) → (${distanceKm} × 2) × ${TARIF_KM_HORS_GRILLE} €/km = ${prixBase.prix} €.`,
   })
 
-  // — Frais de mise en route
-  lignes.push({
-    label:         'Frais de mise en route',
-    montant:       FRAIS_MISE_EN_ROUTE,
-    formule:       'forfait_fixe',
-    variables:     { forfait: FRAIS_MISE_EN_ROUTE },
-    source_regle:  'Forfait mise en route MVP',
-    source_type:   'mock_mvp',
-    justification: `Forfait fixe ${FRAIS_MISE_EN_ROUTE} € — frais logistiques et administratifs. [MOCK MVP]`,
-  })
-
-  let sousTotal = r2(baseKm + FRAIS_MISE_EN_ROUTE)
+  let sousTotal = prixBase.prix
 
   // — Coefficient type de trajet
   const coeffTrajet = typeTrajet === 'aller_retour' ? COEFF_ALLER_RETOUR : typeTrajet === 'circuit' ? COEFF_CIRCUIT : 1.0
@@ -353,12 +386,12 @@ export function calculer_devis(input: DevisInput, _testTodayISO?: string): Devis
     lignes.push({
       label:         `Supplément ${typeLabel}`,
       montant:       delta,
-      formule:       `sous_total × (coeff_trajet − 1) = ${sousTotal.toFixed(2)} × ${(coeffTrajet - 1).toFixed(2)}`,
-      variables:     { sous_total: sousTotal, coeff_trajet: coeffTrajet },
-      source_regle:  'Règle type trajet MVP',
-      source_type:   'mock_mvp',
+      formule:       `prix_base × (coeff_trajet − 1) = ${sousTotal.toFixed(2)} × ${(coeffTrajet - 1).toFixed(2)}`,
+      variables:     { prix_base: sousTotal, coeff_trajet: coeffTrajet },
+      source_regle:  'Règle type trajet NeoTravel',
+      source_type:   'regle_documentee',
       justification: typeTrajet === 'aller_retour'
-        ? `Coefficient ×${COEFF_ALLER_RETOUR} — retour à vide partiellement optimisé, pas ×2. [MOCK MVP]`
+        ? `Aller-retour : prix simple × ${COEFF_ALLER_RETOUR} — règle NeoTravel.`
         : `Coefficient ×${COEFF_CIRCUIT} — circuit multi-étapes avec temps d'attente. [MOCK MVP]`,
     })
     sousTotal = r2(sousTotal * coeffTrajet)
@@ -497,10 +530,12 @@ export function calculer_devis(input: DevisInput, _testTodayISO?: string): Devis
       justification: 'Référentiel distance interne MVP — distances routières approximatives. À remplacer par l\'API Google Maps Distance Matrix.',
     },
     {
-      label:         'Tarif kilométrique',
-      valeur:        `${TARIF_KM} €/km`,
-      source_type:   'mock_mvp',
-      justification: 'Hypothèse MVP : 2,50 €/km. À calibrer avec les barèmes réels des autocaristes partenaires.',
+      label:         'Tarif de base',
+      valeur:        `${prixBase.prix} €`,
+      source_type:   prixBase.source_type,
+      justification: distanceKm <= 180
+        ? `Grille tarifaire NeoTravel : distance ${distanceKm} km → ${prixBase.prix} €.`
+        : `Distance > 180 km → (${distanceKm} × 2) × ${TARIF_KM_HORS_GRILLE} €/km = ${prixBase.prix} €.`,
     },
     {
       label:         'TVA transport voyageurs',
@@ -536,19 +571,19 @@ export function calculer_devis(input: DevisInput, _testTodayISO?: string): Devis
 
   // 7. Explication synthétique
   const typeLabel   = ({ aller_simple: 'aller simple', aller_retour: 'aller-retour', circuit: 'circuit' } as Record<string, string>)[typeTrajet] ?? typeTrajet
-  const baseTotal   = r2(baseKm + FRAIS_MISE_EN_ROUTE)
   const explication_calcul =
     `Devis ${typeLabel} ${input.depart} → ${input.destination} (${distanceKm} km) pour ${input.nb_passagers} passager(s). ` +
     `Durée estimée : ${duree_estimee}. ` +
-    `Base : ${distanceKm} km × ${TARIF_KM} €/km + ${FRAIS_MISE_EN_ROUTE} € = ${baseTotal.toFixed(2)} € HT. ` +
+    (distanceKm <= 180
+      ? `Base : grille tarifaire ${distanceKm} km → ${prixBase.prix} € HT. `
+      : `Base : (${distanceKm} × 2) × ${TARIF_KM_HORS_GRILLE} €/km = ${prixBase.prix} € HT. `) +
     (coeffTrajet !== 1 ? `Type trajet ×${coeffTrajet}. ` : '') +
     (capacite.coeff !== 1 && !capacite.besoin_reprise ? `Capacité ×${capacite.coeff} (${capacite.label}). ` : '') +
     (saison.coeff !== 1 ? `Saisonnalité ×${saison.coeff} (${saison.label}). ` : '') +
     `Urgence ×${urgence.coeff} (${urgence.label}). ` +
     `Marge ×${(1 + MARGE_TAUX).toFixed(2)}. ` +
     `Total HT : ${prix_ht.toFixed(2)} € — TVA 10 % (Art.279-b CGI) : ${tva.toFixed(2)} € — TTC : ${prix_ttc.toFixed(2)} €.` +
-    (besoin_reprise_humaine ? ` ⚠ Reprise humaine nécessaire : ${raison_reprise_humaine}` : '') +
-    ` ⚠ Valeurs MOCK MVP indicatives — à valider avec NeoTravel.`
+    (besoin_reprise_humaine ? ` ⚠ Reprise humaine nécessaire : ${raison_reprise_humaine}` : '')
 
   return {
     success:                true,
