@@ -77,6 +77,9 @@ export default function DashboardLeadDetailPage() {
   const [adjAmount, setAdjAmount] = useState('')
   const [adjReason, setAdjReason] = useState('')
   const [savingAdj, setSavingAdj] = useState(false)
+  const [editingLignes, setEditLignes] = useState(false)
+  const [editedLignes, setEditedLignes] = useState<LigneCalcul[]>([])
+  const [savingLignes, setSavingLignes] = useState(false)
   const [showSources, setShowSrc] = useState(false)
   const [actionMsg, setMsg]       = useState<{ text: string; ok: boolean } | null>(null)
   const [downloading, setDl]      = useState(false)
@@ -142,6 +145,31 @@ export default function DashboardLeadDetailPage() {
       flash((e as Error).message || 'Erreur modification devis', false)
     }
     setSavingAdj(false)
+  }
+
+  function startEditLignes() {
+    if (!quote) return
+    setEditedLignes(quote.lignes_calcul.map(l => ({ ...l })))
+    setEditLignes(true)
+  }
+
+  function updateLigneMontant(index: number, value: string) {
+    setEditedLignes(prev => prev.map((l, i) => i === index ? { ...l, montant: parseFloat(value) || 0 } : l))
+  }
+
+  async function saveLignes() {
+    if (!quote) return
+    setSavingLignes(true)
+    try {
+      const updated = await api.quotes.update(quote._id, { lignes_calcul: editedLignes }) as Quote
+      setQuote(updated)
+      setEditLignes(false)
+      await fetchAll()
+      flash('Lignes mises à jour.', true)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur modification lignes', false)
+    }
+    setSavingLignes(false)
   }
 
   async function approveQuote() {
@@ -707,15 +735,45 @@ export default function DashboardLeadDetailPage() {
                 {/* Lignes */}
                 {quote.lignes_calcul?.length > 0 && (
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--dash-text-faint)' }}>
-                      Détail du calcul
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--dash-text-faint)' }}>
+                        Détail du calcul
+                      </div>
+                      {!editingLignes ? (
+                        <button
+                          onClick={startEditLignes}
+                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors"
+                          style={{ color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}
+                        >
+                          <Edit2 className="w-3 h-3" /> Modifier
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setEditLignes(false)}
+                            className="text-[11px] px-2 py-1 rounded-md transition-colors"
+                            style={{ color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={saveLignes}
+                            disabled={savingLignes}
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md font-medium transition-colors"
+                            style={{ background: '#2563EB', color: '#fff', border: 'none' }}
+                          >
+                            {savingLignes ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            Sauvegarder
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1.5">
-                      {quote.lignes_calcul.map((ligne: LigneCalcul, i) => (
+                      {(editingLignes ? editedLignes : quote.lignes_calcul).map((ligne: LigneCalcul, i) => (
                         <div
                           key={i}
                           className="flex justify-between items-start py-2.5 px-3 rounded-lg"
-                          style={{ background: 'var(--dash-muted)', border: '1px solid var(--dash-border)' }}
+                          style={{ background: 'var(--dash-muted)', border: `1px solid ${editingLignes ? '#3B82F6' : 'var(--dash-border)'}` }}
                         >
                           <div className="flex-1 min-w-0 mr-3">
                             <div className="text-sm" style={{ color: 'var(--dash-text)' }}>{ligne.label}</div>
@@ -738,13 +796,36 @@ export default function DashboardLeadDetailPage() {
                                 {SOURCE_TYPE_LABELS[ligne.source_type].label}
                               </span>
                             )}
-                            <div className="font-mono text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
-                              {fmt(ligne.montant)}
-                            </div>
+                            {editingLignes ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs" style={{ color: 'var(--dash-text-faint)' }}>€</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editedLignes[i]?.montant ?? ligne.montant}
+                                  onChange={e => updateLigneMontant(i, e.target.value)}
+                                  className="w-24 text-right font-mono text-sm font-semibold rounded px-1.5 py-0.5 outline-none"
+                                  style={{
+                                    background: 'var(--dash-bg)',
+                                    border: '1px solid #3B82F6',
+                                    color: 'var(--dash-text)',
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="font-mono text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
+                                {fmt(ligne.montant)}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
+                    {editingLignes && (
+                      <div className="mt-2 px-3 py-2 rounded-lg text-[11px]" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+                        Total HT recalculé : <strong>{editedLignes.reduce((s, l) => s + (Number(l.montant) || 0), 0).toFixed(2)} €</strong>
+                      </div>
+                    )}
                   </div>
                 )}
 
