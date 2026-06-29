@@ -97,8 +97,46 @@ function formatFieldValue(key: string, val: unknown): string {
 
 export default function AIAssistantChat() {
   const router = useRouter()
-  const chatRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const chatRef    = useRef<HTMLDivElement>(null)
+  const inputRef   = useRef<HTMLTextAreaElement>(null)
+  const streamBuf  = useRef('')
+  const rafId      = useRef<number | null>(null)
+
+  function startRaf() {
+    const loop = () => {
+      const pending = streamBuf.current
+      if (pending) {
+        streamBuf.current = ''
+        setMessages(prev => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last?.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: last.content + pending }
+          }
+          return updated
+        })
+      }
+      rafId.current = requestAnimationFrame(loop)
+    }
+    rafId.current = requestAnimationFrame(loop)
+  }
+
+  function stopRaf() {
+    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
+    // flush restant
+    const pending = streamBuf.current
+    if (pending) {
+      streamBuf.current = ''
+      setMessages(prev => {
+        const updated = [...prev]
+        const last = updated[updated.length - 1]
+        if (last?.role === 'assistant') {
+          updated[updated.length - 1] = { ...last, content: last.content + pending }
+        }
+        return updated
+      })
+    }
+  }
 
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: GREETING },
@@ -165,23 +203,16 @@ export default function AIAssistantChat() {
           try { event = JSON.parse(line.slice(6)) } catch { continue }
 
           if (event.t) {
-            // Token réel d'Anthropic : afficher en temps réel
             if (!streamStarted) {
               streamStarted = true
               setLoading(false)
-              setMessages(prev => [...prev, { role: 'assistant', content: event.t! }])
-            } else {
-              setMessages(prev => {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: 'assistant',
-                  content: updated[updated.length - 1].content + event.t,
-                }
-                return updated
-              })
+              streamBuf.current = ''
+              setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+              startRaf()
             }
+            streamBuf.current += event.t
           } else if (event.done && event.result) {
-            // Fin du stream : mise à jour du message final + champs structurés
+            stopRaf()
             const data = event.result
             if (!streamStarted) {
               setLoading(false)

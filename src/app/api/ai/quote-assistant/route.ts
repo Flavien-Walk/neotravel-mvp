@@ -185,6 +185,7 @@ export async function POST(req: NextRequest) {
       let scanBuf = ''
       const MARKER = '"message": "'
       let escaped = false
+      let skipUnicode = 0  // pour sauter les 4 hex chars après \u
 
       try {
         const anthropicStream = client.messages.stream({
@@ -209,9 +210,20 @@ export async function POST(req: NextRequest) {
                   scanBuf += ch
                   if (scanBuf.endsWith(MARKER)) extractState = 'in_message'
                 } else {
-                  if (escaped) {
+                  if (skipUnicode > 0) {
+                    skipUnicode--
+                  } else if (escaped) {
                     escaped = false
-                    visible += ch
+                    switch (ch) {
+                      case 'n':  visible += '\n'; break
+                      case 't':  visible += '\t'; break
+                      case '"':  visible += '"';  break
+                      case '\\': visible += '\\'; break
+                      case '/':  visible += '/';  break
+                      case 'r':  break  // ignore \r
+                      case 'u':  skipUnicode = 4; break  // \uXXXX — sera correct dans le message final
+                      default:   visible += ch;  break
+                    }
                   } else if (ch === '\\') {
                     escaped = true
                   } else if (ch === '"') {

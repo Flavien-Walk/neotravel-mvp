@@ -53,6 +53,43 @@ export default function FloatingAIWidget() {
   const [unavailable, setUnavail] = useState(false)
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLInputElement>(null)
+  const streamBuf  = useRef('')
+  const rafId      = useRef<number | null>(null)
+
+  function startRaf() {
+    const loop = () => {
+      const pending = streamBuf.current
+      if (pending) {
+        streamBuf.current = ''
+        setMsgs(prev => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last?.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: last.content + pending }
+          }
+          return updated
+        })
+      }
+      rafId.current = requestAnimationFrame(loop)
+    }
+    rafId.current = requestAnimationFrame(loop)
+  }
+
+  function stopRaf() {
+    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
+    const pending = streamBuf.current
+    if (pending) {
+      streamBuf.current = ''
+      setMsgs(prev => {
+        const updated = [...prev]
+        const last = updated[updated.length - 1]
+        if (last?.role === 'assistant') {
+          updated[updated.length - 1] = { ...last, content: last.content + pending }
+        }
+        return updated
+      })
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -104,18 +141,13 @@ export default function FloatingAIWidget() {
             if (!streamStarted) {
               streamStarted = true
               setLoading(false)
-              setMsgs(prev => [...prev, { role: 'assistant', content: event.t! }])
-            } else {
-              setMsgs(prev => {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: 'assistant',
-                  content: updated[updated.length - 1].content + event.t,
-                }
-                return updated
-              })
+              streamBuf.current = ''
+              setMsgs(prev => [...prev, { role: 'assistant', content: '' }])
+              startRaf()
             }
+            streamBuf.current += event.t
           } else if (event.done && event.result) {
+            stopRaf()
             const data = event.result
             if (!streamStarted) {
               setLoading(false)
