@@ -50,6 +50,15 @@ export default function TraceableQuoteSection() {
   const inView = useInView(ref, { once: true, margin: '-8% 0px' })
 
   return (
+    <>
+    {/* SVG filter : rend les pixels blancs/clairs transparents */}
+    <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }}>
+      <defs>
+        <filter id="trace-nobg">
+          <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1.5 -1.5 -1.5 4.5 0" />
+        </filter>
+      </defs>
+    </svg>
     <section
       id="fiabilite"
       className="relative py-24 sm:py-32 px-4 sm:px-6 overflow-hidden"
@@ -135,8 +144,8 @@ export default function TraceableQuoteSection() {
                       className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                     >
-                      <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: '#060E24' }}>
-                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized />
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#trace-nobg)' }} />
                       </div>
                       <span className="text-sm text-white/55 flex-1">{label}</span>
                       <span className="text-sm font-mono font-semibold" style={{ color }}>{value}</span>
@@ -247,5 +256,6 @@ export default function TraceableQuoteSection() {
         </div>
       </div>
     </section>
+    </>
   )
 }

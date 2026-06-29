@@ -97,6 +97,15 @@ export default function ChaosToPipeline() {
 
   return (
     <>
+      {/* SVG filter : rend les pixels blancs/clairs transparents */}
+      <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }}>
+        <defs>
+          <filter id="chaos-nobg">
+            <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1.5 -1.5 -1.5 4.5 0" />
+          </filter>
+        </defs>
+      </svg>
+
       {/* ── DESKTOP animated version ── */}
       <section
         ref={sectionRef}
@@ -241,7 +250,7 @@ export default function ChaosToPipeline() {
                       }}
                     >
                       <div className="w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden" style={{ background: '#071B3E' }}>
-                        <Image src={img} alt={label} width={48} height={48} className="w-full h-full object-contain" unoptimized />
+                        <Image src={img} alt={label} width={48} height={48} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#chaos-nobg)' }} />
                       </div>
                       <span className="text-sm font-medium text-white/85">{label}</span>
                       <SealCheck weight="duotone" className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}90` }} />
@@ -352,7 +361,7 @@ export default function ChaosToPipeline() {
               {PIPELINE.map(({ img, label, color }) => (
                 <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
                   <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: '#071B3E' }}>
-                    <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized />
+                    <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#chaos-nobg)' }} />
                   </div>
                   <span className="text-xs font-medium text-white/80">{label}</span>
                   <SealCheck weight="duotone" className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
