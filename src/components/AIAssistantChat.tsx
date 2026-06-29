@@ -351,46 +351,6 @@ export default function AIAssistantChat() {
             </div>
           )}
 
-          {/* Input area */}
-          {!isComplete && (
-            <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    send()
-                  }
-                }}
-                placeholder="Décrivez votre besoin… (Entrée pour envoyer)"
-                rows={2}
-                className="w-full bg-transparent text-sm text-white resize-none focus:outline-none placeholder-white/20"
-                style={{ minHeight: '48px' }}
-                disabled={loading}
-              />
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => send()}
-                  disabled={!input.trim() || loading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-                  style={input.trim() && !loading ? {
-                    background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                  } : {
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.25)',
-                  }}
-                >
-                  {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  Envoyer
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Confirmation panel */}
           {isComplete && (
             <motion.div
@@ -442,6 +402,46 @@ export default function AIAssistantChat() {
                 </button>
               </div>
             </motion.div>
+          )}
+
+          {/* Input area — visible tant que non soumis, même si dossier complet */}
+          {!submitting && (
+            <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
+                placeholder={isComplete ? 'Vous pouvez encore ajouter des infos ou cliquer sur Confirmer…' : 'Décrivez votre besoin… (Entrée pour envoyer)'}
+                rows={2}
+                className="w-full bg-transparent text-sm text-white resize-none focus:outline-none placeholder-white/20"
+                style={{ minHeight: '48px' }}
+                disabled={loading}
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => send()}
+                  disabled={!input.trim() || loading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                  style={input.trim() && !loading ? {
+                    background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.25)',
+                  }}
+                >
+                  {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Envoyer
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
