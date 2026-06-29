@@ -240,8 +240,8 @@ export default function ChaosToPipeline() {
                         backdropFilter: 'blur(8px)',
                       }}
                     >
-                      <div className="w-12 h-12 flex-shrink-0">
-                        <Image src={img} alt={label} width={48} height={48} className="w-full h-full object-contain" style={{ mixBlendMode: 'screen' }} />
+                      <div className="w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden" style={{ background: '#071B3E' }}>
+                        <Image src={img} alt={label} width={48} height={48} className="w-full h-full object-contain" />
                       </div>
                       <span className="text-sm font-medium text-white/85">{label}</span>
                       <SealCheck weight="duotone" className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}90` }} />
@@ -351,8 +351,8 @@ export default function ChaosToPipeline() {
             <div className="space-y-2">
               {PIPELINE.map(({ img, label, color }) => (
                 <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
-                  <div className="w-10 h-10 flex-shrink-0">
-                    <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" style={{ mixBlendMode: 'screen' }} />
+                  <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: '#071B3E' }}>
+                    <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" />
                   </div>
                   <span className="text-xs font-medium text-white/80">{label}</span>
                   <SealCheck weight="duotone" className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
