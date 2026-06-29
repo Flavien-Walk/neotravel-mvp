@@ -202,7 +202,7 @@ export default function AIAssistantChat() {
         date_retour:  fields.date_retour ?? '',
         nb_passagers: Number(fields.nb_passagers) || 0,
         type_trajet:  fields.type_trajet || 'aller_simple',
-        urgence:      fields.urgence || 'normal',
+        urgence:      (fields.urgence === 'prioritaire' ? 'tres_urgent' : fields.urgence) || 'normal',
         options:      Array.isArray(fields.options) ? fields.options : [],
         commentaire:  fields.commentaire ?? '',
       })

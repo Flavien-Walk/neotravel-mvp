@@ -14,7 +14,7 @@ export const ExtractedFieldsSchema = z.object({
   date_retour:  z.string().nullable().optional(),
   nb_passagers: z.number().int().min(1).nullable().optional(),
   type_trajet:  z.enum(['aller_simple', 'aller_retour', 'circuit']).nullable().optional(),
-  urgence:      z.enum(['normal', 'urgent', 'prioritaire']).nullable().optional(),
+  urgence:      z.enum(['normal', 'urgent', 'tres_urgent']).nullable().optional(),
   options:      z.array(z.string()).optional(),
   commentaire:  z.string().nullable().optional(),
 })

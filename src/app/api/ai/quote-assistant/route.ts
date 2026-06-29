@@ -36,7 +36,7 @@ CHAMPS OBLIGATOIRES :
 - nb_passagers : nombre entier de passagers
 
 CHAMPS OPTIONNELS :
-- societe, telephone, date_retour, type_trajet (aller_simple|aller_retour|circuit), urgence (normal|urgent|prioritaire), options (tableau), commentaire
+- societe, telephone, date_retour, type_trajet (aller_simple|aller_retour|circuit), urgence (normal|urgent|tres_urgent), options (tableau), commentaire
 
 REPRISE HUMAINE OBLIGATOIRE (besoin_reprise_humaine = true) SI :
 • Ville inconnue ou très ambiguë (ex : "Saint-Martin" sans précision)
@@ -79,7 +79,7 @@ FORMAT DE RÉPONSE — JSON strict uniquement, SANS markdown, SANS blocs de code
     "date_retour": null,
     "nb_passagers": null,
     "type_trajet": null,
-    "urgence": null,
+    "urgence": null, // valeurs possibles : "normal", "urgent", "tres_urgent"
     "options": [],
     "commentaire": null
   },
