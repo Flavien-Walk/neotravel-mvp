@@ -1,12 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
+import { supabase } from '../lib/supabase'
 
 export interface AuthRequest extends Request {
   userId?: string
   userRole?: string
 }
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-secret'
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization
@@ -17,14 +15,26 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     return
   }
 
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; role?: string }
-    req.userId   = payload.sub
-    req.userRole = payload.role
+  supabase.auth.getUser(token).then(async ({ data, error }) => {
+    if (error || !data.user) {
+      res.status(401).json({ message: 'Token invalide ou expiré.' })
+      return
+    }
+
+    req.userId = data.user.id
+
+    // Role stored in profiles table
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single()
+
+    req.userRole = profile?.role ?? 'client'
     next()
-  } catch {
-    res.status(401).json({ message: 'Token invalide ou expiré.' })
-  }
+  }).catch(() => {
+    res.status(401).json({ message: 'Erreur authentification.' })
+  })
 }
 
 export function requireRole(...roles: string[]) {

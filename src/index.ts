@@ -2,7 +2,6 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
-import { connectDB } from './config/database'
 import authRouter   from './routes/auth'
 import leadsRouter  from './routes/leads'
 import quotesRouter from './routes/quotes'
@@ -50,16 +49,10 @@ app.use((_req, res) => {
 })
 
 async function start() {
-  try {
-    await connectDB()
-    app.listen(PORT, () => {
-      console.log(`NeoTravel API v0.2.0 — http://localhost:${PORT}`)
-      console.log(`Health : http://localhost:${PORT}/health`)
-    })
-  } catch (err) {
-    console.error('Erreur démarrage :', err)
-    process.exit(1)
-  }
+  app.listen(PORT, () => {
+    console.log(`NeoTravel API v0.2.0 — http://localhost:${PORT}`)
+    console.log(`Health : http://localhost:${PORT}/health`)
+  })
 }
 
 start()

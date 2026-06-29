@@ -1,10 +1,7 @@
 import { Router, Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { z } from 'zod'
-import { User } from '../models/User'
-import { Log } from '../models/Log'
+import { supabase } from '../lib/supabase'
 import { requireAuth, requireRole, AuthRequest } from '../middleware/requireAuth'
 import {
   sendWelcomeEmail,
@@ -14,16 +11,14 @@ import {
 
 const router = Router()
 
-const JWT_SECRET      = process.env.JWT_SECRET || 'fallback-dev-secret'
-const JWT_EXPIRES_IN  = process.env.JWT_EXPIRES_IN || '7d'
+// ─── Helper: log to Supabase ─────────────────────────────────────────────────
 
-function signToken(userId: string, role: string): string {
-  return jwt.sign({ sub: userId, role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions)
+async function addLog(action: string, status: string, message: string, payload?: Record<string, unknown>) {
+  try { await supabase.from('logs').insert({ action, status, message, payload: payload ?? null }) } catch {}
 }
 
 // ─── Schemas de validation ────────────────────────────────────────────────────
 
-// Le rôle n'est jamais accepté du frontend — toujours forcé à 'client'
 const registerSchema = z.object({
   nom:          z.string().min(2).max(80),
   email:        z.string().email(),
@@ -44,147 +39,104 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-const forgotSchema = z.object({
-  email: z.string().email(),
-})
-
-const resetSchema = z.object({
-  token:    z.string().min(10),
-  password: z.string().min(8).max(100),
-})
-
-// ─── POST /api/auth/bootstrap — premier admin uniquement (auto-désactive) ────
-// Crée le premier compte admin si aucun admin n'existe en base.
-// Inaccessible dès qu'un admin existe — pas de risque de réutilisation.
+// ─── POST /api/auth/bootstrap — premier admin (auto-désactive) ───────────────
 
 router.post('/bootstrap', async (req: Request, res: Response) => {
   const schema = z.object({
-    nom:      z.string().min(2).max(80),
-    email:    z.string().email(),
-    password: z.string().min(8).max(100),
-    secret:   z.string(),
+    nom: z.string().min(2).max(80), email: z.string().email(),
+    password: z.string().min(8).max(100), secret: z.string(),
   })
-
   const parsed = schema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides' }); return }
 
-  // Secret d'amorçage depuis env — si absent, endpoint bloqué
   const bootstrapSecret = process.env.BOOTSTRAP_SECRET
   if (!bootstrapSecret || parsed.data.secret !== bootstrapSecret) {
-    res.status(403).json({ message: 'Secret invalide.' })
-    return
+    res.status(403).json({ message: 'Secret invalide.' }); return
   }
 
   try {
-    const adminExists = await User.findOne({ role: { $in: ['admin', 'commercial'] } })
-    if (adminExists) {
-      res.status(409).json({ message: 'Un compte staff existe déjà. Endpoint désactivé.' })
-      return
+    const { data: staffCheck } = await supabase.from('profiles').select('id').in('role', ['admin', 'commercial']).limit(1)
+    if (staffCheck && staffCheck.length > 0) {
+      res.status(409).json({ message: 'Un compte staff existe déjà. Endpoint désactivé.' }); return
     }
 
     const { nom, email, password } = parsed.data
-    const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({
-      nom,
-      email: email.toLowerCase(),
-      passwordHash,
-      role: 'admin',
-      organisation: 'NeoTravel',
-      emailVerified: true,
+    const { data, error } = await supabase.auth.admin.createUser({
+      email, password, email_confirm: true,
+      user_metadata: { nom, role: 'admin', organisation: 'NeoTravel' },
     })
+    if (error || !data.user) { res.status(500).json({ message: error?.message ?? 'Erreur création admin' }); return }
 
-    await Log.create({
-      action: 'ADMIN_BOOTSTRAP',
-      status: 'success',
-      message: `Premier compte admin créé via bootstrap : ${nom} (${email})`,
-    })
+    await supabase.from('profiles').upsert({ id: data.user.id, nom, role: 'admin', organisation: 'NeoTravel' })
+    await addLog('ADMIN_BOOTSTRAP', 'success', `Premier compte admin créé : ${nom} (${email})`)
 
-    const token = signToken(String(user._id), user.role)
     res.status(201).json({
-      message: 'Compte admin créé. Retirez BOOTSTRAP_SECRET de vos variables d\'environnement.',
-      token,
-      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role },
+      message: "Compte admin créé. Retirez BOOTSTRAP_SECRET de vos variables d'environnement.",
+      user: { id: data.user.id, nom, email, role: 'admin' },
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur bootstrap', error: String(err) })
   }
 })
 
-// ─── POST /api/auth/register — création compte client uniquement ─────────────
+// ─── POST /api/auth/register — client uniquement ─────────────────────────────
 
 router.post('/register', async (req: Request, res: Response) => {
   const parsed = registerSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() }); return }
 
-  // Le rôle est TOUJOURS 'client' — jamais accepté du payload
-  const { nom, email, organisation } = parsed.data
-  const password = parsed.data.password
+  const { nom, email, password, organisation } = parsed.data
 
   try {
-    const existing = await User.findOne({ email: email.toLowerCase() })
-    if (existing) {
-      res.status(409).json({ message: 'Un compte existe déjà avec cette adresse email.' })
-      return
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({ nom, email: email.toLowerCase(), passwordHash, role: 'client', organisation })
-
-    await Log.create({
-      action: 'USER_REGISTERED',
-      status: 'success',
-      message: `Nouveau compte client créé : ${nom} (${email})`,
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: email.toLowerCase(), password, email_confirm: true,
+      user_metadata: { nom, role: 'client', organisation: organisation ?? null },
     })
+    if (error) {
+      const msg = error.message.includes('already') ? 'Un compte existe déjà avec cette adresse email.' : error.message
+      res.status(409).json({ message: msg }); return
+    }
+    if (!data.user) { res.status(500).json({ message: 'Erreur création compte' }); return }
 
-    sendWelcomeEmail(user).catch(() => {})
+    await supabase.from('profiles').upsert({ id: data.user.id, nom, role: 'client', organisation: organisation ?? null })
+    await addLog('USER_REGISTERED', 'success', `Nouveau compte client : ${nom} (${email})`)
+    sendWelcomeEmail({ id: data.user.id, nom, email, role: 'client' }).catch(() => {})
 
-    const token = signToken(String(user._id), user.role)
+    // Sign in to get token
+    const { data: session } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password })
     res.status(201).json({
-      token,
-      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
+      token: session?.session?.access_token ?? '',
+      user: { id: data.user.id, nom, email: email.toLowerCase(), role: 'client', organisation: organisation ?? null },
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la création du compte', error: String(err) })
   }
 })
 
-// ─── POST /api/auth/staff — création compte NeoTravel (admin uniquement) ─────
+// ─── POST /api/auth/staff — compte NeoTravel (admin uniquement) ──────────────
 
-router.post('/staff', requireAuth, requireRole('admin'), async (req: AuthRequest, res: Response) => {
+router.post('/staff', requireAuth, requireRole('admin'), async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
   const parsed = staffSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides', errors: parsed.error.flatten() }); return }
 
   const { nom, email, password, role, organisation } = parsed.data
 
   try {
-    const existing = await User.findOne({ email: email.toLowerCase() })
-    if (existing) {
-      res.status(409).json({ message: 'Un compte existe déjà avec cette adresse email.' })
-      return
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: email.toLowerCase(), password, email_confirm: true,
+      user_metadata: { nom, role, organisation: organisation ?? null },
+    })
+    if (error) {
+      const msg = error.message.includes('already') ? 'Un compte existe déjà avec cette adresse email.' : error.message
+      res.status(409).json({ message: msg }); return
     }
+    if (!data.user) { res.status(500).json({ message: 'Erreur création compte' }); return }
 
-    const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({ nom, email: email.toLowerCase(), passwordHash, role, organisation })
+    await supabase.from('profiles').upsert({ id: data.user.id, nom, role, organisation: organisation ?? null })
+    await addLog('STAFF_CREATED', 'success', `Compte NeoTravel créé : ${nom} (${email}) — ${role}`, { createdBy: authReq.userId })
 
-    await Log.create({
-      action: 'STAFF_CREATED',
-      status: 'success',
-      message: `Compte NeoTravel créé par admin : ${nom} (${email}) — rôle ${role}`,
-      payload: { createdBy: req.userId },
-    })
-
-    res.status(201).json({
-      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
-    })
+    res.status(201).json({ user: { id: data.user.id, nom, email: email.toLowerCase(), role, organisation: organisation ?? null } })
   } catch (err) {
     res.status(500).json({ message: 'Erreur création compte NeoTravel', error: String(err) })
   }
@@ -194,36 +146,28 @@ router.post('/staff', requireAuth, requireRole('admin'), async (req: AuthRequest
 
 router.post('/login', async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides' })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides' }); return }
 
   const { email, password } = parsed.data
 
   try {
-    const user = await User.findOne({ email })
-    if (!user) {
-      res.status(401).json({ message: 'Email ou mot de passe incorrect.' })
-      return
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user || !data.session) {
+      res.status(401).json({ message: 'Email ou mot de passe incorrect.' }); return
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) {
-      res.status(401).json({ message: 'Email ou mot de passe incorrect.' })
-      return
-    }
+    const { data: profile } = await supabase.from('profiles').select('nom, role, organisation').eq('id', data.user.id).single()
+    await addLog('USER_LOGIN', 'success', `Connexion : ${email}`)
 
-    await Log.create({
-      action: 'USER_LOGIN',
-      status: 'success',
-      message: `Connexion réussie : ${user.email}`,
-    })
-
-    const token = signToken(String(user._id), user.role)
     res.json({
-      token,
-      user: { id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation },
+      token: data.session.access_token,
+      user: {
+        id:           data.user.id,
+        nom:          profile?.nom ?? email,
+        email:        data.user.email,
+        role:         profile?.role ?? 'client',
+        organisation: profile?.organisation ?? null,
+      },
     })
   } catch (err) {
     res.status(500).json({ message: 'Erreur lors de la connexion', error: String(err) })
@@ -233,7 +177,6 @@ router.post('/login', async (req: Request, res: Response) => {
 // ─── POST /api/auth/logout ───────────────────────────────────────────────────
 
 router.post('/logout', (_req: Request, res: Response) => {
-  // JWT stateless — le client supprime le token localement
   res.json({ message: 'Déconnexion effectuée.' })
 })
 
@@ -241,123 +184,68 @@ router.post('/logout', (_req: Request, res: Response) => {
 
 router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId).select('-passwordHash -resetPasswordToken -resetPasswordExpires')
-    if (!user) {
-      res.status(404).json({ message: 'Utilisateur introuvable.' })
-      return
-    }
-    res.json({ id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation })
+    const { data: profile } = await supabase.from('profiles').select('nom, role, organisation').eq('id', req.userId).single()
+    const { data: { user } } = await supabase.auth.admin.getUserById(req.userId!)
+    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+    res.json({ id: user.id, nom: profile?.nom ?? user.email, email: user.email, role: profile?.role ?? 'client', organisation: profile?.organisation ?? null })
   } catch {
     res.status(500).json({ message: 'Erreur serveur' })
   }
 })
 
 // ─── POST /api/auth/forgot-password ─────────────────────────────────────────
+// Supabase handles the reset email natively — we just trigger it.
 
 router.post('/forgot-password', async (req: Request, res: Response) => {
-  const parsed = forgotSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Email invalide.' })
-    return
-  }
+  const parsed = z.object({ email: z.string().email() }).safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ message: 'Email invalide.' }); return }
 
-  // Réponse identique qu'il y ait un compte ou non (anti-enumeration)
   const RESPONSE = { message: 'Si un compte existe, un email de réinitialisation a été envoyé.' }
 
   try {
-    const user = await User.findOne({ email: parsed.data.email })
-    if (!user) { res.json(RESPONSE); return }
-
-    const token = crypto.randomBytes(32).toString('hex')
-    user.resetPasswordToken   = token
-    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1h
-    await user.save()
-
-    await sendPasswordResetEmail(user, token).catch(() => {})
-
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000'
+    await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo: `${FRONTEND_URL}/reset-password` })
     res.json(RESPONSE)
   } catch {
-    res.status(500).json({ message: 'Erreur serveur' })
+    res.json(RESPONSE)
   }
 })
 
 // ─── POST /api/auth/reset-password ──────────────────────────────────────────
+// With Supabase the client handles token exchange via the SDK directly.
+// This endpoint is kept for backward-compat but is a no-op redirect.
 
-router.post('/reset-password', async (req: Request, res: Response) => {
-  const parsed = resetSchema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() })
-    return
-  }
-
-  const { token, password } = parsed.data
-
-  try {
-    const user = await User.findOne({
-      resetPasswordToken:   token,
-      resetPasswordExpires: { $gt: new Date() },
-    })
-    if (!user) {
-      res.status(400).json({ message: 'Lien invalide ou expiré. Veuillez refaire une demande.' })
-      return
-    }
-
-    user.passwordHash         = await bcrypt.hash(password, 12)
-    user.resetPasswordToken   = undefined
-    user.resetPasswordExpires = undefined
-    await user.save()
-
-    sendPasswordChangedEmail(user).catch(() => {})
-
-    await Log.create({
-      action: 'PASSWORD_RESET',
-      status: 'success',
-      message: `Mot de passe réinitialisé pour ${user.email}`,
-    })
-
-    res.json({ message: 'Mot de passe mis à jour avec succès. Vous pouvez maintenant vous connecter.' })
-  } catch {
-    res.status(500).json({ message: 'Erreur serveur' })
-  }
+router.post('/reset-password', async (_req: Request, res: Response) => {
+  res.json({ message: 'Utilisez le lien envoyé par email pour réinitialiser votre mot de passe.' })
 })
 
 // ─── PATCH /api/auth/me ──────────────────────────────────────────────────────
 
-router.patch('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+router.patch('/me', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
   const schema = z.object({
     nom:          z.string().min(2).max(80).optional(),
     email:        z.string().email().optional(),
     organisation: z.string().max(120).optional(),
   })
   const parsed = schema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() }); return }
 
   try {
-    const updates = parsed.data
-    if (updates.email) {
-      const exists = await User.findOne({ email: updates.email, _id: { $ne: req.userId } })
-      if (exists) { res.status(409).json({ message: 'Cette adresse email est déjà utilisée.' }); return }
+    const updates: Record<string, string> = {}
+    if (parsed.data.nom)          updates.nom = parsed.data.nom
+    if (parsed.data.organisation) updates.organisation = parsed.data.organisation
+
+    const { data: profile, error } = await supabase.from('profiles').update(updates).eq('id', authReq.userId).select().single()
+    if (error || !profile) { res.status(500).json({ message: 'Erreur mise à jour profil' }); return }
+
+    if (parsed.data.email) {
+      await supabase.auth.admin.updateUserById(authReq.userId!, { email: parsed.data.email })
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.userId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select('-passwordHash -resetPasswordToken -resetPasswordExpires')
+    await addLog('USER_PROFILE_UPDATED', 'success', `Profil mis à jour`, { userId: authReq.userId, updates })
 
-    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
-
-    await Log.create({
-      action: 'USER_PROFILE_UPDATED',
-      status: 'success',
-      message: `Profil mis à jour : ${user.email}`,
-      payload: updates,
-    }).catch(() => {})
-
-    res.json({ id: String(user._id), nom: user.nom, email: user.email, role: user.role, organisation: user.organisation })
+    res.json({ id: authReq.userId, nom: profile.nom, email: parsed.data.email ?? undefined, role: profile.role, organisation: profile.organisation })
   } catch (err) {
     res.status(500).json({ message: 'Erreur mise à jour profil', error: String(err) })
   }
@@ -365,34 +253,23 @@ router.patch('/me', requireAuth, async (req: AuthRequest, res: Response) => {
 
 // ─── PATCH /api/auth/password ────────────────────────────────────────────────
 
-router.patch('/password', requireAuth, async (req: AuthRequest, res: Response) => {
-  const schema = z.object({
-    currentPassword: z.string().min(1),
-    newPassword:     z.string().min(8).max(100),
-  })
+router.patch('/password', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
+  const schema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8).max(100) })
   const parsed = schema.safeParse(req.body)
-  if (!parsed.success) {
-    res.status(400).json({ message: 'Données invalides.', errors: parsed.error.flatten() })
-    return
-  }
+  if (!parsed.success) { res.status(400).json({ message: 'Données invalides.' }); return }
 
   try {
-    const user = await User.findById(req.userId)
-    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+    // Verify current password via sign-in
+    const { data: { user } } = await supabase.auth.admin.getUserById(authReq.userId!)
+    if (!user?.email) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
 
-    const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash)
-    if (!valid) { res.status(401).json({ message: 'Mot de passe actuel incorrect.' }); return }
+    const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: user.email, password: parsed.data.currentPassword })
+    if (verifyErr) { res.status(401).json({ message: 'Mot de passe actuel incorrect.' }); return }
 
-    user.passwordHash = await bcrypt.hash(parsed.data.newPassword, 12)
-    await user.save()
-
-    await Log.create({
-      action: 'USER_PASSWORD_UPDATED',
-      status: 'success',
-      message: `Mot de passe modifié : ${user.email}`,
-    }).catch(() => {})
-
-    sendPasswordChangedEmail(user).catch(() => {})
+    await supabase.auth.admin.updateUserById(authReq.userId!, { password: parsed.data.newPassword })
+    await addLog('USER_PASSWORD_UPDATED', 'success', `Mot de passe modifié`, { userId: authReq.userId })
+    sendPasswordChangedEmail({ nom: user.email, email: user.email }).catch(() => {})
 
     res.json({ message: 'Mot de passe modifié avec succès.' })
   } catch (err) {

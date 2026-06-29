@@ -1,9 +1,6 @@
 import { Router, Request, Response } from 'express'
-import { Types } from 'mongoose'
-import { Lead } from '../models/Lead'
-import { Quote } from '../models/Quote'
-import { Log } from '../models/Log'
-import { User } from '../models/User'
+import crypto from 'crypto'
+import { supabase } from '../lib/supabase'
 import { requireAuth, AuthRequest } from '../middleware/requireAuth'
 import { calculer_devis, DevisInput } from '../services/calculer_devis'
 import {
@@ -15,56 +12,62 @@ import {
 
 const router = Router()
 
-// GET /api/leads/track/:token — public, suivi sans connexion
+// ─── Helper: log ─────────────────────────────────────────────────────────────
+
+async function addLog(action: string, status: string, message: string, leadId?: string, payload?: Record<string, unknown>) {
+  try {
+    await supabase.from('logs').insert({ action, status, message, lead_id: leadId ?? null, payload: payload ?? null })
+  } catch {}
+}
+
+// ─── Helper: compute completeness score ──────────────────────────────────────
+
+function computeScore(lead: Record<string, unknown>): number {
+  const champs = ['nom', 'email', 'telephone', 'depart', 'destination', 'date_depart', 'nb_passagers', 'type_trajet', 'urgence']
+  const bonus  = ['societe', 'date_retour', 'commentaire']
+  const base   = champs.filter(c => !!lead[c]).length / champs.length * 80
+  const extra  = bonus.filter(c  => !!lead[c]).length / bonus.length  * 20
+  return Math.round(base + extra)
+}
+
+// ─── GET /api/leads/track/:token — public ────────────────────────────────────
+
 router.get('/track/:token', async (req: Request, res: Response) => {
   try {
-    const lead = await Lead.findOne({ trackingToken: req.params.token })
-      .select('nom depart destination date_depart date_retour nb_passagers type_trajet statut updatedAt createdAt')
-      .lean()
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .select('id, nom, depart, destination, date_depart, date_retour, nb_passagers, type_trajet, statut, created_at, updated_at')
+      .eq('tracking_token', req.params.token)
+      .single()
 
-    if (!lead) {
-      res.status(404).json({ message: 'Demande introuvable. Vérifiez le lien reçu par email.' })
-      return
-    }
+    if (error || !lead) { res.status(404).json({ message: 'Demande introuvable. Vérifiez le lien reçu par email.' }); return }
 
-    const quote = await Quote.findOne({ leadId: lead._id })
-      .select('prix_ttc prix_final_ttc statut_devis createdAt explication_calcul warnings besoin_reprise_humaine email_sent_at validite_jours')
-      .lean()
+    const { data: quote } = await supabase
+      .from('quotes')
+      .select('prix_ttc, prix_final_ttc, statut_devis, created_at, explication_calcul, warnings, besoin_reprise_humaine, email_sent_at, validite_jours')
+      .eq('lead_id', lead.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
     const STATUS_LABELS: Record<string, string> = {
-      nouveau:          'Demande reçue',
-      incomplet:        'En attente d\'informations complémentaires',
-      qualifie:         'Dossier qualifié',
-      devis_genere:     'Devis en préparation',
-      devis_envoye:     'Devis envoyé',
-      relance_1:        'Relance envoyée',
-      relance_2:        'Deuxième relance envoyée',
-      accepte:          'Devis accepté',
-      refuse:           'Devis refusé',
-      cas_complexe:     'Reprise par un conseiller',
-      reprise_humaine:  'Validation conseiller en cours',
-      cloture:          'Dossier clôturé',
+      nouveau: 'Demande reçue', incomplet: "En attente d'informations complémentaires",
+      qualifie: 'Dossier qualifié', devis_genere: 'Devis en préparation',
+      devis_envoye: 'Devis envoyé', relance_1: 'Relance envoyée',
+      relance_2: 'Deuxième relance envoyée', accepte: 'Devis accepté',
+      refuse: 'Devis refusé', cas_complexe: 'Reprise par un conseiller',
+      reprise_humaine: 'Validation conseiller en cours', cloture: 'Dossier clôturé',
     }
 
     res.json({
-      tracking: true,
-      statut: lead.statut,
-      statut_label: STATUS_LABELS[lead.statut] ?? lead.statut,
-      trajet: `${lead.depart} → ${lead.destination}`,
-      date_depart: lead.date_depart,
-      date_retour: (lead as Record<string, unknown>).date_retour ?? null,
-      nb_passagers: lead.nb_passagers,
-      type_trajet: lead.type_trajet,
-      createdAt: lead.createdAt,
-      updatedAt: lead.updatedAt,
+      tracking: true, statut: lead.statut, statut_label: STATUS_LABELS[lead.statut] ?? lead.statut,
+      trajet: `${lead.depart} → ${lead.destination}`, date_depart: lead.date_depart,
+      date_retour: lead.date_retour ?? null, nb_passagers: lead.nb_passagers, type_trajet: lead.type_trajet,
+      createdAt: lead.created_at, updatedAt: lead.updated_at,
       devis: quote ? {
-        statut_devis: quote.statut_devis,
-        prix_ttc: quote.prix_final_ttc || quote.prix_ttc,
-        warnings: quote.warnings,
-        besoin_reprise_humaine: quote.besoin_reprise_humaine,
-        email_sent_at: quote.email_sent_at ?? null,
-        validite_jours: quote.validite_jours ?? 30,
-        createdAt: quote.createdAt,
+        statut_devis: quote.statut_devis, prix_ttc: quote.prix_final_ttc || quote.prix_ttc,
+        warnings: quote.warnings, besoin_reprise_humaine: quote.besoin_reprise_humaine,
+        email_sent_at: quote.email_sent_at ?? null, validite_jours: quote.validite_jours ?? 30, createdAt: quote.created_at,
       } : null,
     })
   } catch (err) {
@@ -72,78 +75,86 @@ router.get('/track/:token', async (req: Request, res: Response) => {
   }
 })
 
-// GET /api/leads — protégé
-// client : voit uniquement ses propres leads
-// commercial / admin : voit tous les leads
-router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
+// ─── GET /api/leads ───────────────────────────────────────────────────────────
+
+router.get('/', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
   try {
-    const filter: Record<string, unknown> = {}
-    if (req.query.statut) filter.statut = req.query.statut
+    let query = supabase.from('leads').select('*').order('created_at', { ascending: false })
+    if (authReq.userRole === 'client') query = query.eq('user_id', authReq.userId)
+    if (req.query.statut) query = query.eq('statut', req.query.statut as string)
 
-    if (req.userRole === 'client') {
-      filter.userId = new Types.ObjectId(req.userId)
-    }
-
-    const leads = await Lead.find(filter).sort({ createdAt: -1 }).lean()
-    res.json(leads)
+    const { data, error } = await query
+    if (error) { res.status(500).json({ message: error.message }); return }
+    res.json(data)
   } catch (err) {
     res.status(500).json({ message: 'Erreur récupération leads', error: String(err) })
   }
 })
 
-// GET /api/leads/:id — protégé
-router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const lead = await Lead.findById(req.params.id).lean()
-    if (!lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
+// ─── GET /api/leads/:id ───────────────────────────────────────────────────────
 
-    // Client ne peut voir que ses propres leads
-    if (req.userRole === 'client' && String(lead.userId) !== req.userId) {
-      res.status(403).json({ message: 'Accès refusé.' })
-      return
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
+  try {
+    const { data: lead, error } = await supabase.from('leads').select('*').eq('id', req.params.id).single()
+    if (error || !lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
+
+    if (authReq.userRole === 'client' && lead.user_id !== authReq.userId) {
+      res.status(403).json({ message: 'Accès refusé.' }); return
     }
 
-    const quote = await Quote.findOne({ leadId: lead._id }).lean()
-    res.json({ ...lead, quote: quote || null })
+    const { data: quote } = await supabase.from('quotes').select('*').eq('lead_id', lead.id).order('created_at', { ascending: false }).limit(1).single()
+    res.json({ ...lead, quote: quote ?? null })
   } catch (err) {
     res.status(500).json({ message: 'Erreur récupération lead', error: String(err) })
   }
 })
 
-// POST /api/leads — public (client crée une demande)
-// Après création : calculer_devis() automatiquement.
-// Si calcul fiable → créer Quote + envoyer email devis au client.
-// Si calcul impossible / reprise humaine → email confirmation générique + notification interne.
-router.post('/', async (req: AuthRequest, res: Response) => {
+// ─── POST /api/leads ──────────────────────────────────────────────────────────
+
+router.post('/', async (req: Request, res: Response) => {
   try {
     const body = { ...req.body }
 
-    // Attacher userId si token présent (sans bloquer si absent)
+    // Attach userId if token present (non-blocking)
     const authHeader = req.headers.authorization
     if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const jwt = await import('jsonwebtoken')
-        const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-secret'
-        const payload = jwt.default.verify(authHeader.slice(7), JWT_SECRET) as { sub: string }
-        body.userId = payload.sub
-      } catch { /* token invalide ou absent — demande anonyme */ }
+      const { data } = await supabase.auth.getUser(authHeader.slice(7))
+      if (data?.user) body.userId = data.user.id
     }
 
-    const lead = new Lead(body)
-    await lead.save()
+    const score  = computeScore(body)
+    const statut = score < 60 ? 'incomplet' : 'nouveau'
 
-    await Log.create({
-      action: 'LEAD_CREATED',
-      leadId: lead._id,
-      status: 'success',
-      message: `Nouveau lead : ${lead.nom} (${lead.email}) — ${lead.depart} → ${lead.destination} — score ${lead.score_completude}%`,
-      payload: { email: lead.email, depart: lead.depart, destination: lead.destination, userId: body.userId ?? null },
-    })
+    const leadPayload = {
+      nom:             body.nom,
+      societe:         body.societe ?? null,
+      email:           (body.email as string).toLowerCase(),
+      telephone:       body.telephone ?? '',
+      depart:          body.depart,
+      destination:     body.destination,
+      date_depart:     body.date_depart,
+      date_retour:     body.date_retour ?? null,
+      nb_passagers:    Number(body.nb_passagers),
+      type_trajet:     body.type_trajet,
+      urgence:         body.urgence ?? 'normal',
+      options:         Array.isArray(body.options) ? body.options : [],
+      commentaire:     body.commentaire ?? null,
+      statut,
+      score_completude: score,
+      user_id:         body.userId ?? null,
+      tracking_token:  crypto.randomBytes(20).toString('hex'),
+    }
 
-    // Toujours notifier l'équipe NeoTravel de la nouvelle demande
+    const { data: lead, error } = await supabase.from('leads').insert(leadPayload).select().single()
+    if (error || !lead) { res.status(400).json({ message: error?.message ?? 'Erreur création lead' }); return }
+
+    await addLog('LEAD_CREATED', 'success',
+      `Nouveau lead : ${lead.nom} (${lead.email}) — ${lead.depart} → ${lead.destination} — score ${score}%`,
+      lead.id, { email: lead.email, depart: lead.depart, destination: lead.destination, userId: body.userId ?? null })
+
     sendNewLeadInternalEmail(lead).catch(() => {})
-
-    // Auto-quote asynchrone — ne bloque pas la réponse HTTP
     void autoQuote(lead)
 
     res.status(201).json(lead)
@@ -153,156 +164,113 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 })
 
-// Calcul automatique du devis après création du lead.
-// Si calcul fiable : crée le Quote, envoie l'email devis, met à jour le statut.
-// Si calcul non fiable ou impossible : email confirmation générique + notification interne.
-async function autoQuote(lead: Awaited<ReturnType<typeof Lead.prototype.save>> | InstanceType<typeof Lead>): Promise<void> {
+// ─── Auto-quote ───────────────────────────────────────────────────────────────
+
+async function autoQuote(lead: Record<string, unknown>): Promise<void> {
   const input: DevisInput = {
-    depart:       lead.depart,
-    destination:  lead.destination,
-    date_depart:  lead.date_depart,
-    date_retour:  lead.date_retour,
-    nb_passagers: lead.nb_passagers,
-    type_trajet:  lead.type_trajet,
-    options:      lead.options ?? [],
-    urgence:      lead.urgence ?? 'normal',
+    depart:       lead.depart as string,
+    destination:  lead.destination as string,
+    date_depart:  lead.date_depart as string,
+    date_retour:  lead.date_retour as string | undefined,
+    nb_passagers: lead.nb_passagers as number,
+    type_trajet:  lead.type_trajet as DevisInput['type_trajet'],
+    options:      (lead.options as string[]) ?? [],
+    urgence:      (lead.urgence as DevisInput['urgence']) ?? 'normal',
   }
 
   try {
     const result = calculer_devis(input)
 
     if (!result.success || result.besoin_reprise_humaine) {
-      // Cas complexe ou distance inconnue
-      const raison = result.success
-        ? (result.raison_reprise_humaine ?? 'Reprise humaine requise')
-        : result.error
-
-      await Lead.findByIdAndUpdate(lead._id, { statut: 'cas_complexe' })
-
-      await Log.create({
-        action:  'AUTO_QUOTE_COMPLEX',
-        leadId:  lead._id,
-        status:  'warning',
-        message: `Devis auto impossible — cas complexe : ${raison}`,
-        payload: { input, raison },
-      })
-
-      // Email client — confirmation de réception sans devis
-      sendLeadReceivedEmail(lead).catch(() => {})
-      // Notification interne — commercial doit reprendre
-      sendComplexCaseEmail(lead, raison).catch(() => {})
+      const raison = result.success ? (result.raison_reprise_humaine ?? 'Reprise humaine requise') : result.error
+      await supabase.from('leads').update({ statut: 'cas_complexe' }).eq('id', lead.id)
+      await addLog('AUTO_QUOTE_COMPLEX', 'warning', `Devis auto impossible — cas complexe : ${raison}`, lead.id as string, { input, raison })
+      sendLeadReceivedEmail(lead as never).catch(() => {})
+      sendComplexCaseEmail(lead as never, raison as string).catch(() => {})
       return
     }
 
-    // Calcul réussi, pas de reprise humaine requise
-    const quote = await Quote.create({
-      leadId:   lead._id,
-      source:   'auto',
-      prix_ht:  result.prix_ht,
-      tva:      result.tva,
-      prix_ttc: result.prix_ttc,
-      lignes_calcul:      result.lignes_calcul,
-      coefficients:       result.coefficients,
-      warnings:           result.warnings,
+    const quotePayload = {
+      lead_id:               lead.id,
+      source:                'auto',
+      prix_ht:               result.prix_ht,
+      tva:                   result.tva,
+      prix_ttc:              result.prix_ttc,
+      lignes_calcul:         result.lignes_calcul,
+      coefficients:          result.coefficients,
+      warnings:              result.warnings,
       besoin_reprise_humaine: false,
-      sources_calcul:     result.sources_calcul,
-      explication_calcul: result.explication_calcul,
-      statut_devis:       'genere',
-      validite_jours:     30,
-    })
+      sources_calcul:        result.sources_calcul,
+      explication_calcul:    result.explication_calcul,
+      statut_devis:          'genere',
+      validite_jours:        30,
+      prix_final_ht:         result.prix_ht,
+      prix_final_ttc:        result.prix_ttc,
+      ajustement_manuel_ht:  0,
+    }
 
-    await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_genere' })
+    const { data: quote } = await supabase.from('quotes').insert(quotePayload).select().single()
+    await supabase.from('leads').update({ statut: 'devis_genere' }).eq('id', lead.id)
 
-    // Envoi email devis — si erreur, on loggue mais on ne crash pas
     try {
-      await sendQuoteEmail(lead, quote)
-      await Quote.findByIdAndUpdate(quote._id, { email_sent_at: new Date() })
-      await Lead.findByIdAndUpdate(lead._id, { statut: 'devis_envoye' })
-
-      await Log.create({
-        action:  'AUTO_QUOTE_SENT',
-        leadId:  lead._id,
-        status:  'success',
-        message: `Devis auto calculé et envoyé à ${lead.email} — ${result.prix_ttc.toFixed(2)} € TTC`,
-        payload: { prix_ttc: result.prix_ttc, warnings: result.warnings },
-      })
+      await sendQuoteEmail(lead as never, quote as never)
+      await supabase.from('quotes').update({ email_sent_at: new Date().toISOString() }).eq('id', quote!.id)
+      await supabase.from('leads').update({ statut: 'devis_envoye' }).eq('id', lead.id)
+      await addLog('AUTO_QUOTE_SENT', 'success',
+        `Devis auto calculé et envoyé à ${lead.email} — ${result.prix_ttc.toFixed(2)} € TTC`,
+        lead.id as string, { prix_ttc: result.prix_ttc, warnings: result.warnings })
     } catch (emailErr) {
-      await Log.create({
-        action:  'AUTO_QUOTE_EMAIL_FAILED',
-        leadId:  lead._id,
-        status:  'error',
-        message: `Devis calculé mais email non envoyé : ${String(emailErr)}`,
-        payload: { prix_ttc: result.prix_ttc },
-      })
-      // Devis existe en base même si l'email a échoué — commercial peut envoyer manuellement
+      await addLog('AUTO_QUOTE_EMAIL_FAILED', 'error',
+        `Devis calculé mais email non envoyé : ${String(emailErr)}`,
+        lead.id as string, { prix_ttc: result.prix_ttc })
     }
   } catch (err) {
-    await Log.create({
-      action:  'AUTO_QUOTE_ERROR',
-      leadId:  lead._id,
-      status:  'error',
-      message: `Erreur inattendue calcul auto devis : ${String(err)}`,
-    }).catch(() => {})
+    await addLog('AUTO_QUOTE_ERROR', 'error', `Erreur inattendue calcul auto devis : ${String(err)}`, lead.id as string)
   }
 }
 
-// POST /api/leads/claim-by-email — rattacher les leads anonymes au compte connecté
-router.post('/claim-by-email', requireAuth, async (req: AuthRequest, res: Response) => {
-  if (req.userRole !== 'client') {
-    res.status(403).json({ message: 'Réservé aux comptes clients.' })
-    return
-  }
+// ─── POST /api/leads/claim-by-email ──────────────────────────────────────────
+
+router.post('/claim-by-email', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
+  if (authReq.userRole !== 'client') { res.status(403).json({ message: 'Réservé aux comptes clients.' }); return }
 
   try {
-    const user = await User.findById(req.userId).lean()
-    if (!user) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
+    const { data: { user } } = await supabase.auth.admin.getUserById(authReq.userId!)
+    if (!user?.email) { res.status(404).json({ message: 'Utilisateur introuvable.' }); return }
 
-    const result = await Lead.updateMany(
-      { email: user.email, userId: null },
-      { $set: { userId: req.userId } }
-    )
+    const { data: claimed } = await supabase.from('leads')
+      .update({ user_id: authReq.userId })
+      .eq('email', user.email)
+      .is('user_id', null)
+      .select('id')
 
-    if (result.modifiedCount > 0) {
-      await Log.create({
-        action: 'LEADS_CLAIMED',
-        status: 'success',
-        message: `${result.modifiedCount} demande(s) rattachée(s) au compte ${user.email}`,
-        payload: { userId: req.userId, email: user.email, count: result.modifiedCount },
-      })
+    const count = claimed?.length ?? 0
+    if (count > 0) {
+      await addLog('LEADS_CLAIMED', 'success', `${count} demande(s) rattachée(s) au compte ${user.email}`,
+        undefined, { userId: authReq.userId, email: user.email, count })
     }
 
-    res.json({ claimed: result.modifiedCount })
+    res.json({ claimed: count })
   } catch (err) {
     res.status(500).json({ message: 'Erreur rattachement leads', error: String(err) })
   }
 })
 
-// PATCH /api/leads/:id/status — protégé commercial/admin
-router.patch('/:id/status', requireAuth, async (req: AuthRequest, res: Response) => {
+// ─── PATCH /api/leads/:id/status ─────────────────────────────────────────────
+
+router.patch('/:id/status', requireAuth, async (req: Request, res: Response) => {
+  const authReq = req as AuthRequest
   try {
-    if (req.userRole === 'client') {
-      res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' })
-      return
-    }
+    if (authReq.userRole === 'client') { res.status(403).json({ message: 'Action réservée aux commerciaux NeoTravel.' }); return }
 
     const { statut } = req.body
     if (!statut) { res.status(400).json({ message: 'Champ statut requis' }); return }
 
-    const lead = await Lead.findByIdAndUpdate(
-      req.params.id,
-      { statut },
-      { new: true, runValidators: false }
-    )
-    if (!lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
+    const { data: lead, error } = await supabase.from('leads').update({ statut }).eq('id', req.params.id).select().single()
+    if (error || !lead) { res.status(404).json({ message: 'Lead introuvable' }); return }
 
-    await Log.create({
-      action: 'STATUS_CHANGED',
-      leadId: lead._id,
-      status: 'info',
-      message: `Statut mis à jour → ${statut}`,
-      payload: { statut, modifiedBy: req.userId },
-    })
-
+    await addLog('STATUS_CHANGED', 'info', `Statut mis à jour → ${statut}`, lead.id, { statut, modifiedBy: authReq.userId })
     res.json(lead)
   } catch (err) {
     res.status(500).json({ message: 'Erreur mise à jour statut', error: String(err) })
