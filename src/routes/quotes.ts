@@ -427,20 +427,28 @@ router.patch('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const quote = await Quote.findById(req.params.id)
     if (!quote) { res.status(404).json({ message: 'Devis introuvable' }); return }
 
-    const { ajustement_manuel_ht, raison_ajustement } = req.body
-    if (ajustement_manuel_ht === undefined) {
-      res.status(400).json({ message: 'ajustement_manuel_ht requis.' })
-      return
-    }
+    const { ajustement_manuel_ht, raison_ajustement, lignes_calcul } = req.body
 
     const oldHt  = quote.prix_final_ht || quote.prix_ht
     const oldTtc = quote.prix_final_ttc || quote.prix_ttc
 
-    quote.ajustement_manuel_ht = Number(ajustement_manuel_ht)
-    quote.raison_ajustement    = raison_ajustement ?? ''
-    quote.modifiedBy           = req.userId
-    quote.modifiedAt           = new Date()
-    // prix_final recalculé par le pre-save hook
+    // Mise à jour des lignes individuelles — recalcul prix_ht depuis la somme
+    if (Array.isArray(lignes_calcul) && lignes_calcul.length > 0) {
+      quote.lignes_calcul = lignes_calcul
+      const taux_tva = 0.20
+      const nouveauHt = Math.round(lignes_calcul.reduce((s: number, l: { montant: number }) => s + (Number(l.montant) || 0), 0) * 100) / 100
+      quote.prix_ht  = nouveauHt
+      quote.tva      = Math.round(nouveauHt * taux_tva * 100) / 100
+      quote.prix_ttc = Math.round(nouveauHt * (1 + taux_tva) * 100) / 100
+    }
+
+    if (ajustement_manuel_ht !== undefined) {
+      quote.ajustement_manuel_ht = Number(ajustement_manuel_ht)
+    }
+    quote.raison_ajustement = raison_ajustement ?? quote.raison_ajustement ?? ''
+    quote.modifiedBy        = req.userId
+    quote.modifiedAt        = new Date()
+    // prix_final recalculé par le pre-save hook (prix_ht + ajustement_manuel_ht)
     await quote.save()
 
     await Log.create({
