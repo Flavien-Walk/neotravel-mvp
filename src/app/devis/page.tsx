@@ -56,17 +56,13 @@ export default function DevisPage() {
         <div className="max-w-6xl mx-auto w-full">
 
           {/* Page header */}
-          <div className="text-center mb-10">
-            <span className="label-tag mb-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Devis gratuit · Sans engagement · Réponse sous 2h
-            </span>
-            <h1 className="mt-4 text-3xl sm:text-4xl font-bold text-white">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
               Votre devis de transport de groupe
             </h1>
-            <p className="mt-3 text-white/50 max-w-lg mx-auto text-base leading-relaxed">
-              Remplissez les étapes ci-contre. Notre assistant de devis collecte les informations
-              nécessaires — le prix est ensuite calculé automatiquement selon nos tarifs.
+            <p className="text-white/45 max-w-md mx-auto text-base leading-relaxed">
+              Décrivez votre besoin. Le prix est calculé automatiquement —
+              détaillé, ligne par ligne, sans interprétation.
             </p>
           </div>
 

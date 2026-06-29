@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Clock, FileText } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
@@ -16,9 +16,9 @@ const item = {
 }
 
 const REASSURANCES = [
-  { icon: FileText, value: 'Devis gratuit',  label: 'sans engagement' },
-  { icon: Clock,    value: 'Réponse 2h',     label: 'en heures ouvrées' },
-  { icon: Shield,   value: 'Prix traçable',  label: 'ligne par ligne' },
+  { img: '/images/neotravel/devis-gratuit.png', value: 'Devis gratuit',  label: 'sans engagement' },
+  { img: '/images/neotravel/reponse-2h.png',    value: 'Réponse 2h',     label: 'en heures ouvrées' },
+  { img: '/images/neotravel/prix-tracable.png', value: 'Prix traçable',  label: 'ligne par ligne' },
 ]
 
 export default function HeroSection() {
@@ -143,13 +143,6 @@ export default function HeroSection() {
             initial="hidden"
             animate="visible"
           >
-            <motion.div variants={item}>
-              <span className="label-tag mb-7">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                Autocar de groupe · Devis sur mesure · Suivi garanti
-              </span>
-            </motion.div>
-
             <motion.h1
               variants={item}
               className="text-4xl sm:text-5xl xl:text-[3.35rem] font-bold leading-[1.1] tracking-tight text-white mb-5"
@@ -177,11 +170,15 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.div variants={item} className="flex flex-wrap gap-3">
-              {REASSURANCES.map(({ icon: Icon, value, label }) => (
-                <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl glass">
-                  <Icon className="w-4 h-4 text-neo-blue" />
-                  <span className="font-bold text-white text-sm">{value}</span>
-                  <span className="text-white/40 text-xs">{label}</span>
+              {REASSURANCES.map(({ img, value, label }) => (
+                <div key={label} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl glass">
+                  <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
+                    <Image src={img} alt={value} width={36} height={36} className="w-full h-full object-cover" unoptimized />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm leading-tight">{value}</div>
+                    <div className="text-white/40 text-[11px]">{label}</div>
+                  </div>
                 </div>
               ))}
             </motion.div>
