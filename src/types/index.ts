@@ -78,9 +78,9 @@ export const URGENCE_LABELS: Record<UrgenceLevel, string> = {
 }
 
 export const URGENCE_COLORS: Record<UrgenceLevel, string> = {
-  normal:      'bg-white/5 text-white/40 border border-white/10',
-  urgent:      'bg-orange-500/12 text-orange-300 border border-orange-500/20',
-  tres_urgent: 'bg-red-500/12 text-red-300 border border-red-500/20',
+  normal:      'bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-500/12 dark:text-slate-400 dark:border-slate-500/20',
+  urgent:      'bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-500/12 dark:text-orange-300 dark:border-orange-500/20',
+  tres_urgent: 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/12 dark:text-red-300 dark:border-red-500/20',
 }
 
 export type SourceType = 'mock_mvp' | 'regle_documentee' | 'hypothese_mvp' | 'a_definir'
