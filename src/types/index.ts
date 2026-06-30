@@ -235,6 +235,26 @@ export interface LeadFormData {
   commentaire: string
 }
 
+export interface MarketBenchmark {
+  id: string
+  quote_id: string
+  lead_id: string
+  depart: string
+  destination: string
+  type_trajet: string
+  nb_passagers: number
+  prix_bas: number | null
+  prix_median: number | null
+  prix_haut: number | null
+  sources: string[]
+  justification: string | null
+  nb_trajets_similaires: number
+  status: 'pending' | 'ready' | 'error' | 'insufficient_data'
+  requested_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface TrackingData {
   tracking: true
   statut: LeadStatus

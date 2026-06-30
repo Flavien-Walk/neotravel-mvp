@@ -12,10 +12,11 @@ import {
   ShieldCheck, Clock,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul } from '@/types'
+import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul, MarketBenchmark } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 import UrgencyBadge from '@/components/UrgencyBadge'
 import ManualQuoteModal from '@/components/ManualQuoteModal'
+import MarketBenchmarkBlock from '@/components/MarketBenchmarkBlock'
 
 const STATUS_OPTIONS: LeadStatus[] = [
   'nouveau', 'incomplet', 'qualifie',
@@ -84,6 +85,7 @@ export default function DashboardLeadDetailPage() {
   const [actionMsg, setMsg]       = useState<{ text: string; ok: boolean } | null>(null)
   const [downloading, setDl]      = useState(false)
   const [manualModal, setManual]  = useState(false)
+  const [benchmark, setBenchmark] = useState<MarketBenchmark | null>(null)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -96,6 +98,10 @@ export default function DashboardLeadDetailPage() {
         setQuote(leadData.quote)
         setAdjAmount(String(leadData.quote.ajustement_manuel_ht ?? 0))
         setAdjReason(leadData.quote.raison_ajustement ?? '')
+        // Charge le dernier benchmark (sans bloquer si absent)
+        api.quotes.benchmark.get(leadData.quote._id)
+          .then(b => setBenchmark(b))
+          .catch(() => {/* benchmark optionnel */})
       }
       setLogs(logsData)
     } catch {
@@ -874,6 +880,14 @@ export default function DashboardLeadDetailPage() {
               </motion.div>
             )}
           </Card>
+
+          {/* Référentiel marché — visible uniquement si un devis existe */}
+          {quote && (
+            <MarketBenchmarkBlock
+              quoteId={quote._id}
+              initial={benchmark}
+            />
+          )}
 
           {/* Historique */}
           <Card className="p-5">

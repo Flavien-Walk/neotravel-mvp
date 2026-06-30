@@ -85,6 +85,22 @@ export const api = {
         },
       })
     },
+
+    benchmark: {
+      get: (quoteId: string): Promise<import('@/types').MarketBenchmark | null> => {
+        const token = getToken()
+        return fetch(`/api/quotes/${quoteId}/benchmark`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        }).then(r => r.ok ? r.json() : r.json().then((e: { message?: string }) => Promise.reject(new Error(e.message ?? `HTTP ${r.status}`))))
+      },
+      request: (quoteId: string): Promise<import('@/types').MarketBenchmark> => {
+        const token = getToken()
+        return fetch(`/api/quotes/${quoteId}/benchmark`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        }).then(r => r.ok ? r.json() : r.json().then((e: { message?: string }) => Promise.reject(new Error(e.message ?? `HTTP ${r.status}`))))
+      },
+    },
   },
 
   chat: {
