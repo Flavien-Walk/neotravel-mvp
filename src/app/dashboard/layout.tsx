@@ -183,8 +183,8 @@ function Sidebar({ onOpenQuoteModal }: { onOpenQuoteModal: () => void }) {
           className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-lg transition-all"
           style={{ color: 'var(--dash-text-faint)' }}
           onMouseEnter={e => {
-            e.currentTarget.style.color = '#DC2626'
-            e.currentTarget.style.background = '#FEF2F2'
+            e.currentTarget.style.color = 'var(--dash-danger-text)'
+            e.currentTarget.style.background = 'var(--dash-danger-bg)'
           }}
           onMouseLeave={e => {
             e.currentTarget.style.color = 'var(--dash-text-faint)'

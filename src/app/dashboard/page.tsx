@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  Users, RefreshCw, Send, ArrowRight,
-  UserCheck, ArrowUpRight,
-  ChevronRight, Zap, FileText, ShieldCheck, Bell,
+  Users, Clock, CheckCircle, TrendingUp, RefreshCw,
+  Send, ArrowRight, BarChart3,
+  UserCheck, MapPin, ArrowUpRight, Activity,
+  ChevronRight, AlertTriangle, Zap, FileText,
+  Mail, Bot, CircleDot, ShieldCheck, Bell,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
@@ -75,38 +77,49 @@ function UrgencyChip({ urgence }: { urgence: string }) {
 }
 
 function KPICard({
-  label, value, sub, accent, loading, trend,
+  label, value, sub, icon: Icon, accent, loading, trend,
 }: {
   label: string; value: number | string; sub?: string; trend?: string;
-  accent: string; loading: boolean;
+  icon: typeof BarChart3; accent: string; loading: boolean;
 }) {
   return (
-    <div className="rounded-xl p-4 bg-white dark:bg-[#0F1B2D] border border-slate-200 dark:border-white/8 shadow-sm">
-      {loading ? (
-        <div className="h-7 w-12 rounded-md animate-pulse bg-slate-100 dark:bg-white/5" />
-      ) : (
-        <div className="flex items-baseline gap-2">
-          <div className="text-2xl font-bold font-mono text-slate-900 dark:text-white">{value}</div>
-          {trend && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400">
-              {trend}
-            </span>
-          )}
+    <div
+      className="rounded-xl p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md group"
+      style={{
+        background: 'var(--dash-surface)',
+        border: '1px solid var(--dash-border)',
+        boxShadow: 'var(--dash-shadow)',
+        borderTop: `3px solid ${accent}`,
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+          style={{ background: accent + '14' }}
+        >
+          <Icon className="w-4 h-4" style={{ color: accent }} />
         </div>
-      )}
-      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{label}</div>
-      {sub && (
-        <div className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">{sub}</div>
-      )}
-      <div className="mt-2 h-0.5 rounded-full" style={{ background: accent + '30' }}>
-        <div className="h-full w-full rounded-full" style={{ background: accent }} />
+        {trend && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--dash-success-bg)', color: 'var(--dash-success-text)' }}>
+            {trend}
+          </span>
+        )}
       </div>
+      {loading ? (
+        <div className="h-7 w-12 rounded-md animate-pulse" style={{ background: 'var(--dash-border)' }} />
+      ) : (
+        <div className="text-2xl font-bold font-mono" style={{ color: 'var(--dash-text)' }}>{value}</div>
+      )}
+      <div className="mt-0.5 text-xs font-medium" style={{ color: 'var(--dash-text-muted)' }}>{label}</div>
+      {sub && (
+        <div className="mt-1 text-[10px]" style={{ color: 'var(--dash-text-faint)' }}>{sub}</div>
+      )}
     </div>
   )
 }
 
 function ActionCard({
-  label, count, desc, color, href, cta, loading,
+  label, count, desc, color, href, cta, loading, icon: Icon,
 }: {
   label: string; count: number; desc: string; color: string;
   href: string; cta: string; loading: boolean; icon: typeof Zap;
@@ -114,25 +127,46 @@ function ActionCard({
   return (
     <Link
       href={href}
-      className="group rounded-xl p-4 flex flex-col gap-2 bg-white dark:bg-[#0F1B2D] border border-slate-200 dark:border-white/8 shadow-sm hover:shadow-md transition-shadow"
-      style={{ borderLeft: `3px solid ${color}` }}
+      className="group rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      style={{
+        background: 'var(--dash-surface)',
+        border: `1px solid var(--dash-border)`,
+        boxShadow: 'var(--dash-shadow)',
+        borderLeft: `4px solid ${color}`,
+      }}
     >
-      <div>
-        {loading ? (
-          <div className="h-7 w-8 rounded animate-pulse bg-slate-100 dark:bg-white/5 mb-1" />
-        ) : (
-          <div
-            className="text-xl font-bold font-mono"
-            style={{ color: count > 0 ? color : '#94A3B8' }}
-          >
-            {count}
-          </div>
-        )}
-        <div className="font-medium text-sm text-slate-900 dark:text-white mt-0.5">{label}</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{desc}</div>
+      <div className="flex items-start justify-between">
+        <div>
+          {loading ? (
+            <div className="h-8 w-8 rounded-md animate-pulse mb-1" style={{ background: 'var(--dash-border)' }} />
+          ) : (
+            <div className="flex items-center gap-2">
+              <div
+                className="text-2xl font-bold leading-none font-mono"
+                style={{ color: count > 0 ? color : 'var(--dash-text-faint)' }}
+              >
+                {count}
+              </div>
+              {count > 0 && (
+                <div
+                  className="w-2 h-2 rounded-full animate-pulse mt-0.5"
+                  style={{ background: color }}
+                />
+              )}
+            </div>
+          )}
+          <div className="font-semibold text-sm mt-1" style={{ color: 'var(--dash-text)' }}>{label}</div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>{desc}</div>
+        </div>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+          style={{ background: color + '12' }}
+        >
+          <Icon className="w-4 h-4" style={{ color }} />
+        </div>
       </div>
       <div
-        className="flex items-center gap-1 text-xs font-medium mt-auto pt-2 border-t border-slate-100 dark:border-white/5 transition-all group-hover:gap-2"
+        className="flex items-center gap-1 text-xs font-semibold mt-auto transition-all group-hover:gap-2"
         style={{ color }}
       >
         {cta}
@@ -192,20 +226,24 @@ export default function DashboardPage() {
   const totalActions = aValider + aEnvoyer + aRelancer + repriseHumaine
 
   return (
-    <div className="p-6 lg:p-8 min-h-full bg-slate-50 dark:bg-[#07111F]">
+    <div className="p-6 lg:p-8 min-h-full" style={{ background: 'var(--dash-bg)' }}>
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--dash-text)' }}>
             {greeting}, {firstName}
           </h1>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <p className="text-sm" style={{ color: 'var(--dash-text-muted)' }}>
               {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             {totalActions > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400 border border-orange-200 dark:border-orange-500/20">
+              <span
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md"
+                style={{ background: 'var(--dash-danger-bg)', color: 'var(--dash-danger-text)', border: '1px solid var(--dash-danger-border)' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--dash-danger-text)' }} />
                 {totalActions} action{totalActions > 1 ? 's' : ''} requise{totalActions > 1 ? 's' : ''}
               </span>
             )}
@@ -214,7 +252,13 @@ export default function DashboardPage() {
         <button
           onClick={() => fetch(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all"
+          style={{
+            background: 'var(--dash-surface)',
+            border: '1px solid var(--dash-border)',
+            color: 'var(--dash-text-muted)',
+            boxShadow: 'var(--dash-shadow)',
+          }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           Actualiser
@@ -222,17 +266,19 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <KPICard
           label="Total leads"
           value={total}
+          icon={Users}
           accent="#2563EB"
           loading={loading}
-          sub={`${enCours} actif${enCours > 1 ? 's' : ''}`}
+          sub={`${enCours} dossier${enCours > 1 ? 's' : ''} actif${enCours > 1 ? 's' : ''}`}
         />
         <KPICard
           label="Devis envoyés"
           value={devisEnv}
+          icon={Send}
           accent="#0284C7"
           loading={loading}
           sub={`${autoEnvoyes} automatiquement`}
@@ -240,6 +286,7 @@ export default function DashboardPage() {
         <KPICard
           label="Acceptés"
           value={acceptes}
+          icon={CheckCircle}
           accent="#16A34A"
           loading={loading}
           sub="dossiers signés"
@@ -248,6 +295,7 @@ export default function DashboardPage() {
         <KPICard
           label="Taux conversion"
           value={`${taux}%`}
+          icon={TrendingUp}
           accent="#7C3AED"
           loading={loading}
           sub={`sur ${total} leads total`}
@@ -255,7 +303,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Action cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <ActionCard
           label="Devis à valider"
           count={aValider}
@@ -289,52 +337,89 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Pipeline ── */}
-      <div className="rounded-xl p-5 mb-5 bg-white dark:bg-[#0F1B2D] border border-slate-200 dark:border-white/8 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm font-medium text-slate-900 dark:text-white">Pipeline commercial</div>
+      <div
+        className="rounded-xl p-5 mb-6"
+        style={{
+          background: 'var(--dash-surface)',
+          border: '1px solid var(--dash-border)',
+          boxShadow: 'var(--dash-shadow)',
+        }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="font-semibold text-sm" style={{ color: 'var(--dash-text)' }}>Pipeline commercial</div>
+            <div className="text-xs mt-0.5" style={{ color: 'var(--dash-text-faint)' }}>
+              {!loading && `${enCours} dossier${enCours > 1 ? 's' : ''} en cours`}
+            </div>
+          </div>
           <Link
             href="/dashboard/leads"
-            className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:opacity-80"
+            className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            style={{ color: '#2563EB' }}
           >
             Tous les leads <ArrowUpRight className="w-3 h-3" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-          {PIPELINE_STAGES.map(({ label, statuts, color }) => {
-            const count = leads.filter(l => statuts.includes(l.statut)).length
-            const active = count > 0
-            return (
-              <div key={label} className="flex flex-col items-center gap-1.5 text-center">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{
-                    background: active ? color : undefined,
-                    color: active ? '#fff' : '#94A3B8',
-                    border: active ? 'none' : '2px solid #E2E8F0',
-                  }}
-                >
-                  {loading ? '–' : (active ? count : '·')}
+        <div className="relative">
+          <div
+            className="absolute top-5 left-5 right-5 h-px hidden sm:block"
+            style={{ background: 'var(--dash-border)' }}
+          />
+          <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 relative z-10">
+            {PIPELINE_STAGES.map(({ label, statuts, color }, i) => {
+              const count = leads.filter(l => statuts.includes(l.statut)).length
+              const active = count > 0
+              return (
+                <div key={label} className="flex flex-col items-center gap-2 text-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${active ? 'shadow-sm' : ''}`}
+                    style={{
+                      background: active ? color : 'var(--dash-muted)',
+                      color: active ? '#fff' : 'var(--dash-text-faint)',
+                      border: active ? `2px solid ${color}` : '2px solid var(--dash-border)',
+                      boxShadow: active ? `0 0 0 3px ${color}18` : undefined,
+                    }}
+                  >
+                    {loading ? '–' : (active ? count : (i < 6 ? '·' : '·'))}
+                  </div>
+                  <div
+                    className="text-[10px] font-medium leading-tight"
+                    style={{ color: active ? 'var(--dash-text)' : 'var(--dash-text-faint)' }}
+                  >
+                    {label}
+                  </div>
                 </div>
-                <div className={`text-[10px] leading-tight ${active ? 'font-medium text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {label}
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* ── Bottom grid ── */}
-      <div className="grid lg:grid-cols-[1fr_260px] gap-5">
+      <div className="grid lg:grid-cols-[1fr_280px] gap-6">
 
         {/* Leads récents */}
-        <div className="rounded-xl overflow-hidden bg-white dark:bg-[#0F1B2D] border border-slate-200 dark:border-white/8 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-white/5">
-            <div className="text-sm font-medium text-slate-900 dark:text-white">Leads récents</div>
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: 'var(--dash-surface)',
+            border: '1px solid var(--dash-border)',
+            boxShadow: 'var(--dash-shadow)',
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-5 py-3.5"
+            style={{ borderBottom: '1px solid var(--dash-border)', background: 'var(--dash-muted)' }}
+          >
+            <div className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--dash-text)' }}>
+              <Activity className="w-4 h-4" style={{ color: '#2563EB' }} />
+              Leads récents
+            </div>
             <Link
               href="/dashboard/leads"
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:opacity-75"
+              className="text-xs font-medium transition-colors hover:opacity-75"
+              style={{ color: '#2563EB' }}
             >
               Voir tout <ChevronRight className="w-3 h-3 inline" />
             </Link>
@@ -343,19 +428,24 @@ export default function DashboardPage() {
           {loading ? (
             <div className="p-5 space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-10 rounded-lg animate-pulse bg-slate-50 dark:bg-white/3" />
+                <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--dash-muted)' }} />
               ))}
             </div>
           ) : recent.length === 0 ? (
             <div className="p-10 text-center">
-              <p className="text-sm text-slate-400">Aucun lead pour l&apos;instant</p>
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-20" style={{ color: 'var(--dash-text-faint)' }} />
+              <p className="text-sm" style={{ color: 'var(--dash-text-faint)' }}>Aucun lead pour l&apos;instant</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-white/5">
+                <tr style={{ borderBottom: '1px solid var(--dash-border)' }}>
                   {['Client', 'Trajet', 'Statut', 'Urgence', ''].map(h => (
-                    <th key={h} className="px-5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <th
+                      key={h}
+                      className="px-5 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider"
+                      style={{ color: 'var(--dash-text-faint)' }}
+                    >
                       {h}
                     </th>
                   ))}
@@ -365,31 +455,38 @@ export default function DashboardPage() {
                 {recent.map(lead => (
                   <tr
                     key={lead._id}
-                    className="group border-b border-slate-50 dark:border-white/3 last:border-0 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors"
+                    className="group transition-colors"
+                    style={{ borderBottom: '1px solid var(--dash-border)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--dash-muted)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <td className="px-5 py-2.5">
-                      <div className="font-medium text-[13px] text-slate-800 dark:text-slate-100">{lead.nom}</div>
+                    <td className="px-5 py-3">
+                      <div className="font-medium text-[13px]" style={{ color: 'var(--dash-text)' }}>{lead.nom}</div>
                       {lead.societe && (
-                        <div className="text-[11px] text-slate-400">{lead.societe}</div>
+                        <div className="text-[11px]" style={{ color: 'var(--dash-text-faint)' }}>{lead.societe}</div>
                       )}
                     </td>
-                    <td className="px-5 py-2.5">
-                      <span className="text-xs text-slate-600 dark:text-slate-300">
-                        {lead.depart} → {lead.destination}
-                      </span>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--dash-text-muted)' }}>
+                        <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: '#2563EB', opacity: 0.6 }} />
+                        <span className="truncate max-w-[120px] font-medium">{lead.depart}</span>
+                        <span style={{ color: 'var(--dash-text-faint)' }}>→</span>
+                        <span className="truncate max-w-[80px]">{lead.destination}</span>
+                      </div>
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-3">
                       <StatusChip statut={lead.statut} />
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-3">
                       <UrgencyChip urgence={lead.urgence} />
                     </td>
-                    <td className="px-5 py-2.5 text-right">
+                    <td className="px-5 py-3 text-right">
                       <Link
                         href={`/dashboard/leads/${lead._id}`}
-                        className="opacity-0 group-hover:opacity-100 text-xs font-medium text-blue-600 dark:text-blue-400 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 flex items-center justify-end gap-1 text-xs font-medium transition-all"
+                        style={{ color: '#2563EB' }}
                       >
-                        Ouvrir →
+                        Ouvrir <ArrowRight className="w-3 h-3" />
                       </Link>
                     </td>
                   </tr>
@@ -399,54 +496,54 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Sidebar */}
-        <div className="flex flex-col gap-3">
-
-          {/* Activité */}
-          <div className="rounded-xl p-4 bg-white dark:bg-[#0F1B2D] border border-slate-200 dark:border-white/8 shadow-sm">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-              Activité
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { label: 'Dossiers actifs',   value: enCours,        color: '#2563EB' },
-                { label: 'À valider',          value: aEnvoyer,       color: '#D97706' },
-                { label: 'Relance 1',          value: leads.filter(l => l.statut === 'relance_1').length, color: '#EA580C' },
-                { label: 'Relance 2',          value: leads.filter(l => l.statut === 'relance_2').length, color: '#DC2626' },
-                { label: 'Taux de conversion', value: `${taux}%`,     color: '#16A34A' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{label}</span>
-                  <span
-                    className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded"
-                    style={{
-                      color,
-                      background: typeof value === 'number' && value > 0 ? color + '10' : undefined,
-                    }}
-                  >
-                    {loading ? '–' : value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Pilotage column */}
+        <div className="flex flex-col gap-4">
 
           {/* Urgents */}
           {urgents.length > 0 && (
-            <div className="rounded-xl p-4 bg-white dark:bg-[#0F1B2D] border border-orange-200 dark:border-orange-500/20 shadow-sm">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-2">
-                Urgents · {urgents.length}
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'var(--dash-surface)',
+                border: '1px solid var(--dash-warning-border)',
+                boxShadow: '0 0 0 3px rgba(245,158,11,0.08)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--dash-warning-bg)' }}>
+                  <AlertTriangle className="w-3.5 h-3.5" style={{ color: 'var(--dash-warning-text)' }} />
+                </div>
+                <span className="text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
+                  Urgents
+                </span>
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                  style={{ background: 'var(--dash-warning-bg)', color: 'var(--dash-warning-text)' }}
+                >
+                  {urgents.length}
+                </span>
               </div>
               <div className="space-y-1.5">
                 {urgents.map(l => (
                   <Link
                     key={l._id}
                     href={`/dashboard/leads/${l._id}`}
-                    className="flex items-center justify-between py-1.5 hover:opacity-75 transition-opacity"
+                    className="flex items-center justify-between p-2.5 rounded-xl transition-all"
+                    style={{ border: '1px solid transparent' }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'var(--dash-warning-bg)'
+                      e.currentTarget.style.borderColor = 'var(--dash-warning-border)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.borderColor = 'transparent'
+                    }}
                   >
                     <div>
-                      <div className="text-xs font-medium text-slate-800 dark:text-slate-100">{l.nom}</div>
-                      <div className="text-[10px] text-slate-400">{l.depart} → {l.destination}</div>
+                      <div className="text-xs font-semibold" style={{ color: 'var(--dash-text)' }}>{l.nom}</div>
+                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--dash-text-faint)' }}>
+                        {l.depart} → {l.destination}
+                      </div>
                     </div>
                     <UrgencyChip urgence={l.urgence} />
                   </Link>
@@ -454,6 +551,150 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+
+          {/* Quick stats */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--dash-text-faint)' }}>
+              Activité
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Dossiers actifs',   value: enCours,    icon: Activity,      color: '#2563EB', total: total },
+                { label: 'À valider',          value: aValider,   icon: ShieldCheck,   color: '#9333EA', total: enCours || 1 },
+                { label: 'Relance 1',          value: enRelance1, icon: Bell,          color: '#EA580C', total: enCours || 1 },
+                { label: 'Relance 2',          value: enRelance2, icon: AlertTriangle, color: '#DC2626', total: enCours || 1 },
+                { label: 'Taux conversion',    value: `${taux}%`, icon: TrendingUp,    color: '#16A34A', total: null },
+              ].map(({ label, value, icon: Icon, color, total: t }) => (
+                <div key={label} className="flex items-center gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: color + '12' }}
+                  >
+                    <Icon className="w-3.5 h-3.5" style={{ color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>{label}</span>
+                      <span className="text-[11px] font-semibold font-mono" style={{ color: 'var(--dash-text)' }}>
+                        {loading ? '–' : value}
+                      </span>
+                    </div>
+                    {t !== null && !loading && typeof value === 'number' && (
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: 'var(--dash-border)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, t > 0 ? Math.round((value / t) * 100) : 0)}%`,
+                            background: color,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Automatisation */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: 'var(--dash-selected-bg)' }}>
+                <Bot className="w-3 h-3" style={{ color: 'var(--dash-selected-text)' }} />
+              </div>
+              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--dash-text-faint)' }}>
+                Automatisation
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Devis calculés',    value: devisCalcules,  icon: FileText,  color: '#D97706' },
+                { label: 'Emails envoyés',    value: emailsEnvoyes,  icon: Mail,      color: '#0284C7' },
+                { label: 'Reprises humaines', value: repriseHumaine, icon: UserCheck, color: '#DC2626' },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
+                    <span className="text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>{label}</span>
+                  </div>
+                  <span
+                    className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md"
+                    style={{
+                      background: value > 0 ? color + '12' : 'var(--dash-muted)',
+                      color: value > 0 ? color : 'var(--dash-text-faint)',
+                    }}
+                  >
+                    {loading ? '–' : value}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {!loading && devisCalcules > 0 && (
+              <div className="mt-3 pt-3 flex items-center gap-1.5 text-[10px]" style={{ borderTop: '1px solid var(--dash-border)', color: 'var(--dash-text-faint)' }}>
+                <CircleDot className="w-3 h-3 flex-shrink-0" style={{ color: '#16A34A' }} />
+                <span>
+                  {Math.round((emailsEnvoyes / Math.max(devisCalcules, 1)) * 100)}% des devis envoyés automatiquement
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Garanties */}
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--dash-text-faint)' }}>
+              Fiabilité NeoTravel
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: 'Calcul 100% traçable',           color: '#16A34A' },
+                { label: 'Prix déterministe + auditable',   color: '#0284C7' },
+                { label: 'Reprise humaine si cas complexe', color: '#D97706' },
+                { label: 'Devis valable 30 jours',          color: '#7C3AED' },
+              ].map(({ label, color }) => (
+                <div key={label} className="flex items-start gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color }} />
+                  <span className="text-[11px]" style={{ color: 'var(--dash-text-muted)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Link
+            href="/dashboard/settings"
+            className="group flex items-center justify-between p-3 rounded-xl transition-all hover:-translate-y-px"
+            style={{
+              background: 'var(--dash-surface)',
+              border: '1px solid var(--dash-border)',
+              boxShadow: 'var(--dash-shadow)',
+            }}
+          >
+            <div>
+              <div className="text-xs font-semibold" style={{ color: 'var(--dash-text)' }}>Paramètres</div>
+              <div className="text-[10px]" style={{ color: 'var(--dash-text-faint)' }}>Profil, carburant, marges, TVA…</div>
+            </div>
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--dash-text-faint)' }} />
+          </Link>
         </div>
       </div>
     </div>

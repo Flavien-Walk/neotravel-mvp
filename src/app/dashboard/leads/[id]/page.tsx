@@ -24,18 +24,18 @@ const STATUS_OPTIONS: LeadStatus[] = [
   'cas_complexe', 'reprise_humaine', 'erreur_envoi', 'cloture',
 ]
 
-const LOG_STATUS: Record<string, { dot: string; text: string }> = {
-  success: { dot: '#22C55E', text: '#15803D' },
-  error:   { dot: '#EF4444', text: '#B91C1C' },
-  info:    { dot: '#3B82F6', text: '#1D4ED8' },
-  warning: { dot: '#F59E0B', text: '#B45309' },
+const LOG_STATUS: Record<string, { dot: string }> = {
+  success: { dot: '#22C55E' },
+  error:   { dot: '#EF4444' },
+  info:    { dot: '#3B82F6' },
+  warning: { dot: '#F59E0B' },
 }
 
 const SOURCE_TYPE_LABELS: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  regle_documentee: { label: 'Règle documentée',  bg: '#F0FDF4', color: '#15803D', border: '#BBF7D0' },
-  mock_mvp:         { label: 'Estimation MVP',     bg: '#FFFBEB', color: '#92400E', border: '#FDE68A' },
-  hypothese_mvp:    { label: 'Hypothèse MVP',      bg: '#FFF7ED', color: '#C2410C', border: '#FED7AA' },
-  a_definir:        { label: 'À affiner',          bg: '#F8FAFC', color: '#64748B', border: '#E2E8F0' },
+  regle_documentee: { label: 'Règle documentée', bg: 'var(--dash-success-bg)', color: 'var(--dash-success-text)', border: 'var(--dash-success-border)' },
+  mock_mvp:         { label: 'Estimation MVP',   bg: 'var(--dash-warning-bg)', color: 'var(--dash-warning-text)', border: 'var(--dash-warning-border)' },
+  hypothese_mvp:    { label: 'Hypothèse MVP',    bg: 'var(--dash-orange-bg)',  color: 'var(--dash-orange-text)',  border: 'var(--dash-orange-border)'  },
+  a_definir:        { label: 'À affiner',        bg: 'var(--dash-muted)',      color: 'var(--dash-text-muted)',   border: 'var(--dash-border)'         },
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -291,14 +291,15 @@ export default function DashboardLeadDetailPage() {
 
   return (
     <div className="p-6 sm:p-8 transition-colors duration-200" style={{ background: 'var(--dash-bg)', minHeight: '100vh' }}>
+
       {/* Flash */}
       {actionMsg && (
         <motion.div
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
           className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
           style={actionMsg.ok
-            ? { background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }
-            : { background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }
+            ? { background: 'var(--dash-success-bg)', color: 'var(--dash-success-text)', border: '1px solid var(--dash-success-border)' }
+            : { background: 'var(--dash-danger-bg)',  color: 'var(--dash-danger-text)',  border: '1px solid var(--dash-danger-border)'  }
           }
         >
           {actionMsg.ok
@@ -348,9 +349,9 @@ export default function DashboardLeadDetailPage() {
               <div className="flex-1 text-center">
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2"
-                  style={{ background: '#EFF6FF' }}
+                  style={{ background: 'var(--dash-selected-bg)' }}
                 >
-                  <MapPin className="w-4 h-4" style={{ color: '#2563EB' }} />
+                  <MapPin className="w-4 h-4" style={{ color: 'var(--dash-selected-text)' }} />
                 </div>
                 <div className="font-bold text-sm" style={{ color: 'var(--dash-text)' }}>{lead.depart}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'var(--dash-text-faint)' }}>Départ</div>
@@ -366,9 +367,9 @@ export default function DashboardLeadDetailPage() {
               <div className="flex-1 text-center">
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2"
-                  style={{ background: '#F0F9FF' }}
+                  style={{ background: 'var(--dash-info-bg)' }}
                 >
-                  <MapPin className="w-4 h-4" style={{ color: '#0EA5E9' }} />
+                  <MapPin className="w-4 h-4" style={{ color: 'var(--dash-info-text)' }} />
                 </div>
                 <div className="font-bold text-sm" style={{ color: 'var(--dash-text)' }}>{lead.destination}</div>
                 <div className="text-[10px] mt-0.5" style={{ color: 'var(--dash-text-faint)' }}>Arrivée</div>
@@ -424,7 +425,7 @@ export default function DashboardLeadDetailPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline font-mono"
-                  style={{ color: '#2563EB' }}
+                  style={{ color: 'var(--dash-selected-text)' }}
                 >
                   /suivi/{lead.trackingToken.slice(0, 12)}…
                 </a>
@@ -494,7 +495,7 @@ export default function DashboardLeadDetailPage() {
                         onClick={remindQuote}
                         disabled={reminding}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all"
-                        style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
+                        style={{ background: 'var(--dash-orange-bg)', color: 'var(--dash-orange-text)', border: '1px solid var(--dash-orange-border)' }}
                       >
                         {reminding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
                         {reminding ? 'Envoi…' : `Relance ${nextRelanceLevel} manuelle`}
@@ -517,11 +518,12 @@ export default function DashboardLeadDetailPage() {
 
             {quote && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+
                 {/* Bandeau validation humaine */}
                 {quote.statut_devis === 'pending_human_validation' && (
                   <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
-                    style={{ background: '#FDF4FF', border: '1px solid #E9D5FF' }}>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#7E22CE' }}>
+                    style={{ background: 'var(--dash-purple-bg)', border: '1px solid var(--dash-purple-border)' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--dash-purple-text)' }}>
                       <Clock className="w-4 h-4 flex-shrink-0" />
                       <span className="font-medium">En attente de validation humaine</span>
                     </div>
@@ -542,8 +544,8 @@ export default function DashboardLeadDetailPage() {
                 {/* Bandeau devis approuvé */}
                 {quote.statut_devis === 'approved' && (
                   <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
-                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#15803D' }}>
+                    style={{ background: 'var(--dash-success-bg)', border: '1px solid var(--dash-success-border)' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--dash-success-text)' }}>
                       <ShieldCheck className="w-4 h-4 flex-shrink-0" />
                       <span><strong>Devis approuvé.</strong> Cliquez sur &quot;Envoyer le devis&quot; pour l&apos;envoyer au client.</span>
                     </div>
@@ -552,8 +554,8 @@ export default function DashboardLeadDetailPage() {
 
                 {/* Bandeau devis envoyé + suivi relances */}
                 {quote.statut_devis === 'sent' && (
-                  <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid #BAE6FD' }}>
-                    <div className="flex items-center gap-2 px-4 py-2.5 text-sm" style={{ background: '#E0F2FE', color: '#0369A1' }}>
+                  <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid var(--dash-info-border)' }}>
+                    <div className="flex items-center gap-2 px-4 py-2.5 text-sm" style={{ background: 'var(--dash-info-bg)', color: 'var(--dash-info-text)' }}>
                       <Send className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>
                         <strong>Devis envoyé</strong>
@@ -562,17 +564,17 @@ export default function DashboardLeadDetailPage() {
                         )}
                       </span>
                     </div>
-                    <div className="px-4 py-3" style={{ background: '#F0F9FF' }}>
-                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#0369A1' }}>
+                    <div className="px-4 py-3" style={{ background: 'var(--dash-muted)' }}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--dash-info-text)' }}>
                         Relances automatiques (n8n)
                       </div>
                       <div className="space-y-1.5">
                         {/* Relance 1 */}
                         <div className="flex items-center gap-2 text-xs">
                           {reminderCount >= 1
-                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
-                            : <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#0284C7' }} />}
-                          <span style={{ color: reminderCount >= 1 ? '#15803D' : '#0369A1' }}>
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--dash-success-text)' }} />
+                            : <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--dash-info-text)' }} />}
+                          <span style={{ color: reminderCount >= 1 ? 'var(--dash-success-text)' : 'var(--dash-info-text)' }}>
                             {reminderCount >= 1
                               ? <>Relance 1 envoyée{quote.lastReminderAt && reminderCount === 1
                                   ? ` le ${new Date(quote.lastReminderAt).toLocaleDateString('fr-FR')}`
@@ -593,11 +595,11 @@ export default function DashboardLeadDetailPage() {
                         {/* Relance 2 */}
                         <div className="flex items-center gap-2 text-xs">
                           {reminderCount >= 2
-                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--dash-success-text)' }} />
                             : reminderCount === 1
-                            ? <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#EA580C' }} />
-                            : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border" style={{ borderColor: '#CBD5E1' }} />}
-                          <span style={{ color: reminderCount >= 2 ? '#15803D' : reminderCount === 1 ? '#C2410C' : '#94A3B8' }}>
+                            ? <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--dash-orange-text)' }} />
+                            : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border" style={{ borderColor: 'var(--dash-border)' }} />}
+                          <span style={{ color: reminderCount >= 2 ? 'var(--dash-success-text)' : reminderCount === 1 ? 'var(--dash-orange-text)' : 'var(--dash-text-faint)' }}>
                             {reminderCount >= 2
                               ? <>Relance 2 envoyée le {quote.lastReminderAt ? new Date(quote.lastReminderAt).toLocaleDateString('fr-FR') : '—'}</>
                               : reminderCount === 1
@@ -616,7 +618,7 @@ export default function DashboardLeadDetailPage() {
                         </div>
                         {/* Max atteint */}
                         {reminderCount >= 2 && (
-                          <div className="flex items-center gap-2 text-xs mt-1" style={{ color: '#64748B' }}>
+                          <div className="flex items-center gap-2 text-xs mt-1" style={{ color: 'var(--dash-text-muted)' }}>
                             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                             Toutes les relances automatiques ont été envoyées. Traitement manuel requis.
                           </div>
@@ -631,7 +633,7 @@ export default function DashboardLeadDetailPage() {
                   <div className="mb-4 space-y-1.5">
                     {quote.warnings.map((w, i) => (
                       <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg text-xs"
-                        style={{ background: '#FFFBEB', color: '#92400E', border: '1px solid #FDE68A' }}>
+                        style={{ background: 'var(--dash-warning-bg)', color: 'var(--dash-warning-text)', border: '1px solid var(--dash-warning-border)' }}>
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                         {w}
                       </div>
@@ -642,7 +644,7 @@ export default function DashboardLeadDetailPage() {
                 {/* Reprise humaine */}
                 {quote.besoin_reprise_humaine && (
                   <div className="mb-4 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs"
-                    style={{ background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>
+                    style={{ background: 'var(--dash-danger-bg)', color: 'var(--dash-danger-text)', border: '1px solid var(--dash-danger-border)' }}>
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold">Reprise humaine :</span> {quote.raison_reprise_humaine}
@@ -653,14 +655,14 @@ export default function DashboardLeadDetailPage() {
                 {/* Prix TTC */}
                 <div
                   className="text-center py-5 mb-5 rounded-xl"
-                  style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}
+                  style={{ background: 'var(--dash-info-bg)', border: '1px solid var(--dash-info-border)' }}
                 >
-                  <div className="text-3xl font-bold mb-1" style={{ color: '#0369A1' }}>{fmt(finalTtc)}</div>
-                  <div className="text-xs" style={{ color: '#0284C7' }}>
+                  <div className="text-3xl font-bold mb-1" style={{ color: 'var(--dash-info-text)' }}>{fmt(finalTtc)}</div>
+                  <div className="text-xs" style={{ color: 'var(--dash-text-muted)' }}>
                     TTC · {fmt(finalHt)} HT + {fmt(quote.tva)} TVA (10%)
                   </div>
                   {hasAdj && (
-                    <div className="mt-1.5 text-xs" style={{ color: '#92400E' }}>
+                    <div className="mt-1.5 text-xs" style={{ color: 'var(--dash-warning-text)' }}>
                       Ajustement commercial : {fmt(quote.ajustement_manuel_ht!)}
                       {quote.raison_ajustement ? ` — ${quote.raison_ajustement}` : ''}
                     </div>
@@ -723,7 +725,7 @@ export default function DashboardLeadDetailPage() {
                         onClick={saveAdjustment}
                         disabled={savingAdj}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
-                        style={{ background: '#2563EB', color: '#fff' }}
+                        style={{ background: '#2563EB', color: '#fff', border: 'none' }}
                       >
                         {savingAdj ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         {savingAdj ? 'Sauvegarde…' : 'Sauvegarder'}
@@ -788,8 +790,8 @@ export default function DashboardLeadDetailPage() {
                               <span
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border"
                                 style={{
-                                  background: SOURCE_TYPE_LABELS[ligne.source_type].bg,
-                                  color:      SOURCE_TYPE_LABELS[ligne.source_type].color,
+                                  background:  SOURCE_TYPE_LABELS[ligne.source_type].bg,
+                                  color:       SOURCE_TYPE_LABELS[ligne.source_type].color,
                                   borderColor: SOURCE_TYPE_LABELS[ligne.source_type].border,
                                 }}
                               >
@@ -822,7 +824,7 @@ export default function DashboardLeadDetailPage() {
                       ))}
                     </div>
                     {editingLignes && (
-                      <div className="mt-2 px-3 py-2 rounded-lg text-[11px]" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+                      <div className="mt-2 px-3 py-2 rounded-lg text-[11px]" style={{ background: 'var(--dash-selected-bg)', border: '1px solid var(--dash-selected-border)', color: 'var(--dash-selected-text)' }}>
                         Total HT recalculé : <strong>{editedLignes.reduce((s, l) => s + (Number(l.montant) || 0), 0).toFixed(2)} €</strong>
                       </div>
                     )}
@@ -846,7 +848,7 @@ export default function DashboardLeadDetailPage() {
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                         {quote.explication_calcul && (
                           <div className="mb-3 px-3 py-2.5 rounded-lg text-xs"
-                            style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+                            style={{ background: 'var(--dash-selected-bg)', border: '1px solid var(--dash-selected-border)', color: 'var(--dash-selected-text)' }}>
                             {quote.explication_calcul}
                           </div>
                         )}
@@ -864,8 +866,8 @@ export default function DashboardLeadDetailPage() {
                                   <span
                                     className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] border"
                                     style={{
-                                      background: SOURCE_TYPE_LABELS[src.source_type].bg,
-                                      color:      SOURCE_TYPE_LABELS[src.source_type].color,
+                                      background:  SOURCE_TYPE_LABELS[src.source_type].bg,
+                                      color:       SOURCE_TYPE_LABELS[src.source_type].color,
                                       borderColor: SOURCE_TYPE_LABELS[src.source_type].border,
                                     }}
                                   >
@@ -894,7 +896,7 @@ export default function DashboardLeadDetailPage() {
             )}
             <div className="space-y-1.5">
               {logs.map((log) => {
-                const style = LOG_STATUS[log.status] ?? { dot: '#94A3B8', text: '#64748B' }
+                const dot = (LOG_STATUS[log.status] ?? { dot: '#94A3B8' }).dot
                 return (
                   <div
                     key={log._id}
@@ -903,7 +905,7 @@ export default function DashboardLeadDetailPage() {
                   >
                     <div
                       className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
-                      style={{ background: style.dot }}
+                      style={{ background: dot }}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm" style={{ color: 'var(--dash-text)' }}>{log.message}</div>
@@ -973,14 +975,14 @@ export default function DashboardLeadDetailPage() {
                   onClick={remindQuote}
                   disabled={reminding}
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-all"
-                  style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
+                  style={{ background: 'var(--dash-orange-bg)', color: 'var(--dash-orange-text)', border: '1px solid var(--dash-orange-border)' }}
                 >
                   <Mail className="w-4 h-4" />
                   {reminding ? 'Envoi en cours…' : `Relance ${nextRelanceLevel} manuelle`}
                 </button>
               )}
               {quote && quote.statut_devis === 'sent' && reminderCount >= 2 && (
-                <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid var(--dash-border)' }}>
+                <div className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--dash-muted)', color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}>
                   Relances automatiques terminées. Pour contacter le client, utilisez l&apos;email direct.
                 </div>
               )}
@@ -989,7 +991,7 @@ export default function DashboardLeadDetailPage() {
                   onClick={downloadPdf}
                   disabled={downloading}
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-all"
-                  style={{ background: '#F0F9FF', color: '#0369A1', border: '1px solid #BAE6FD' }}
+                  style={{ background: 'var(--dash-info-bg)', color: 'var(--dash-info-text)', border: '1px solid var(--dash-info-border)' }}
                 >
                   {downloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   {downloading ? 'Génération PDF…' : 'Télécharger PDF'}
@@ -998,7 +1000,7 @@ export default function DashboardLeadDetailPage() {
               <button
                 onClick={markComplex}
                 className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-all"
-                style={{ background: '#FAF5FF', color: '#7E22CE', border: '1px solid #E9D5FF' }}
+                style={{ background: 'var(--dash-purple-bg)', color: 'var(--dash-purple-text)', border: '1px solid var(--dash-purple-border)' }}
               >
                 <UserCheck className="w-4 h-4" />
                 Reprise humaine
@@ -1008,7 +1010,7 @@ export default function DashboardLeadDetailPage() {
                   <button
                     onClick={markAccepted}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-all"
-                    style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0' }}
+                    style={{ background: 'var(--dash-success-bg)', color: 'var(--dash-success-text)', border: '1px solid var(--dash-success-border)' }}
                   >
                     <CheckCircle className="w-4 h-4" />
                     Marquer accepté
@@ -1016,7 +1018,7 @@ export default function DashboardLeadDetailPage() {
                   <button
                     onClick={markRefused}
                     className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm transition-all"
-                    style={{ background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}
+                    style={{ background: 'var(--dash-danger-bg)', color: 'var(--dash-danger-text)', border: '1px solid var(--dash-danger-border)' }}
                   >
                     <XCircle className="w-4 h-4" />
                     Marquer refusé
@@ -1048,10 +1050,10 @@ export default function DashboardLeadDetailPage() {
                   onClick={() => api.leads.updateStatus(lead._id, s).then(fetchAll)}
                   className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-2"
                   style={lead.statut === s ? {
-                    background: '#EFF6FF',
-                    color: '#1D4ED8',
+                    background: 'var(--dash-selected-bg)',
+                    color: 'var(--dash-selected-text)',
                     fontWeight: 600,
-                    border: '1px solid #BFDBFE',
+                    border: '1px solid var(--dash-selected-border)',
                   } : {
                     color: 'var(--dash-text-muted)',
                     border: '1px solid transparent',
@@ -1060,7 +1062,7 @@ export default function DashboardLeadDetailPage() {
                   onMouseLeave={e => { if (lead.statut !== s) e.currentTarget.style.background = 'transparent' }}
                 >
                   {lead.statut === s
-                    ? <CheckCircle className="w-3 h-3 flex-shrink-0 text-blue-600" />
+                    ? <CheckCircle className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--dash-selected-text)' }} />
                     : <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ border: '1px solid var(--dash-border)' }} />}
                   {LEAD_STATUS_LABELS[s]}
                 </button>
@@ -1074,23 +1076,23 @@ export default function DashboardLeadDetailPage() {
               <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
               <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
               {quote?.modifiedAt && (
-                <div style={{ color: '#92400E' }}>
+                <div style={{ color: 'var(--dash-warning-text)' }}>
                   Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
                 </div>
               )}
               {quote?.email_sent_at && (
-                <div style={{ color: '#0369A1' }}>
+                <div style={{ color: 'var(--dash-info-text)' }}>
                   Envoyé le {new Date(quote.email_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
               {quote?.lastReminderAt && (
-                <div style={{ color: '#C2410C' }}>
+                <div style={{ color: 'var(--dash-orange-text)' }}>
                   Dernière relance le {new Date(quote.lastReminderAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {' '}({reminderCount}/{2})
                 </div>
               )}
               {quote?.statut_devis === 'sent' && reminderCount < 2 && (
-                <div style={{ color: '#64748B' }}>
+                <div style={{ color: 'var(--dash-text-faint)' }}>
                   Relances n8n : {reminderCount}/2 envoyées
                 </div>
               )}
@@ -1099,7 +1101,6 @@ export default function DashboardLeadDetailPage() {
         </div>
       </div>
 
-      {/* ManualQuoteModal avec leadId pré-rempli */}
       {manualModal && (
         <ManualQuoteModal
           onClose={() => { setManual(false); fetchAll() }}
