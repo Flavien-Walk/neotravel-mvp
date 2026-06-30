@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Users, RefreshCw, Send, ArrowRight,
   UserCheck, ArrowUpRight,
-  ChevronRight, Zap, FileText,
+  ChevronRight, Zap, FileText, ShieldCheck, Bell,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, LeadStatus } from '@/types'
