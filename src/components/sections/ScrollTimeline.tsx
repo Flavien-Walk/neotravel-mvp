@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import Image from 'next/image'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Inbox, Navigation, Calculator, Send, Bell, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 
 const STEPS = [
   {
     num: '01',
-    img: '/images/neotravel/demande-recue.png',
+    Icon: Inbox,
     title: 'Demande reçue',
     desc: 'Vous remplissez le formulaire NeoTravel : trajet, date, passagers, options. Votre demande est enregistrée immédiatement — sans email, sans téléphone.',
     color: '#60A5FA',
@@ -19,7 +18,7 @@ const STEPS = [
   },
   {
     num: '02',
-    img: '/images/neotravel/trajet-qualifie.png',
+    Icon: Navigation,
     title: 'Trajet qualifié',
     desc: 'L\'agent vérifie les informations, identifie les données manquantes et classe la demande selon sa complexité. Rien n\'est laissé sans statut.',
     color: '#A78BFA',
@@ -29,7 +28,7 @@ const STEPS = [
   },
   {
     num: '03',
-    img: '/images/neotravel/prix-calcule.png',
+    Icon: Calculator,
     title: 'Prix calculé',
     desc: 'Le moteur <code>calculer_devis()</code> applique les règles tarifaires — distance, durée, passagers, péages, options, TVA. Déterministe. Auditable. Reproductible.',
     color: '#FCD34D',
@@ -40,7 +39,7 @@ const STEPS = [
   },
   {
     num: '04',
-    img: '/images/neotravel/devis-envoye.png',
+    Icon: Send,
     title: 'Devis envoyé',
     desc: 'Le devis formaté est envoyé par email avec le détail ligne par ligne : distance, options, TVA. Le client comprend chaque centime.',
     color: '#4ADE80',
@@ -50,7 +49,7 @@ const STEPS = [
   },
   {
     num: '05',
-    img: '/images/neotravel/suivi-active.png',
+    Icon: Bell,
     title: 'Suivi activé',
     desc: 'Un lien de tracking est inclus dans chaque email. Le client suit l\'avancement en temps réel — sans créer de compte.',
     color: '#38BDF8',
@@ -60,7 +59,7 @@ const STEPS = [
   },
   {
     num: '06',
-    img: '/images/neotravel/reprise-humaine.png',
+    Icon: UserCheck,
     title: 'Reprise humaine si nécessaire',
     desc: 'Circuit multi-étapes, groupe > 85 pax, ville hors base — le système flagge et transmet à un conseiller NeoTravel. Aucun cas n\'est laissé sans réponse.',
     color: '#FB923C',
@@ -215,7 +214,7 @@ export default function ScrollTimeline() {
 
           {/* Right: step cards */}
           <div className="space-y-5">
-            {STEPS.map(({ num, img, title, desc, color, bg, border, who, badge }, i) => (
+            {STEPS.map(({ num, Icon, title, desc, color, bg, border, who, badge }, i) => (
               <div
                 key={num}
                 ref={el => { stepRefs.current[i] = el }}
@@ -236,8 +235,16 @@ export default function ScrollTimeline() {
                 </span>
 
                 <div className="flex items-start gap-4 mb-4 relative z-10">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0" style={{ border: `1px solid ${color}28` }}>
-                    <Image src={img} alt={title} width={56} height={56} className="w-full h-full object-cover" unoptimized />
+                  <div
+                    className="relative w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(145deg, ${color}1C 0%, ${color}08 100%)`,
+                      border: `1px solid ${color}32`,
+                      boxShadow: `inset 0 1px 0 ${color}18, 0 4px 16px ${color}12`,
+                    }}
+                  >
+                    <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 28%, ${color}22 0%, transparent 62%)` }} />
+                    <Icon className="w-5 h-5 relative z-10" style={{ color }} />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">

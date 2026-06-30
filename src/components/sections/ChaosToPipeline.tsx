@@ -1,10 +1,9 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import Image from 'next/image'
 import {
   Inbox, Phone, MessageSquare, BellOff, FileSpreadsheet,
-  ArrowRight,
+  ArrowRight, FolderOpen, Navigation, Calculator, Send, RefreshCw,
 } from 'lucide-react'
 import { SealCheck } from '@phosphor-icons/react'
 import Link from 'next/link'
@@ -18,11 +17,11 @@ const CHAOS = [
 ]
 
 const PIPELINE = [
-  { img: '/images/neotravel/demande-centralise.png', label: 'Demande centralisée', color: '#60A5FA' },
-  { img: '/images/neotravel/trajet-qualifie.png',    label: 'Trajet qualifié',      color: '#A78BFA' },
-  { img: '/images/neotravel/prix-calcule.png',       label: 'Prix calculé',          color: '#4ADE80' },
-  { img: '/images/neotravel/devis-envoye.png',       label: 'Devis envoyé',          color: '#38BDF8' },
-  { img: '/images/neotravel/suivie-automatique.png', label: 'Suivi automatique',     color: '#FCD34D' },
+  { Icon: FolderOpen,  label: 'Demande centralisée', color: '#60A5FA' },
+  { Icon: Navigation,  label: 'Trajet qualifié',      color: '#A78BFA' },
+  { Icon: Calculator,  label: 'Prix calculé',          color: '#4ADE80' },
+  { Icon: Send,        label: 'Devis envoyé',          color: '#38BDF8' },
+  { Icon: RefreshCw,   label: 'Suivi automatique',     color: '#FCD34D' },
 ]
 
 function lerp(from: number, to: number, p: number, pFrom: number, pTo: number): number {
@@ -97,15 +96,6 @@ export default function ChaosToPipeline() {
 
   return (
     <>
-      {/* SVG filter : rend les pixels blancs/clairs transparents */}
-      <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }}>
-        <defs>
-          <filter id="chaos-nobg">
-            <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1.5 -1.5 -1.5 4.5 0" />
-          </filter>
-        </defs>
-      </svg>
-
       {/* ── DESKTOP animated version ── */}
       <section
         ref={sectionRef}
@@ -236,7 +226,7 @@ export default function ChaosToPipeline() {
                     className="absolute z-0 pointer-events-none"
                     style={{ left: 36, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
                   />
-                  {PIPELINE.map(({ img, label, color }, i) => (
+                  {PIPELINE.map(({ Icon, label, color }, i) => (
                     <div
                       key={label}
                       ref={el => { pipeItems.current[i] = el }}
@@ -249,8 +239,16 @@ export default function ChaosToPipeline() {
                         backdropFilter: 'blur(8px)',
                       }}
                     >
-                      <div className="w-12 h-12 flex-shrink-0 rounded-2xl overflow-hidden" style={{ background: '#071B3E' }}>
-                        <Image src={img} alt={label} width={48} height={48} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#chaos-nobg)' }} />
+                      <div
+                        className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: `linear-gradient(145deg, ${color}1C 0%, ${color}0A 100%)`,
+                          border: `1px solid ${color}35`,
+                          boxShadow: `inset 0 1px 0 ${color}18`,
+                        }}
+                      >
+                        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 30%, ${color}20 0%, transparent 60%)` }} />
+                        <Icon className="w-4 h-4 relative z-10" style={{ color }} />
                       </div>
                       <span className="text-sm font-medium text-white/85">{label}</span>
                       <SealCheck weight="duotone" className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}90` }} />
@@ -358,10 +356,18 @@ export default function ChaosToPipeline() {
               Avec NeoTravel ✓
             </div>
             <div className="space-y-2">
-              {PIPELINE.map(({ img, label, color }) => (
+              {PIPELINE.map(({ Icon, label, color }) => (
                 <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
-                  <div className="w-10 h-10 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: '#071B3E' }}>
-                    <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#chaos-nobg)' }} />
+                  <div
+                    className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(145deg, ${color}1C 0%, ${color}0A 100%)`,
+                      border: `1px solid ${color}32`,
+                      boxShadow: `inset 0 1px 0 ${color}16`,
+                    }}
+                  >
+                    <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 30%, ${color}20 0%, transparent 60%)` }} />
+                    <Icon className="w-4 h-4 relative z-10" style={{ color }} />
                   </div>
                   <span className="text-xs font-medium text-white/80">{label}</span>
                   <SealCheck weight="duotone" className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />

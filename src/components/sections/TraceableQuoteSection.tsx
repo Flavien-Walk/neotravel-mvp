@@ -1,17 +1,16 @@
 'use client'
 
 import { useRef } from 'react'
-import Image from 'next/image'
 import { motion, useInView } from 'framer-motion'
-import { Receipt, UserCheck, Lock } from 'lucide-react'
+import { Receipt, UserCheck, Lock, MapPin, Clock, Users, Settings2, Percent } from 'lucide-react'
 
 const FORMULA_ROWS = [
-  { img: '/images/neotravel/distance.png',      label: 'Distance',        value: '284 km',          color: '#60A5FA' },
-  { img: '/images/neotravel/duree-estimee.png', label: 'Durée estimée',   value: '3h 20',           color: '#A78BFA' },
-  { img: '/images/neotravel/passagers.png',     label: 'Passagers',       value: '48 pax',          color: '#4ADE80' },
-  { img: '/images/neotravel/option.png',        label: 'Options',         value: 'Wi-Fi, clim, WC', color: '#38BDF8' },
-  { img: '/images/neotravel/peage.png',         label: 'Péages',          value: '62 €',            color: '#FCD34D' },
-  { img: '/images/neotravel/tva.png',           label: 'TVA 10%',         value: 'incluse',         color: '#FB923C' },
+  { Icon: MapPin,    label: 'Distance',        value: '284 km',          color: '#60A5FA' },
+  { Icon: Clock,     label: 'Durée estimée',   value: '3h 20',           color: '#A78BFA' },
+  { Icon: Users,     label: 'Passagers',       value: '48 pax',          color: '#4ADE80' },
+  { Icon: Settings2, label: 'Options',         value: 'Wi-Fi, clim, WC', color: '#38BDF8' },
+  { Icon: Receipt,   label: 'Péages',          value: '62 €',            color: '#FCD34D' },
+  { Icon: Percent,   label: 'TVA 10%',         value: 'incluse',         color: '#FB923C' },
 ]
 
 const PILLARS = [
@@ -128,15 +127,23 @@ export default function TraceableQuoteSection() {
               <div className="p-6">
                 <p className="text-xs text-white/30 uppercase tracking-wider mb-4 font-semibold">Paramètres d&apos;entrée</p>
                 <motion.div className="space-y-2" variants={stagger}>
-                  {FORMULA_ROWS.map(({ img, label, value, color }) => (
+                  {FORMULA_ROWS.map(({ Icon, label, value, color }) => (
                     <motion.div
                       key={label}
                       variants={item}
                       className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                       style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                     >
-                      <div className="w-10 h-10 flex-shrink-0">
-                        <Image src={img} alt={label} width={40} height={40} className="w-full h-full object-contain" unoptimized style={{ filter: 'url(#trace-nobg)' }} />
+                      <div
+                        className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: `linear-gradient(145deg, ${color}1C 0%, ${color}0A 100%)`,
+                          border: `1px solid ${color}32`,
+                          boxShadow: `inset 0 1px 0 ${color}16`,
+                        }}
+                      >
+                        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 30%, ${color}1E 0%, transparent 60%)` }} />
+                        <Icon className="w-4 h-4 relative z-10" style={{ color }} />
                       </div>
                       <span className="text-sm text-white/55 flex-1">{label}</span>
                       <span className="text-sm font-mono font-semibold" style={{ color }}>{value}</span>

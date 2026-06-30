@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, FileCheck, Clock, ListOrdered } from 'lucide-react'
 import TransportHeroVisual from '@/components/visuals/TransportHeroVisual'
 
 const stagger = {
@@ -16,9 +16,9 @@ const item = {
 }
 
 const REASSURANCES = [
-  { img: '/images/neotravel/devis-gratuit.png', value: 'Devis gratuit',  label: 'sans engagement' },
-  { img: '/images/neotravel/reponse-2h.png',    value: 'Réponse 2h',     label: 'en heures ouvrées' },
-  { img: '/images/neotravel/prix-tracable.png', value: 'Prix traçable',  label: 'ligne par ligne' },
+  { Icon: FileCheck,    value: 'Devis gratuit',  label: 'sans engagement' },
+  { Icon: Clock,        value: 'Réponse 2h',     label: 'en heures ouvrées' },
+  { Icon: ListOrdered,  value: 'Prix traçable',  label: 'ligne par ligne' },
 ]
 
 export default function HeroSection() {
@@ -170,10 +170,18 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.div variants={item} className="flex flex-wrap gap-3">
-              {REASSURANCES.map(({ img, value, label }) => (
+              {REASSURANCES.map(({ Icon, value, label }) => (
                 <div key={label} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl glass">
-                  <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0">
-                    <Image src={img} alt={value} width={36} height={36} className="w-full h-full object-cover" unoptimized />
+                  <div
+                    className="relative w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(145deg, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 100%)',
+                      border: '1px solid rgba(96,165,250,0.28)',
+                      boxShadow: 'inset 0 1px 0 rgba(96,165,250,0.15)',
+                    }}
+                  >
+                    <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 35% 30%, rgba(96,165,250,0.2) 0%, transparent 60%)' }} />
+                    <Icon className="w-3.5 h-3.5 relative z-10 text-neo-blue" />
                   </div>
                   <div>
                     <div className="font-bold text-white text-sm leading-tight">{value}</div>
