@@ -65,8 +65,11 @@ export const api = {
     createManual: (data: unknown) =>
       request('/api/quotes/manual', { method: 'POST', body: JSON.stringify(data) }),
 
-    update: (id: string, data: { ajustement_manuel_ht: number; raison_ajustement?: string }) =>
+    update: (id: string, data: { ajustement_manuel_ht?: number; raison_ajustement?: string; lignes_calcul?: unknown[] }) =>
       request(`/api/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+    approve: (id: string) =>
+      request(`/api/quotes/${id}/approve`, { method: 'POST' }),
 
     send: (id: string) =>
       request(`/api/quotes/${id}/send`, { method: 'POST' }),

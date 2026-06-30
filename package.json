@@ -9,13 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.106.0",
-    "@floating-ui/react": "^0.27.19",
-    "@gsap/react": "^2.1.2",
+    "@ai-sdk/anthropic": "^4.0.2",
     "@phosphor-icons/react": "^2.1.10",
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.18.0",
-    "@types/three": "^0.184.0",
+    "ai": "^7.0.5",
     "clsx": "^2.1.1",
     "d3-geo": "^3.1.1",
     "framer-motion": "^12.38.0",
@@ -27,7 +23,6 @@
     "react-dom": "^18",
     "react-simple-maps": "^3.0.0",
     "tailwind-merge": "^3.5.0",
-    "three": "^0.184.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

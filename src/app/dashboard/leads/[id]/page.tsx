@@ -9,6 +9,7 @@ import {
   CheckCircle, Activity, MapPin, Users, Calendar,
   Send, Mail, AlertTriangle, XCircle, X, Edit2, Save,
   Info, ChevronDown, ChevronUp, Euro, Download, FileText,
+  ShieldCheck, Clock,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Lead, Quote, Log, LeadStatus, LEAD_STATUS_LABELS, CalculationSource, LigneCalcul } from '@/types'
@@ -17,8 +18,10 @@ import UrgencyBadge from '@/components/UrgencyBadge'
 import ManualQuoteModal from '@/components/ManualQuoteModal'
 
 const STATUS_OPTIONS: LeadStatus[] = [
-  'nouveau', 'incomplet', 'qualifie', 'devis_genere', 'devis_envoye',
-  'relance_1', 'relance_2', 'accepte', 'refuse', 'cas_complexe', 'reprise_humaine', 'cloture',
+  'nouveau', 'incomplet', 'qualifie',
+  'devis_genere', 'en_attente_validation', 'devis_valide', 'devis_envoye',
+  'relance_1', 'relance_2', 'accepte', 'refuse',
+  'cas_complexe', 'reprise_humaine', 'erreur_envoi', 'cloture',
 ]
 
 const LOG_STATUS: Record<string, { dot: string; text: string }> = {
@@ -67,12 +70,16 @@ export default function DashboardLeadDetailPage() {
   const [logs, setLogs]       = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [calculating, setCalc]    = useState(false)
+  const [approving, setApproving] = useState(false)
   const [sending, setSending]     = useState(false)
   const [reminding, setRemind]    = useState(false)
   const [editingQuote, setEditQ]  = useState(false)
   const [adjAmount, setAdjAmount] = useState('')
   const [adjReason, setAdjReason] = useState('')
   const [savingAdj, setSavingAdj] = useState(false)
+  const [editingLignes, setEditLignes] = useState(false)
+  const [editedLignes, setEditedLignes] = useState<LigneCalcul[]>([])
+  const [savingLignes, setSavingLignes] = useState(false)
   const [showSources, setShowSrc] = useState(false)
   const [actionMsg, setMsg]       = useState<{ text: string; ok: boolean } | null>(null)
   const [downloading, setDl]      = useState(false)
@@ -138,6 +145,44 @@ export default function DashboardLeadDetailPage() {
       flash((e as Error).message || 'Erreur modification devis', false)
     }
     setSavingAdj(false)
+  }
+
+  function startEditLignes() {
+    if (!quote) return
+    setEditedLignes(quote.lignes_calcul.map(l => ({ ...l })))
+    setEditLignes(true)
+  }
+
+  function updateLigneMontant(index: number, value: string) {
+    setEditedLignes(prev => prev.map((l, i) => i === index ? { ...l, montant: parseFloat(value) || 0 } : l))
+  }
+
+  async function saveLignes() {
+    if (!quote) return
+    setSavingLignes(true)
+    try {
+      const updated = await api.quotes.update(quote._id, { lignes_calcul: editedLignes }) as Quote
+      setQuote(updated)
+      setEditLignes(false)
+      await fetchAll()
+      flash('Lignes mises à jour.', true)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur modification lignes', false)
+    }
+    setSavingLignes(false)
+  }
+
+  async function approveQuote() {
+    if (!quote) return
+    setApproving(true)
+    try {
+      await api.quotes.approve(quote._id)
+      await fetchAll()
+      flash('Devis approuvé. Cliquez sur "Envoyer le devis" pour l\'envoyer au client.', true)
+    } catch (e: unknown) {
+      flash((e as Error).message || 'Erreur approbation devis', false)
+    }
+    setApproving(false)
   }
 
   async function sendQuote() {
@@ -231,8 +276,14 @@ export default function DashboardLeadDetailPage() {
 
   if (!lead) return null
 
-  const canSend    = quote && ['devis_genere'].includes(lead.statut)
-  const canRemind  = quote && ['devis_envoye', 'relance_1'].includes(lead.statut)
+  const canApprove   = quote && quote.statut_devis === 'pending_human_validation'
+  const canSend      = quote && quote.statut_devis === 'approved'
+  const stopStatuts  = ['accepte', 'refuse', 'cloture', 'reprise_humaine', 'cas_complexe']
+  const canRemind    = quote && quote.statut_devis === 'sent'
+    && (quote.reminder_count ?? 0) < 2
+    && !stopStatuts.includes(lead.statut)
+  const reminderCount = quote?.reminder_count ?? 0
+  const nextRelanceLevel = reminderCount + 1
   const finalTtc   = quote ? (quote.prix_final_ttc || quote.prix_ttc) : 0
   const finalHt    = quote ? (quote.prix_final_ht  || quote.prix_ht)  : 0
   const hasAdj     = quote && quote.ajustement_manuel_ht && quote.ajustement_manuel_ht !== 0
@@ -416,6 +467,17 @@ export default function DashboardLeadDetailPage() {
                     >
                       <Edit2 className="w-3.5 h-3.5" /> Ajuster
                     </button>
+                    {canApprove && (
+                      <button
+                        onClick={approveQuote}
+                        disabled={approving}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                        style={{ background: '#7E22CE', color: '#fff' }}
+                      >
+                        {approving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        {approving ? 'Approbation…' : 'Approuver'}
+                      </button>
+                    )}
                     {canSend && (
                       <button
                         onClick={sendQuote}
@@ -435,7 +497,7 @@ export default function DashboardLeadDetailPage() {
                         style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
                       >
                         {reminding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                        {reminding ? 'Envoi…' : 'Relancer'}
+                        {reminding ? 'Envoi…' : `Relance ${nextRelanceLevel} manuelle`}
                       </button>
                     )}
                   </>
@@ -455,6 +517,115 @@ export default function DashboardLeadDetailPage() {
 
             {quote && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {/* Bandeau validation humaine */}
+                {quote.statut_devis === 'pending_human_validation' && (
+                  <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                    style={{ background: '#FDF4FF', border: '1px solid #E9D5FF' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#7E22CE' }}>
+                      <Clock className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-medium">En attente de validation humaine</span>
+                    </div>
+                    <button
+                      onClick={approveQuote}
+                      disabled={approving}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all flex-shrink-0"
+                      style={{ background: '#7E22CE', color: '#fff' }}
+                    >
+                      {approving
+                        ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        : <ShieldCheck className="w-3.5 h-3.5" />}
+                      {approving ? 'Approbation…' : 'Approuver le devis'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Bandeau devis approuvé */}
+                {quote.statut_devis === 'approved' && (
+                  <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                    style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#15803D' }}>
+                      <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                      <span><strong>Devis approuvé.</strong> Cliquez sur &quot;Envoyer le devis&quot; pour l&apos;envoyer au client.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bandeau devis envoyé + suivi relances */}
+                {quote.statut_devis === 'sent' && (
+                  <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid #BAE6FD' }}>
+                    <div className="flex items-center gap-2 px-4 py-2.5 text-sm" style={{ background: '#E0F2FE', color: '#0369A1' }}>
+                      <Send className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>
+                        <strong>Devis envoyé</strong>
+                        {quote.email_sent_at && (
+                          <> le {new Date(quote.email_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</>
+                        )}
+                      </span>
+                    </div>
+                    <div className="px-4 py-3" style={{ background: '#F0F9FF' }}>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#0369A1' }}>
+                        Relances automatiques (n8n)
+                      </div>
+                      <div className="space-y-1.5">
+                        {/* Relance 1 */}
+                        <div className="flex items-center gap-2 text-xs">
+                          {reminderCount >= 1
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
+                            : <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#0284C7' }} />}
+                          <span style={{ color: reminderCount >= 1 ? '#15803D' : '#0369A1' }}>
+                            {reminderCount >= 1
+                              ? <>Relance 1 envoyée{quote.lastReminderAt && reminderCount === 1
+                                  ? ` le ${new Date(quote.lastReminderAt).toLocaleDateString('fr-FR')}`
+                                  : ''}</>
+                              : <>Relance 1 : 48h après envoi
+                                  {quote.email_sent_at && (() => {
+                                    const due = new Date(new Date(quote.email_sent_at).getTime() + 48 * 3600000)
+                                    const now = new Date()
+                                    const diffH = Math.round((due.getTime() - now.getTime()) / 3600000)
+                                    return diffH > 0
+                                      ? ` (dans ~${diffH}h)`
+                                      : ' (dû — n8n va envoyer prochainement)'
+                                  })()}
+                                </>
+                            }
+                          </span>
+                        </div>
+                        {/* Relance 2 */}
+                        <div className="flex items-center gap-2 text-xs">
+                          {reminderCount >= 2
+                            ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#16A34A' }} />
+                            : reminderCount === 1
+                            ? <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#EA580C' }} />
+                            : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border" style={{ borderColor: '#CBD5E1' }} />}
+                          <span style={{ color: reminderCount >= 2 ? '#15803D' : reminderCount === 1 ? '#C2410C' : '#94A3B8' }}>
+                            {reminderCount >= 2
+                              ? <>Relance 2 envoyée le {quote.lastReminderAt ? new Date(quote.lastReminderAt).toLocaleDateString('fr-FR') : '—'}</>
+                              : reminderCount === 1
+                              ? <>Relance 2 : 72h après relance 1
+                                  {quote.lastReminderAt && (() => {
+                                    const due = new Date(new Date(quote.lastReminderAt).getTime() + 72 * 3600000)
+                                    const now = new Date()
+                                    const diffH = Math.round((due.getTime() - now.getTime()) / 3600000)
+                                    return diffH > 0
+                                      ? ` (dans ~${diffH}h)`
+                                      : ' (dû — n8n va envoyer prochainement)'
+                                  })()}
+                                </>
+                              : 'Relance 2 : après relance 1 + 72h'}
+                          </span>
+                        </div>
+                        {/* Max atteint */}
+                        {reminderCount >= 2 && (
+                          <div className="flex items-center gap-2 text-xs mt-1" style={{ color: '#64748B' }}>
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                            Toutes les relances automatiques ont été envoyées. Traitement manuel requis.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Warnings */}
                 {quote.warnings?.length > 0 && (
                   <div className="mb-4 space-y-1.5">
@@ -564,15 +735,45 @@ export default function DashboardLeadDetailPage() {
                 {/* Lignes */}
                 {quote.lignes_calcul?.length > 0 && (
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--dash-text-faint)' }}>
-                      Détail du calcul
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--dash-text-faint)' }}>
+                        Détail du calcul
+                      </div>
+                      {!editingLignes ? (
+                        <button
+                          onClick={startEditLignes}
+                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors"
+                          style={{ color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}
+                        >
+                          <Edit2 className="w-3 h-3" /> Modifier
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setEditLignes(false)}
+                            className="text-[11px] px-2 py-1 rounded-md transition-colors"
+                            style={{ color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border)' }}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={saveLignes}
+                            disabled={savingLignes}
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md font-medium transition-colors"
+                            style={{ background: '#2563EB', color: '#fff', border: 'none' }}
+                          >
+                            {savingLignes ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            Sauvegarder
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1.5">
-                      {quote.lignes_calcul.map((ligne: LigneCalcul, i) => (
+                      {(editingLignes ? editedLignes : quote.lignes_calcul).map((ligne: LigneCalcul, i) => (
                         <div
                           key={i}
                           className="flex justify-between items-start py-2.5 px-3 rounded-lg"
-                          style={{ background: 'var(--dash-muted)', border: '1px solid var(--dash-border)' }}
+                          style={{ background: 'var(--dash-muted)', border: `1px solid ${editingLignes ? '#3B82F6' : 'var(--dash-border)'}` }}
                         >
                           <div className="flex-1 min-w-0 mr-3">
                             <div className="text-sm" style={{ color: 'var(--dash-text)' }}>{ligne.label}</div>
@@ -595,13 +796,36 @@ export default function DashboardLeadDetailPage() {
                                 {SOURCE_TYPE_LABELS[ligne.source_type].label}
                               </span>
                             )}
-                            <div className="font-mono text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
-                              {fmt(ligne.montant)}
-                            </div>
+                            {editingLignes ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs" style={{ color: 'var(--dash-text-faint)' }}>€</span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editedLignes[i]?.montant ?? ligne.montant}
+                                  onChange={e => updateLigneMontant(i, e.target.value)}
+                                  className="w-24 text-right font-mono text-sm font-semibold rounded px-1.5 py-0.5 outline-none"
+                                  style={{
+                                    background: 'var(--dash-bg)',
+                                    border: '1px solid #3B82F6',
+                                    color: 'var(--dash-text)',
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="font-mono text-sm font-semibold" style={{ color: 'var(--dash-text)' }}>
+                                {fmt(ligne.montant)}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
+                    {editingLignes && (
+                      <div className="mt-2 px-3 py-2 rounded-lg text-[11px]" style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+                        Total HT recalculé : <strong>{editedLignes.reduce((s, l) => s + (Number(l.montant) || 0), 0).toFixed(2)} €</strong>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -722,6 +946,17 @@ export default function DashboardLeadDetailPage() {
                   </button>
                 </>
               )}
+              {canApprove && (
+                <button
+                  onClick={approveQuote}
+                  disabled={approving}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-semibold transition-all"
+                  style={{ background: '#7E22CE', color: '#fff' }}
+                >
+                  {approving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  {approving ? 'Approbation…' : 'Approuver le devis'}
+                </button>
+              )}
               {canSend && (
                 <button
                   onClick={sendQuote}
@@ -741,8 +976,13 @@ export default function DashboardLeadDetailPage() {
                   style={{ background: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}
                 >
                   <Mail className="w-4 h-4" />
-                  {reminding ? 'Envoi en cours…' : 'Email de relance'}
+                  {reminding ? 'Envoi en cours…' : `Relance ${nextRelanceLevel} manuelle`}
                 </button>
+              )}
+              {quote && quote.statut_devis === 'sent' && reminderCount >= 2 && (
+                <div className="text-xs px-3 py-2 rounded-lg" style={{ background: '#F8FAFC', color: '#64748B', border: '1px solid var(--dash-border)' }}>
+                  Relances automatiques terminées. Pour contacter le client, utilisez l&apos;email direct.
+                </div>
               )}
               {quote && (
                 <button
@@ -830,14 +1070,30 @@ export default function DashboardLeadDetailPage() {
 
           {/* Meta */}
           <Card className="p-4">
-            <div className="text-xs space-y-1" style={{ color: 'var(--dash-text-muted)' }}>
-            <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
-            <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
-            {quote?.modifiedAt && (
-              <div style={{ color: '#92400E' }}>
-                Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
-              </div>
-            )}
+            <div className="text-xs space-y-1.5" style={{ color: 'var(--dash-text-muted)' }}>
+              <div>Créé le {new Date(lead.createdAt).toLocaleDateString('fr-FR')}</div>
+              <div>Mis à jour {new Date(lead.updatedAt).toLocaleDateString('fr-FR')}</div>
+              {quote?.modifiedAt && (
+                <div style={{ color: '#92400E' }}>
+                  Devis modifié le {new Date(quote.modifiedAt).toLocaleDateString('fr-FR')}
+                </div>
+              )}
+              {quote?.email_sent_at && (
+                <div style={{ color: '#0369A1' }}>
+                  Envoyé le {new Date(quote.email_sent_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
+              {quote?.lastReminderAt && (
+                <div style={{ color: '#C2410C' }}>
+                  Dernière relance le {new Date(quote.lastReminderAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {' '}({reminderCount}/{2})
+                </div>
+              )}
+              {quote?.statut_devis === 'sent' && reminderCount < 2 && (
+                <div style={{ color: '#64748B' }}>
+                  Relances n8n : {reminderCount}/2 envoyées
+                </div>
+              )}
             </div>
           </Card>
         </div>

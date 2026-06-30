@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { Inbox, CheckSquare, Calculator, Send, Bell, UserCheck, ArrowRight } from 'lucide-react'
+import { ArrowRight, Inbox, Navigation, Calculator, Send, Bell, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 
 const STEPS = [
@@ -18,7 +18,7 @@ const STEPS = [
   },
   {
     num: '02',
-    Icon: CheckSquare,
+    Icon: Navigation,
     title: 'Trajet qualifié',
     desc: 'L\'agent vérifie les informations, identifie les données manquantes et classe la demande selon sa complexité. Rien n\'est laissé sans statut.',
     color: '#A78BFA',
@@ -236,10 +236,15 @@ export default function ScrollTimeline() {
 
                 <div className="flex items-start gap-4 mb-4 relative z-10">
                   <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${color}18`, border: `1px solid ${color}32` }}
+                    className="relative w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(145deg, ${color}1C 0%, ${color}08 100%)`,
+                      border: `1px solid ${color}32`,
+                      boxShadow: `inset 0 1px 0 ${color}18, 0 4px 16px ${color}12`,
+                    }}
                   >
-                    <Icon className="w-6 h-6" style={{ color }} />
+                    <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 28%, ${color}22 0%, transparent 62%)` }} />
+                    <Icon className="w-5 h-5 relative z-10" style={{ color }} />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">

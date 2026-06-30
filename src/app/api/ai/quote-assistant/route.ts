@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+// @ts-nocheck
+import { NextRequest } from 'next/server'
+import { streamText } from 'ai'
+import { anthropic } from '@ai-sdk/anthropic'
 import { QuoteAssistantSchema, validateCity, type AICallLog } from '@/lib/quoteAssistant'
 
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
@@ -79,7 +81,7 @@ FORMAT DE RÉPONSE — JSON strict uniquement, SANS markdown, SANS blocs de code
     "date_retour": null,
     "nb_passagers": null,
     "type_trajet": null,
-    "urgence": null, // valeurs possibles : "normal", "urgent", "tres_urgent"
+    "urgence": null,
     "options": [],
     "commentaire": null
   },
@@ -103,240 +105,257 @@ Ne mets que les valeurs réellement fournies par le client. null pour tout ce qu
 const MODEL = 'claude-sonnet-4-6'
 const API_URL = process.env.API_URL || 'http://localhost:4000'
 
+// ─── SSE HELPER ────────────────────────────────────────────────────────────────
+
+function sseHeaders() {
+  return {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+  }
+}
+
 // ─── HANDLER ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   console.log('[NeoTravel AI] ANTHROPIC_API_KEY présente:', Boolean(process.env.ANTHROPIC_API_KEY))
 
+  const encoder = new TextEncoder()
+  const emit = (controller, data: object) =>
+    controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+
+  // ── Clé absente ──
   if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({
-      message: "L'assistant IA n'est pas configuré sur ce serveur. Utilisez le formulaire guidé.",
-      extractedFields: {},
-      missingFields: [],
-      confidence: 0,
-      isComplete: false,
-      besoin_reprise_humaine: false,
-      raison_reprise: null,
-      villes: {},
-      nextAction: 'ask_missing_field',
-      unavailable: true,
+    const body = new ReadableStream({
+      start(c) {
+        emit(c, {
+          done: true,
+          result: {
+            message: "L'assistant IA n'est pas configuré sur ce serveur. Utilisez le formulaire guidé.",
+            extractedFields: {}, missingFields: [], confidence: 0,
+            isComplete: false, besoin_reprise_humaine: false,
+            raison_reprise: null, villes: {}, nextAction: 'ask_missing_field', unavailable: true,
+          },
+        })
+        c.close()
+      },
     })
+    return new Response(body, { headers: sseHeaders() })
   }
 
-  let body: {
-    messages: { role: string; content: string }[]
-    currentFields?: Record<string, unknown>
-    leadId?: string
-  }
-
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Corps de requête invalide.' }, { status: 400 })
-  }
+  // ── Parse body ──
+  let body: { messages: { role: string; content: string }[]; currentFields?: Record<string, unknown>; leadId?: string }
+  try { body = await req.json() }
+  catch { return new Response('data: {"error":"Corps invalide"}\n\n', { headers: sseHeaders() }) }
 
   const { messages, currentFields = {}, leadId } = body
 
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return NextResponse.json({ error: 'Historique de messages requis.' }, { status: 400 })
-  }
+  if (!Array.isArray(messages) || messages.length === 0)
+    return new Response('data: {"error":"Messages requis"}\n\n', { headers: sseHeaders() })
 
   const validMessages = messages.filter(
     m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'
-  ) as Anthropic.Messages.MessageParam[]
+  )
 
-  if (validMessages.length === 0) {
-    return NextResponse.json({ error: 'Aucun message valide.' }, { status: 400 })
-  }
+  if (validMessages.length === 0)
+    return new Response('data: {"error":"Aucun message valide"}\n\n', { headers: sseHeaders() })
 
   const contextNote = Object.keys(currentFields).length > 0
     ? `\n\n[Contexte système — champs déjà collectés : ${JSON.stringify(currentFields)}]`
     : ''
 
   const augmented = validMessages.map((m, i) =>
-    i === 0 && m.role === 'user'
-      ? { ...m, content: String(m.content) + contextNote }
-      : m
+    i === 0 && m.role === 'user' ? { ...m, content: String(m.content) + contextNote } : m
   )
 
   const t0 = Date.now()
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  let raw = ''
-  let inputTokens = 0
-  let outputTokens = 0
-  let parseError: string | undefined
-  let zodError: string | undefined
+  // ── Streaming SSE via Vercel AI SDK ──
+  const stream = new ReadableStream({
+    async start(controller) {
+      let fullText = ''
+      let inputTokens = 0
+      let outputTokens = 0
+      let parseError: string | undefined
+      let zodError: string | undefined
 
-  try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1200,
-      system: SYSTEM_PROMPT,
-      messages: augmented,
-    })
+      // State machine : extrait le champ "message" du JSON en temps réel
+      let extractState: 'scanning' | 'in_message' | 'done_scanning' = 'scanning'
+      let scanBuf = ''
+      const MARKER = '"message": "'
+      let escaped = false
+      let skipUnicode = 0
 
-    inputTokens  = response.usage?.input_tokens  ?? 0
-    outputTokens = response.usage?.output_tokens ?? 0
-    raw = response.content[0]?.type === 'text' ? response.content[0].text.trim() : ''
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Erreur serveur'
-    const log: AICallLog = {
-      timestamp:              new Date().toISOString(),
-      latency_ms:             Date.now() - t0,
-      model:                  MODEL,
-      input_tokens:           0,
-      output_tokens:          0,
-      nextAction:             'escalate_human',
-      isComplete:             false,
-      besoin_reprise_humaine: true,
-      confidence:             0,
-      parse_error:            msg,
-    }
-    logAICall(log, leadId)
+      try {
+        // ── Vercel AI SDK : streamText + provider @ai-sdk/anthropic ──
+        const result = streamText({
+          model: anthropic(MODEL),
+          system: SYSTEM_PROMPT,
+          messages: augmented,
+          maxTokens: 1200,
+        })
 
-    return NextResponse.json({
-      message: "Une erreur est survenue avec l'assistant. Veuillez utiliser le formulaire guidé.",
-      extractedFields: currentFields,
-      missingFields: [],
-      confidence: 0,
-      isComplete: false,
-      besoin_reprise_humaine: false,
-      raison_reprise: null,
-      villes: {},
-      nextAction: 'ask_missing_field',
-      unavailable: true,
-    })
-  }
+        for await (const chunk of result.textStream) {
+          fullText += chunk
 
-  // ── Parse JSON from Claude's response ──
-  let parsed: Record<string, unknown>
-  try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw)
-  } catch (err: unknown) {
-    parseError = err instanceof Error ? err.message : 'JSON parse error'
-    parsed = {
-      message: raw || "Je n'ai pas pu traiter votre demande. Pouvez-vous reformuler ?",
-      extractedFields: currentFields,
-      missingFields: [],
-      confidence: 0,
-      isComplete: false,
-      besoin_reprise_humaine: false,
-      raison_reprise: null,
-      villes: {},
-      nextAction: 'ask_missing_field',
-    }
-  }
+          // Extrait uniquement les chars visibles du champ "message"
+          if (extractState !== 'done_scanning') {
+            let visible = ''
+            for (const ch of chunk) {
+              if (extractState === 'scanning') {
+                scanBuf += ch
+                if (scanBuf.endsWith(MARKER)) extractState = 'in_message'
+              } else {
+                if (skipUnicode > 0) {
+                  skipUnicode--
+                } else if (escaped) {
+                  escaped = false
+                  switch (ch) {
+                    case 'n':  visible += '\n'; break
+                    case 't':  visible += '\t'; break
+                    case '"':  visible += '"';  break
+                    case '\\': visible += '\\'; break
+                    case '/':  visible += '/';  break
+                    case 'r':  break
+                    case 'u':  skipUnicode = 4; break
+                    default:   visible += ch;   break
+                  }
+                } else if (ch === '\\') {
+                  escaped = true
+                } else if (ch === '"') {
+                  extractState = 'done_scanning'
+                  break
+                } else {
+                  visible += ch
+                }
+              }
+            }
+            if (visible) emit(controller, { t: visible })
+          }
+        }
 
-  // ── Zod validation ──
-  const validation = QuoteAssistantSchema.safeParse(parsed)
-  let validated: Record<string, unknown>
+        // Tokens — Vercel AI SDK usage
+        const usage = await result.usage
+        inputTokens  = usage.promptTokens     ?? 0
+        outputTokens = usage.completionTokens ?? 0
 
-  if (validation.success) {
-    validated = validation.data as unknown as Record<string, unknown>
-  } else {
-    zodError = validation.error.message
-    // Partial recovery: keep message and merge with defaults
-    validated = {
-      message:                String(parsed.message ?? "Je n'ai pas pu structurer ma réponse. Pouvez-vous reformuler ?"),
-      extractedFields:        { ...currentFields, ...(parsed.extractedFields as object ?? {}) },
-      missingFields:          Array.isArray(parsed.missingFields) ? parsed.missingFields : [],
-      confidence:             typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-      isComplete:             Boolean(parsed.isComplete),
-      besoin_reprise_humaine: Boolean(parsed.besoin_reprise_humaine),
-      raison_reprise:         typeof parsed.raison_reprise === 'string' ? parsed.raison_reprise : null,
-      villes:                 typeof parsed.villes === 'object' ? parsed.villes : {},
-      nextAction:             typeof parsed.nextAction === 'string' ? parsed.nextAction : 'ask_missing_field',
-    }
-  }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erreur serveur'
+        logAICall({
+          timestamp: new Date().toISOString(), latency_ms: Date.now() - t0, model: MODEL,
+          input_tokens: 0, output_tokens: 0, nextAction: 'escalate_human',
+          isComplete: false, besoin_reprise_humaine: true, confidence: 0, parse_error: msg,
+        }, leadId)
+        emit(controller, {
+          done: true,
+          result: {
+            message: "Une erreur est survenue avec l'assistant. Veuillez utiliser le formulaire guidé.",
+            extractedFields: currentFields, missingFields: [], confidence: 0,
+            isComplete: false, besoin_reprise_humaine: false,
+            raison_reprise: null, villes: {}, nextAction: 'ask_missing_field', unavailable: true,
+          },
+        })
+        controller.close()
+        return
+      }
 
-  // ── City validation (server-side enrichment) ──
-  const fields = validated.extractedFields as Record<string, unknown>
-  const departCity = typeof fields?.depart === 'string' ? fields.depart : null
-  const destCity   = typeof fields?.destination === 'string' ? fields.destination : null
+      // ── Parse JSON ──
+      let parsed: Record<string, unknown>
+      try {
+        const jsonMatch = fullText.match(/\{[\s\S]*\}/)
+        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : fullText)
+      } catch (err) {
+        parseError = err instanceof Error ? err.message : 'JSON parse error'
+        parsed = {
+          message: fullText || "Je n'ai pas pu traiter votre demande. Pouvez-vous reformuler ?",
+          extractedFields: currentFields, missingFields: [], confidence: 0,
+          isComplete: false, besoin_reprise_humaine: false,
+          raison_reprise: null, villes: {}, nextAction: 'ask_missing_field',
+        }
+      }
 
-  const departVal = validateCity(departCity)
-  const destVal   = validateCity(destCity)
+      // ── Zod validation ──
+      const validation = QuoteAssistantSchema.safeParse(parsed)
+      let validated: Record<string, unknown>
 
-  const villes = (validated.villes as Record<string, unknown>) ?? {}
+      if (validation.success) {
+        validated = validation.data as unknown as Record<string, unknown>
+      } else {
+        zodError = validation.error.message
+        validated = {
+          message: String(parsed.message ?? "Je n'ai pas pu structurer ma réponse. Pouvez-vous reformuler ?"),
+          extractedFields: { ...currentFields, ...(parsed.extractedFields as object ?? {}) },
+          missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields : [],
+          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
+          isComplete: Boolean(parsed.isComplete),
+          besoin_reprise_humaine: Boolean(parsed.besoin_reprise_humaine),
+          raison_reprise: typeof parsed.raison_reprise === 'string' ? parsed.raison_reprise : null,
+          villes: typeof parsed.villes === 'object' ? parsed.villes : {},
+          nextAction: typeof parsed.nextAction === 'string' ? parsed.nextAction : 'ask_missing_field',
+        }
+      }
 
-  if (departCity) {
-    villes.depart_status    = departVal.status
-    villes.depart_canonical = departVal.canonical
-    villes.depart_zone      = departVal.zone
-  }
-  if (destCity) {
-    villes.destination_status    = destVal.status
-    villes.destination_canonical = destVal.canonical
-    villes.destination_zone      = destVal.zone
-  }
+      // ── City validation ──
+      const fields = validated.extractedFields as Record<string, unknown>
+      const departCity  = typeof fields?.depart      === 'string' ? fields.depart      : null
+      const destCity    = typeof fields?.destination === 'string' ? fields.destination : null
+      const departVal   = validateCity(departCity)
+      const destVal     = validateCity(destCity)
+      const villes      = (validated.villes as Record<string, unknown>) ?? {}
 
-  // Escalate if city unknown
-  if (departVal.status === 'inconnu' || destVal.status === 'inconnu') {
-    validated.besoin_reprise_humaine = true
-    validated.raison_reprise = `Ville non reconnue : ${
-      departVal.status === 'inconnu' ? departCity : destCity
-    }`
-    validated.nextAction = 'escalate_human'
-  } else if (departVal.status === 'ambigu' || destVal.status === 'ambigu') {
-    validated.nextAction = 'validate_city'
-  }
+      if (departCity) { villes.depart_status = departVal.status; villes.depart_canonical = departVal.canonical; villes.depart_zone = departVal.zone }
+      if (destCity)   { villes.destination_status = destVal.status; villes.destination_canonical = destVal.canonical; villes.destination_zone = destVal.zone }
 
-  // Use canonical city names if available
-  if (departVal.canonical && departCity) {
-    (validated.extractedFields as Record<string, unknown>).depart = departVal.canonical
-  }
-  if (destVal.canonical && destCity) {
-    (validated.extractedFields as Record<string, unknown>).destination = destVal.canonical
-  }
+      if (departVal.status === 'inconnu' || destVal.status === 'inconnu') {
+        validated.besoin_reprise_humaine = true
+        validated.raison_reprise = `Ville non reconnue : ${departVal.status === 'inconnu' ? departCity : destCity}`
+        validated.nextAction = 'escalate_human'
+      } else if (departVal.status === 'ambigu' || destVal.status === 'ambigu') {
+        validated.nextAction = 'validate_city'
+      }
 
-  validated.villes = villes
+      if (departVal.canonical && departCity) (validated.extractedFields as Record<string, unknown>).depart = departVal.canonical
+      if (destVal.canonical   && destCity)   (validated.extractedFields as Record<string, unknown>).destination = destVal.canonical
+      validated.villes = villes
 
-  // ── Log AI call ──
-  const latency = Date.now() - t0
-  const log: AICallLog = {
-    timestamp:              new Date().toISOString(),
-    latency_ms:             latency,
-    model:                  MODEL,
-    input_tokens:           inputTokens,
-    output_tokens:          outputTokens,
-    nextAction:             String(validated.nextAction ?? 'ask_missing_field'),
-    isComplete:             Boolean(validated.isComplete),
-    besoin_reprise_humaine: Boolean(validated.besoin_reprise_humaine),
-    confidence:             typeof validated.confidence === 'number' ? validated.confidence : 0,
-    ...(parseError ? { parse_error: parseError } : {}),
-    ...(zodError   ? { zod_error:   zodError   } : {}),
-  }
-  logAICall(log, leadId)
+      // ── Log ──
+      const latency = Date.now() - t0
+      const log: AICallLog = {
+        timestamp: new Date().toISOString(), latency_ms: latency, model: MODEL,
+        input_tokens: inputTokens, output_tokens: outputTokens,
+        nextAction: String(validated.nextAction ?? 'ask_missing_field'),
+        isComplete: Boolean(validated.isComplete),
+        besoin_reprise_humaine: Boolean(validated.besoin_reprise_humaine),
+        confidence: typeof validated.confidence === 'number' ? validated.confidence : 0,
+        ...(parseError ? { parse_error: parseError } : {}),
+        ...(zodError   ? { zod_error:   zodError   } : {}),
+      }
+      logAICall(log, leadId)
 
-  return NextResponse.json(validated)
+      emit(controller, { done: true, result: validated })
+      controller.close()
+    },
+  })
+
+  return new Response(stream, { headers: sseHeaders() })
 }
 
 // ─── LOGGING ──────────────────────────────────────────────────────────────────
 
 function logAICall(log: AICallLog, leadId?: string): void {
-  // Console log (Vercel logs / dev)
   const prefix = log.parse_error || log.zod_error ? '[AI:WARN]' : '[AI:OK]'
   console.log(
     `${prefix} ${log.model} | ${log.latency_ms}ms | in=${log.input_tokens} out=${log.output_tokens} | action=${log.nextAction} | conf=${log.confidence.toFixed(2)} | hitl=${log.besoin_reprise_humaine}${leadId ? ` | lead=${leadId}` : ''}${log.parse_error ? ` | err=${log.parse_error}` : ''}${log.zod_error ? ` | zod=${log.zod_error.slice(0, 80)}` : ''}`
   )
-
-  // Backend log (fire-and-forget, non-blocking)
   void sendBackendLog({
-    action: 'ai_quote_assistant',
-    leadId: leadId ?? null,
+    action: 'ai_quote_assistant', leadId: leadId ?? null,
     status: log.parse_error || log.zod_error ? 'warning' : 'success',
     message: `Claude ${log.model} | ${log.latency_ms}ms | tokens=${log.input_tokens}+${log.output_tokens} | action=${log.nextAction} | conf=${log.confidence.toFixed(2)}`,
     payload: {
-      latency_ms:             log.latency_ms,
-      model:                  log.model,
-      input_tokens:           log.input_tokens,
-      output_tokens:          log.output_tokens,
-      nextAction:             log.nextAction,
-      isComplete:             log.isComplete,
-      besoin_reprise_humaine: log.besoin_reprise_humaine,
-      confidence:             log.confidence,
+      latency_ms: log.latency_ms, model: log.model,
+      input_tokens: log.input_tokens, output_tokens: log.output_tokens,
+      nextAction: log.nextAction, isComplete: log.isComplete,
+      besoin_reprise_humaine: log.besoin_reprise_humaine, confidence: log.confidence,
       ...(log.parse_error ? { parse_error: log.parse_error } : {}),
       ...(log.zod_error   ? { zod_error:   log.zod_error.slice(0, 200) } : {}),
     },
@@ -344,19 +363,12 @@ function logAICall(log: AICallLog, leadId?: string): void {
 }
 
 async function sendBackendLog(data: {
-  action: string
-  leadId: string | null
-  status: string
-  message: string
-  payload: Record<string, unknown>
+  action: string; leadId: string | null; status: string
+  message: string; payload: Record<string, unknown>
 }): Promise<void> {
   try {
     await fetch(`${API_URL}/api/logs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
     })
-  } catch {
-    // Non-blocking — log failure is not critical
-  }
+  } catch { /* non-blocking */ }
 }

@@ -97,8 +97,46 @@ function formatFieldValue(key: string, val: unknown): string {
 
 export default function AIAssistantChat() {
   const router = useRouter()
-  const chatRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const chatRef    = useRef<HTMLDivElement>(null)
+  const inputRef   = useRef<HTMLTextAreaElement>(null)
+  const streamBuf  = useRef('')
+  const rafId      = useRef<number | null>(null)
+
+  const streamDone  = useRef(false)
+  const finalMsgRef = useRef('')
+
+  function startRaf() {
+    const loop = () => {
+      if (streamBuf.current.length > 0) {
+        // 2 chars par frame → ~120 chars/sec à 60fps, rendu parfaitement fluide
+        const chunk = streamBuf.current.slice(0, 2)
+        streamBuf.current = streamBuf.current.slice(2)
+        setMessages(prev => {
+          const updated = [...prev]
+          const last = updated[updated.length - 1]
+          if (last?.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: last.content + chunk }
+          }
+          return updated
+        })
+        rafId.current = requestAnimationFrame(loop)
+      } else if (streamDone.current) {
+        // Buffer vide + stream terminé → message final propre
+        rafId.current = null
+        if (finalMsgRef.current) {
+          setMessages(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1] = { role: 'assistant', content: finalMsgRef.current }
+            return updated
+          })
+        }
+      } else {
+        // Buffer vide mais tokens encore en route → attendre
+        rafId.current = requestAnimationFrame(loop)
+      }
+    }
+    rafId.current = requestAnimationFrame(loop)
+  }
 
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: GREETING },
@@ -141,44 +179,80 @@ export default function AIAssistantChat() {
       const res = await fetch('/api/ai/quote-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          currentFields: fields,
-        }),
+        body: JSON.stringify({ messages: newMessages, currentFields: fields }),
       })
 
-      if (!res.ok) throw new Error('Erreur serveur')
-      const data: AIResponse = await res.json()
+      if (!res.ok || !res.body) throw new Error('Erreur serveur')
 
-      if (data.unavailable) setUnavailable(true)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let streamStarted = false
 
-      const assistantMsg: Message = { role: 'assistant', content: data.message }
-      setMessages(prev => [...prev, assistantMsg])
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-      if (data.extractedFields) {
-        setFields(prev => {
-          const merged = { ...prev }
-          for (const [k, v] of Object.entries(data.extractedFields)) {
-            if (v !== null && v !== undefined && v !== '') {
-              (merged as Record<string, unknown>)[k] = v
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          let event: { t?: string; done?: boolean; result?: AIResponse }
+          try { event = JSON.parse(line.slice(6)) } catch { continue }
+
+          if (event.t) {
+            if (!streamStarted) {
+              streamStarted = true
+              setLoading(false)
+              streamBuf.current = ''
+              streamDone.current = false
+              finalMsgRef.current = ''
+              setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+              startRaf()
             }
+            streamBuf.current += event.t
+          } else if (event.done && event.result) {
+            const data = event.result
+            if (!streamStarted) {
+              setLoading(false)
+              setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+            } else {
+              // Signale la fin au RAF — il finira de vider le buffer puis mettra le message final
+              finalMsgRef.current = data.message
+              streamDone.current = true
+            }
+
+            if (data.unavailable) setUnavailable(true)
+
+            if (data.extractedFields) {
+              setFields(prev => {
+                const merged = { ...prev }
+                for (const [k, v] of Object.entries(data.extractedFields)) {
+                  if (v !== null && v !== undefined && v !== '') {
+                    (merged as Record<string, unknown>)[k] = v
+                  }
+                }
+                return merged
+              })
+            }
+
+            setMissingFields(data.missingFields ?? [])
+            setConfidence(data.confidence ?? 0)
+            setIsComplete(data.isComplete ?? false)
+            setHitl({ needed: data.besoin_reprise_humaine ?? false, raison: data.raison_reprise ?? null })
+
+            const villes = data.villes ?? {}
+            const warnings: string[] = []
+            if (villes.depart_status === 'ambigu') warnings.push('Ville de départ ambiguë')
+            if (villes.depart_status === 'inconnu') warnings.push('Ville de départ non reconnue')
+            if (villes.destination_status === 'ambigu') warnings.push('Ville de destination ambiguë')
+            if (villes.destination_status === 'inconnu') warnings.push('Ville de destination non reconnue')
+            setVilleWarning(warnings.length > 0 ? warnings.join(' · ') : null)
           }
-          return merged
-        })
+        }
       }
-
-      setMissingFields(data.missingFields ?? [])
-      setConfidence(data.confidence ?? 0)
-      setIsComplete(data.isComplete ?? false)
-      setHitl({ needed: data.besoin_reprise_humaine ?? false, raison: data.raison_reprise ?? null })
-
-      const villes = data.villes ?? {}
-      const warnings: string[] = []
-      if (villes.depart_status === 'ambigu') warnings.push('Ville de départ ambiguë')
-      if (villes.depart_status === 'inconnu') warnings.push('Ville de départ non reconnue')
-      if (villes.destination_status === 'ambigu') warnings.push('Ville de destination ambiguë')
-      if (villes.destination_status === 'inconnu') warnings.push('Ville de destination non reconnue')
-      setVilleWarning(warnings.length > 0 ? warnings.join(' · ') : null)
     } catch {
       setError("Impossible de contacter l'assistant. Vérifiez votre connexion et réessayez.")
     }
@@ -351,46 +425,6 @@ export default function AIAssistantChat() {
             </div>
           )}
 
-          {/* Input area */}
-          {!isComplete && (
-            <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    send()
-                  }
-                }}
-                placeholder="Décrivez votre besoin… (Entrée pour envoyer)"
-                rows={2}
-                className="w-full bg-transparent text-sm text-white resize-none focus:outline-none placeholder-white/20"
-                style={{ minHeight: '48px' }}
-                disabled={loading}
-              />
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={() => send()}
-                  disabled={!input.trim() || loading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
-                  style={input.trim() && !loading ? {
-                    background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-                  } : {
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.25)',
-                  }}
-                >
-                  {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                  Envoyer
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Confirmation panel */}
           {isComplete && (
             <motion.div
@@ -442,6 +476,46 @@ export default function AIAssistantChat() {
                 </button>
               </div>
             </motion.div>
+          )}
+
+          {/* Input area — visible tant que non soumis, même si dossier complet */}
+          {!submitting && (
+            <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)' }}>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
+                placeholder={isComplete ? 'Vous pouvez encore ajouter des infos ou cliquer sur Confirmer…' : 'Décrivez votre besoin… (Entrée pour envoyer)'}
+                rows={2}
+                className="w-full bg-transparent text-sm text-white resize-none focus:outline-none placeholder-white/20"
+                style={{ minHeight: '48px' }}
+                disabled={loading}
+              />
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={() => send()}
+                  disabled={!input.trim() || loading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+                  style={input.trim() && !loading ? {
+                    background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+                  } : {
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.25)',
+                  }}
+                >
+                  {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Envoyer
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

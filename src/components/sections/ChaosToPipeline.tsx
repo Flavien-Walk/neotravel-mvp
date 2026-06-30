@@ -3,16 +3,9 @@
 import { useRef, useEffect } from 'react'
 import {
   Inbox, Phone, MessageSquare, BellOff, FileSpreadsheet,
-  ArrowRight,
+  ArrowRight, FolderOpen, Navigation, Calculator, Send, RefreshCw,
 } from 'lucide-react'
-import {
-  Tray,
-  NavigationArrow,
-  CurrencyEur,
-  PaperPlaneTilt,
-  BellSimpleRinging,
-  SealCheck,
-} from '@phosphor-icons/react'
+import { SealCheck } from '@phosphor-icons/react'
 import Link from 'next/link'
 
 const CHAOS = [
@@ -24,11 +17,11 @@ const CHAOS = [
 ]
 
 const PIPELINE = [
-  { Icon: Tray,                label: 'Demande centralisée', color: '#60A5FA' },
-  { Icon: NavigationArrow,     label: 'Trajet qualifié',      color: '#A78BFA' },
-  { Icon: CurrencyEur,         label: 'Prix calculé',          color: '#4ADE80' },
-  { Icon: PaperPlaneTilt,      label: 'Devis envoyé',          color: '#38BDF8' },
-  { Icon: BellSimpleRinging,   label: 'Suivi automatique',     color: '#FCD34D' },
+  { Icon: FolderOpen,  label: 'Demande centralisée', color: '#60A5FA' },
+  { Icon: Navigation,  label: 'Trajet qualifié',      color: '#A78BFA' },
+  { Icon: Calculator,  label: 'Prix calculé',          color: '#4ADE80' },
+  { Icon: Send,        label: 'Devis envoyé',          color: '#38BDF8' },
+  { Icon: RefreshCw,   label: 'Suivi automatique',     color: '#FCD34D' },
 ]
 
 function lerp(from: number, to: number, p: number, pFrom: number, pTo: number): number {
@@ -231,13 +224,13 @@ export default function ChaosToPipeline() {
                 <div className="relative flex flex-col gap-2.5" style={{ width: 330 }}>
                   <div
                     className="absolute z-0 pointer-events-none"
-                    style={{ left: 26, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
+                    style={{ left: 36, top: 18, bottom: 18, width: 1, background: 'linear-gradient(to bottom, rgba(96,165,250,0.45), rgba(252,211,77,0.45))' }}
                   />
                   {PIPELINE.map(({ Icon, label, color }, i) => (
                     <div
                       key={label}
                       ref={el => { pipeItems.current[i] = el }}
-                      className="relative z-10 flex items-center gap-3 px-4 py-2.5 rounded-2xl"
+                      className="relative z-10 flex items-center gap-3 px-4 py-2 rounded-2xl"
                       style={{
                         opacity:    0,
                         background: 'rgba(255,255,255,0.05)',
@@ -247,10 +240,15 @@ export default function ChaosToPipeline() {
                       }}
                     >
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${color}18`, border: `1px solid ${color}30` }}
+                        className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: `linear-gradient(145deg, ${color}1C 0%, ${color}0A 100%)`,
+                          border: `1px solid ${color}35`,
+                          boxShadow: `inset 0 1px 0 ${color}18`,
+                        }}
                       >
-                        <Icon weight="duotone" className="w-4 h-4" style={{ color }} />
+                        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 30%, ${color}20 0%, transparent 60%)` }} />
+                        <Icon className="w-4 h-4 relative z-10" style={{ color }} />
                       </div>
                       <span className="text-sm font-medium text-white/85">{label}</span>
                       <SealCheck weight="duotone" className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: `${color}90` }} />
@@ -360,8 +358,16 @@ export default function ChaosToPipeline() {
             <div className="space-y-2">
               {PIPELINE.map(({ Icon, label, color }) => (
                 <div key={label} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}25` }}>
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}18` }}>
-                    <Icon weight="duotone" className="w-3 h-3" style={{ color }} />
+                  <div
+                    className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(145deg, ${color}1C 0%, ${color}0A 100%)`,
+                      border: `1px solid ${color}32`,
+                      boxShadow: `inset 0 1px 0 ${color}16`,
+                    }}
+                  >
+                    <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 35% 30%, ${color}20 0%, transparent 60%)` }} />
+                    <Icon className="w-4 h-4 relative z-10" style={{ color }} />
                   </div>
                   <span className="text-xs font-medium text-white/80">{label}</span>
                   <SealCheck weight="duotone" className="w-3.5 h-3.5 ml-auto flex-shrink-0" style={{ color: `${color}80` }} />
