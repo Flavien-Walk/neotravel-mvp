@@ -468,17 +468,6 @@ export default function DashboardLeadDetailPage() {
                     >
                       <Edit2 className="w-3.5 h-3.5" /> Ajuster
                     </button>
-                    {canApprove && (
-                      <button
-                        onClick={approveQuote}
-                        disabled={approving}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
-                        style={{ background: '#7E22CE', color: '#fff' }}
-                      >
-                        {approving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                        {approving ? 'Approbation…' : 'Approuver'}
-                      </button>
-                    )}
                     {canSend && (
                       <button
                         onClick={sendQuote}
