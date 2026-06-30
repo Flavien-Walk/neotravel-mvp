@@ -91,14 +91,25 @@ export const api = {
         const token = getToken()
         return fetch(`/api/quotes/${quoteId}/benchmark`, {
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        }).then(r => r.ok ? r.json() : r.json().then((e: { message?: string }) => Promise.reject(new Error(e.message ?? `HTTP ${r.status}`))))
+        }).then(async r => {
+          const text = await r.text()
+          if (!text) return null
+          const json = JSON.parse(text)
+          if (!r.ok) throw new Error(json?.message ?? `HTTP ${r.status}`)
+          return json
+        })
       },
       request: (quoteId: string): Promise<import('@/types').MarketBenchmark> => {
         const token = getToken()
         return fetch(`/api/quotes/${quoteId}/benchmark`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        }).then(r => r.ok ? r.json() : r.json().then((e: { message?: string }) => Promise.reject(new Error(e.message ?? `HTTP ${r.status}`))))
+        }).then(async r => {
+          const text = await r.text()
+          const json = text ? JSON.parse(text) : {}
+          if (!r.ok) throw new Error(json?.message ?? `HTTP ${r.status}`)
+          return json
+        })
       },
     },
   },

@@ -25,28 +25,35 @@ async function requireStaff(req: NextRequest): Promise<{ id: string; nom: string
 // ─── GET /api/quotes/[id]/benchmark ──────────────────────────────────────────
 // Retourne le dernier benchmark calculé pour ce devis
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = await requireStaff(req)
-  if (!user) return NextResponse.json({ message: 'Non autorisé' }, { status: 401 })
+  try {
+    const user = await requireStaff(req)
+    if (!user) return NextResponse.json({ message: 'Non autorisé' }, { status: 401 })
 
-  const { data, error } = await getSupabaseAdmin()
-    .from('market_benchmarks')
-    .select('*')
-    .eq('quote_id', params.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    const { data, error } = await getSupabaseAdmin()
+      .from('market_benchmarks')
+      .select('*')
+      .eq('quote_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-  if (error) {
-    console.error('[benchmark:GET]', error)
-    return NextResponse.json({ message: 'Erreur base de données' }, { status: 500 })
+    if (error) {
+      console.error('[benchmark:GET]', error)
+      return NextResponse.json({ message: 'Erreur base de données' }, { status: 500 })
+    }
+
+    return NextResponse.json(data)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erreur serveur'
+    console.error('[benchmark:GET] uncaught:', msg)
+    return NextResponse.json({ message: msg }, { status: 500 })
   }
-
-  return NextResponse.json(data)
 }
 
 // ─── POST /api/quotes/[id]/benchmark ─────────────────────────────────────────
 // Déclenche le calcul d'un benchmark marché à partir de l'historique interne
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
   const user = await requireStaff(req)
   if (!user) return NextResponse.json({ message: 'Non autorisé' }, { status: 401 })
 
@@ -163,4 +170,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   })
 
   return NextResponse.json(saved, { status: 201 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erreur serveur'
+    console.error('[benchmark:POST] uncaught:', msg)
+    return NextResponse.json({ message: msg }, { status: 500 })
+  }
 }
