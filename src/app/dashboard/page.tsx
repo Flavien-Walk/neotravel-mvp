@@ -178,9 +178,10 @@ function ActionCard({
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [leads, setLeads]     = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRef]  = useState(false)
+  const [leads, setLeads]         = useState<Lead[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [refreshing, setRef]      = useState(false)
+  const [selectedStage, setStage] = useState<number | null>(null)
 
   const fetch = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRef(true)
@@ -218,6 +219,12 @@ export default function DashboardPage() {
     .slice()
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8)
+
+  const stageLeads = selectedStage !== null
+    ? leads
+        .filter(l => PIPELINE_STAGES[selectedStage].statuts.includes(l.statut))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    : recent
 
   const hour      = new Date().getHours()
   const greeting  = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bonne après-midi' : 'Bonsoir'
@@ -368,28 +375,42 @@ export default function DashboardPage() {
           />
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 relative z-10">
             {PIPELINE_STAGES.map(({ label, statuts, color }, i) => {
-              const count = leads.filter(l => statuts.includes(l.statut)).length
-              const active = count > 0
+              const count   = leads.filter(l => statuts.includes(l.statut)).length
+              const active  = count > 0
+              const sel     = selectedStage === i
               return (
-                <div key={label} className="flex flex-col items-center gap-2 text-center">
+                <button
+                  key={label}
+                  onClick={() => setStage(sel ? null : i)}
+                  disabled={loading}
+                  className="flex flex-col items-center gap-2 text-center group focus:outline-none"
+                  title={sel ? 'Désélectionner' : `Voir les leads : ${label}`}
+                >
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200 ${active ? 'shadow-sm' : ''}`}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-200"
                     style={{
-                      background: active ? color : 'var(--dash-muted)',
-                      color: active ? '#fff' : 'var(--dash-text-faint)',
-                      border: active ? `2px solid ${color}` : '2px solid var(--dash-border)',
-                      boxShadow: active ? `0 0 0 3px ${color}18` : undefined,
+                      background: sel ? color : active ? color + 'cc' : 'var(--dash-muted)',
+                      color: (active || sel) ? '#fff' : 'var(--dash-text-faint)',
+                      border: sel ? `2px solid ${color}` : active ? `2px solid ${color}` : '2px solid var(--dash-border)',
+                      boxShadow: sel
+                        ? `0 0 0 4px ${color}40`
+                        : active ? `0 0 0 3px ${color}18` : undefined,
+                      transform: sel ? 'scale(1.15)' : undefined,
+                      cursor: loading ? 'default' : 'pointer',
                     }}
                   >
-                    {loading ? '–' : (active ? count : (i < 6 ? '·' : '·'))}
+                    {loading ? '–' : (active ? count : '·')}
                   </div>
                   <div
-                    className="text-[10px] font-medium leading-tight"
-                    style={{ color: active ? 'var(--dash-text)' : 'var(--dash-text-faint)' }}
+                    className="text-[10px] font-medium leading-tight transition-colors"
+                    style={{ color: sel ? color : active ? 'var(--dash-text)' : 'var(--dash-text-faint)' }}
                   >
                     {label}
                   </div>
-                </div>
+                  {sel && (
+                    <div className="w-1 h-1 rounded-full" style={{ background: color }} />
+                  )}
+                </button>
               )
             })}
           </div>
@@ -413,16 +434,41 @@ export default function DashboardPage() {
             style={{ borderBottom: '1px solid var(--dash-border)', background: 'var(--dash-muted)' }}
           >
             <div className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--dash-text)' }}>
-              <Activity className="w-4 h-4" style={{ color: '#2563EB' }} />
-              Leads récents
+              <Activity
+                className="w-4 h-4"
+                style={{ color: selectedStage !== null ? PIPELINE_STAGES[selectedStage].color : '#2563EB' }}
+              />
+              {selectedStage !== null ? (
+                <span>
+                  {PIPELINE_STAGES[selectedStage].label}
+                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--dash-text-faint)' }}>
+                    {stageLeads.length} lead{stageLeads.length > 1 ? 's' : ''}
+                  </span>
+                </span>
+              ) : 'Leads récents'}
             </div>
-            <Link
-              href="/dashboard/leads"
-              className="text-xs font-medium transition-colors hover:opacity-75"
-              style={{ color: '#2563EB' }}
-            >
-              Voir tout <ChevronRight className="w-3 h-3 inline" />
-            </Link>
+            <div className="flex items-center gap-3">
+              {selectedStage !== null && (
+                <button
+                  onClick={() => setStage(null)}
+                  className="text-xs font-medium transition-colors hover:opacity-75 flex items-center gap-1"
+                  style={{ color: 'var(--dash-text-faint)' }}
+                >
+                  ✕ Effacer le filtre
+                </button>
+              )}
+              <Link
+                href={
+                  selectedStage !== null
+                    ? `/dashboard/leads?statut=${PIPELINE_STAGES[selectedStage].statuts[0]}`
+                    : '/dashboard/leads'
+                }
+                className="text-xs font-medium transition-colors hover:opacity-75"
+                style={{ color: '#2563EB' }}
+              >
+                Voir tout <ChevronRight className="w-3 h-3 inline" />
+              </Link>
+            </div>
           </div>
 
           {loading ? (
@@ -431,10 +477,14 @@ export default function DashboardPage() {
                 <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--dash-muted)' }} />
               ))}
             </div>
-          ) : recent.length === 0 ? (
+          ) : stageLeads.length === 0 ? (
             <div className="p-10 text-center">
               <Users className="w-8 h-8 mx-auto mb-2 opacity-20" style={{ color: 'var(--dash-text-faint)' }} />
-              <p className="text-sm" style={{ color: 'var(--dash-text-faint)' }}>Aucun lead pour l&apos;instant</p>
+              <p className="text-sm" style={{ color: 'var(--dash-text-faint)' }}>
+                {selectedStage !== null
+                  ? `Aucun lead en phase « ${PIPELINE_STAGES[selectedStage].label} »`
+                  : 'Aucun lead pour l\'instant'}
+              </p>
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -452,7 +502,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recent.map(lead => (
+                {stageLeads.map(lead => (
                   <tr
                     key={lead._id}
                     className="group transition-colors"
