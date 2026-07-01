@@ -34,21 +34,21 @@ const CLIENT_LABELS: Record<LeadStatus, string> = {
 }
 
 const STATUS_STYLE: Record<LeadStatus, { color: string; bg: string; border: string }> = {
-  nouveau:               { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  incomplet:             { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
-  qualifie:              { color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  devis_genere:          { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  en_attente_validation: { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-  devis_valide:          { color: '#0F766E', bg: '#F0FDFA', border: '#99F6E4' },
-  devis_envoye:          { color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  relance_1:             { color: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
-  relance_2:             { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
-  accepte:               { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-  refuse:                { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
-  cloture:               { color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
-  cas_complexe:          { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-  reprise_humaine:       { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-  erreur_envoi:          { color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
+  nouveau:               { color: '#60A5FA', bg: 'rgba(96,165,250,0.10)',  border: 'rgba(96,165,250,0.25)'  },
+  incomplet:             { color: '#FBBF24', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.25)'  },
+  qualifie:              { color: '#60A5FA', bg: 'rgba(96,165,250,0.10)',  border: 'rgba(96,165,250,0.25)'  },
+  devis_genere:          { color: '#38BDF8', bg: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.25)'  },
+  en_attente_validation: { color: '#C084FC', bg: 'rgba(192,132,252,0.10)', border: 'rgba(192,132,252,0.25)' },
+  devis_valide:          { color: '#34D399', bg: 'rgba(52,211,153,0.10)',  border: 'rgba(52,211,153,0.25)'  },
+  devis_envoye:          { color: '#38BDF8', bg: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.25)'  },
+  relance_1:             { color: '#FB923C', bg: 'rgba(251,146,60,0.10)',  border: 'rgba(251,146,60,0.25)'  },
+  relance_2:             { color: '#F87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.25)' },
+  accepte:               { color: '#4ADE80', bg: 'rgba(74,222,128,0.10)',  border: 'rgba(74,222,128,0.25)'  },
+  refuse:                { color: '#94A3B8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.20)' },
+  cloture:               { color: '#94A3B8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.20)' },
+  cas_complexe:          { color: '#C084FC', bg: 'rgba(192,132,252,0.10)', border: 'rgba(192,132,252,0.25)' },
+  reprise_humaine:       { color: '#C084FC', bg: 'rgba(192,132,252,0.10)', border: 'rgba(192,132,252,0.25)' },
+  erreur_envoi:          { color: '#FBBF24', bg: 'rgba(251,191,36,0.10)',  border: 'rgba(251,191,36,0.25)'  },
 }
 
 interface TimelineStep {
@@ -102,9 +102,9 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
       <div className="flex items-center gap-4 px-5 py-4">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}
+          style={{ background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.25)' }}
         >
-          <MapPin className="w-4 h-4" style={{ color: '#2563EB' }} />
+          <MapPin className="w-4 h-4" style={{ color: '#60A5FA' }} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -135,7 +135,7 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
             <Link
               href={`/suivi/${lead.trackingToken}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-              style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
+              style={{ background: 'rgba(96,165,250,0.12)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.28)' }}
               onClick={e => e.stopPropagation()}
             >
               <ExternalLink className="w-3 h-3" />
@@ -198,9 +198,9 @@ function LeadCard({ lead, index }: { lead: Lead; index: number }) {
 
       {/* Special state (cas_complexe / reprise_humaine) */}
       {special && (
-        <div className="mx-5 mb-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl" style={{ background: '#FAF5FF', border: '1px solid #E9D5FF' }}>
+        <div className="mx-5 mb-4 flex items-center gap-2.5 px-4 py-2.5 rounded-xl" style={{ background: 'rgba(192,132,252,0.08)', border: '1px solid rgba(192,132,252,0.22)' }}>
           <UserCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#C084FC' }} />
-          <p className="text-xs" style={{ color: '#6B21A8' }}>
+          <p className="text-xs" style={{ color: '#C084FC' }}>
             Un conseiller NeoTravel s&apos;occupe personnellement de votre dossier et vous recontactera rapidement.
           </p>
         </div>
@@ -279,7 +279,7 @@ export default function ClientDashboardPage() {
             <div className="flex items-center gap-2 mb-2">
               <span
                 className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-                style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
+                style={{ background: 'rgba(96,165,250,0.12)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.28)' }}
               >
                 Espace client
               </span>
@@ -346,16 +346,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(4)}
             className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-            style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}
+            style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.22)' }}
           >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(56,189,248,0.1)' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(56,189,248,0.12)' }}>
               <Clock className="w-4 h-4" style={{ color: '#38BDF8' }} />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#0369A1' }}>
+              <p className="text-sm font-semibold" style={{ color: '#38BDF8' }}>
                 {inProcess.length} dossier{inProcess.length > 1 ? 's' : ''} en traitement
               </p>
-              <p className="text-[11px] mt-0.5" style={{ color: '#0284C7' }}>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(56,189,248,0.7)' }}>
                 Vous recevrez un email dès qu&apos;un devis sera prêt.
               </p>
             </div>
@@ -367,16 +367,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(4.5)}
             className="flex items-start gap-3 px-4 py-3.5 rounded-2xl"
-            style={{ background: '#FAF5FF', border: '1px solid #E9D5FF' }}
+            style={{ background: 'rgba(192,132,252,0.08)', border: '1px solid rgba(192,132,252,0.22)' }}
           >
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(192,132,252,0.1)' }}>
-              <UserCheck className="w-4 h-4" style={{ color: '#7E22CE' }} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(192,132,252,0.12)' }}>
+              <UserCheck className="w-4 h-4" style={{ color: '#C084FC' }} />
             </div>
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#6D28D9' }}>
+              <p className="text-sm font-semibold" style={{ color: '#C084FC' }}>
                 Un conseiller NeoTravel s&apos;occupe de votre dossier
               </p>
-              <p className="text-[11px] mt-0.5" style={{ color: '#7C3AED' }}>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(192,132,252,0.7)' }}>
                 Votre demande nécessite une validation personnalisée. Vous serez recontacté rapidement.
               </p>
             </div>
@@ -388,16 +388,16 @@ export default function ClientDashboardPage() {
           <motion.div
             {...fade(5)}
             className="flex items-center gap-4 p-4 rounded-2xl"
-            style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}
+            style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.22)' }}
           >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,158,11,0.12)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(251,191,36,0.12)' }}>
               <AlertCircle className="w-5 h-5 text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold" style={{ color: 'var(--dash-text)' }}>
+              <p className="text-sm font-bold" style={{ color: '#FBBF24' }}>
                 {hasQuote.length > 1 ? `${hasQuote.length} devis préparés` : 'Un devis préparé'} pour vous
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--dash-text-muted)' }}>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(251,191,36,0.7)' }}>
                 Consultez votre lien de suivi pour voir les détails.
               </p>
             </div>
