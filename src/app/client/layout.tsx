@@ -3,14 +3,36 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FileText, PlusCircle, Settings, LogOut, ChevronRight } from 'lucide-react'
+import { FileText, PlusCircle, Settings, LogOut, ChevronRight, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 
 const NAV = [
   { href: '/client',          label: 'Mes demandes',     icon: FileText,   exact: true  },
   { href: '/devis',           label: 'Nouvelle demande', icon: PlusCircle, exact: true  },
   { href: '/client/settings', label: 'Mon compte',       icon: Settings,   exact: false },
 ]
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      onClick={toggle}
+      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs transition-all"
+      style={{ color: 'var(--dash-text-muted)', background: 'transparent' }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--dash-muted)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      aria-label="Basculer thème"
+    >
+      {theme === 'light' ? (
+        <Moon className="w-3.5 h-3.5 flex-shrink-0" />
+      ) : (
+        <Sun className="w-3.5 h-3.5 flex-shrink-0" />
+      )}
+      <span>{theme === 'light' ? 'Mode sombre' : 'Mode clair'}</span>
+    </button>
+  )
+}
 
 function ClientSidebar() {
   const { user, logout } = useAuth()
@@ -88,6 +110,7 @@ function ClientSidebar() {
 
       {/* User */}
       <div className="p-3 flex flex-col gap-1" style={{ borderTop: '1px solid var(--dash-sidebar-border)' }}>
+        <ThemeToggle />
         {user && (
           <div
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg mb-1"
